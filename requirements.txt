@@ -45,6 +45,9 @@ structlog>=23.0.0
 python-dotenv>=1.0.0
 PyYAML>=6.0
 
+# 加密和安全
+cryptography>=41.0.0
+
 # 工具庫
 tqdm>=4.66.0
 rich>=13.0.0

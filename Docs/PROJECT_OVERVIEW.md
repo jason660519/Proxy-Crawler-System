@@ -312,6 +312,14 @@
 - 自動重試和降級策略
 - 詳細的錯誤日誌記錄
 
+### 6. 前端管理界面
+
+- **VS Code 風格設計**: 採用現代化的 VS Code 風格界面設計
+- **即時監控面板**: 代理狀態、性能指標的即時顯示
+- **響應式設計**: 支援桌面和行動裝置的最佳體驗
+- **多主題支援**: 明亮/暗黑主題切換
+- **國際化支援**: 多語言界面（繁體中文、英文）
+
 ## 檔案結構
 
 ```
@@ -394,7 +402,32 @@ docker build -t jason-spider .
 docker run -p 8000:8000 jason-spider
 ```
 
-### 3. HTML to Markdown 轉換服務
+### 3. 前端開發環境建置
+
+```bash
+# 進入前端專案目錄 (未來實現)
+cd frontend
+
+# 安裝前端依賴
+npm install
+# 或使用 yarn
+yarn install
+
+# 啟動開發服務器
+npm run dev
+# 或使用 yarn
+yarn dev
+
+# 建置生產版本
+npm run build
+yarn build
+
+# 預覽生產版本
+npm run preview
+yarn preview
+```
+
+### 4. HTML to Markdown 轉換服務
 
 ```bash
 # 啟動轉換服務 (包含在主應用中)
@@ -403,7 +436,7 @@ curl -X POST "http://localhost:8000/convert" \
      -d '{"html": "<h1>Hello World</h1>", "engine": "markdownify"}'
 ```
 
-### 3. 示範程式
+### 5. 示範程式
 
 ```bash
 # 執行示範程式
@@ -453,6 +486,14 @@ python demo.py
 - **ETL 流程引擎**: 完整的資料清理、驗證、標準化流程
 - **多格式輸出**: 支援 Markdown、JSON、CSV 等多種輸出格式
 
+### 前端架構與界面
+- **現代化技術棧**: React 18 + TypeScript + Vite 的高性能前端架構
+- **VS Code 風格組件**: 仿 VS Code 的專業開發者界面設計
+- **狀態管理**: Zustand 輕量級狀態管理，支援持久化和中間件
+- **資料視覺化**: Chart.js + D3.js 的豐富圖表和視覺化組件
+- **UI 組件庫**: Ant Design + 自定義組件的完整設計系統
+- **響應式布局**: CSS Grid + Flexbox 的現代化響應式設計
+
 ### 監控與管理
 - **實時性能監控**: 代理響應時間、成功率、地理位置等指標追蹤
 - **Web 管理界面**: 直觀的代理池狀態管理和統計面板
@@ -475,12 +516,19 @@ python demo.py
 ## 未來改進
 
 ### 短期目標 (1-3 個月)
+- **前端基礎架構建置**: React + TypeScript + Vite 的完整開發環境
+- **VS Code 風格界面實現**: 側邊欄、主面板、狀態欄的基礎布局
+- **代理管理基礎功能**: 代理列表顯示、基本篩選和搜尋功能
 - **智能代理評分系統**: 基於響應時間、穩定性、匿名性的綜合評分
 - **Web 管理界面優化**: 實時監控面板、代理池狀態視覺化
 - **API 服務擴展**: RESTful API 的完整 CRUD 操作支援
 - **配置熱重載**: 無需重啟的動態配置更新機制
 
 ### 中期目標 (3-6 個月)
+- **進階前端功能**: 即時圖表、資料視覺化、進階篩選和排序
+- **多主題系統**: 明亮/暗黑主題切換，自定義主題配色
+- **國際化實現**: 繁體中文、英文的完整多語言支援
+- **效能優化**: 虛擬列表、懶加載、記憶化優化
 - **機器學習整合**: 基於歷史資料的代理品質預測模型
 - **分散式爬取**: 多節點協同爬取，提升整體效能
 - **智能反檢測**: AI 驅動的反檢測策略自動調整
@@ -560,6 +608,19 @@ MIT License
 - **監控指標**: `prometheus-client`
 - **進度追蹤**: `tqdm`
 - **重試機制**: `tenacity`
+
+### 前端技術棧
+- **核心框架**: `React 18` + `TypeScript`
+- **建置工具**: `Vite` (快速建置與熱重載)
+- **狀態管理**: `Zustand` (輕量級狀態管理)
+- **UI 組件庫**: `Ant Design` + 自定義組件
+- **樣式方案**: `CSS Modules` + `Styled Components`
+- **資料視覺化**: `Chart.js` + `D3.js`
+- **HTTP 客戶端**: `Axios` + `React Query`
+- **路由管理**: `React Router v6`
+- **表單處理**: `React Hook Form` + `Zod` 驗證
+- **測試框架**: `Vitest` + `React Testing Library`
+- **程式碼品質**: `ESLint` + `Prettier` + `Husky`
 
 ### 版本控制與協作
 - **版本控制**: `Git`

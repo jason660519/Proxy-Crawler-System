@@ -33,13 +33,22 @@ except ImportError:
 from .manager import ProxyManager, ProxyManagerConfig
 from .models import ProxyNode, ProxyStatus, ProxyAnonymity, ProxyProtocol, ProxyFilter
 from .pools import PoolType
-from .validators import ValidationConfig
+from .validators import ProxyValidator, ValidationResult
+from .database_service import get_database_service, cleanup_database_service
+from database_config import DatabaseConfig
 
 logger = logging.getLogger(__name__)
 
 # Pydantic 模型定義
 class ProxyResponse(BaseModel):
     """代理響應模型"""
+    success: bool
+    message: str
+    data: Optional[Any] = None
+
+
+class ProxyNodeResponse(BaseModel):
+    """單個代理節點響應模型"""
     host: str
     port: int
     protocol: str
@@ -52,7 +61,7 @@ class ProxyResponse(BaseModel):
     last_checked: Optional[datetime] = None
     
     @classmethod
-    def from_proxy_node(cls, proxy: ProxyNode) -> "ProxyResponse":
+    def from_proxy_node(cls, proxy: ProxyNode) -> "ProxyNodeResponse":
         return cls(
             host=proxy.host,
             port=proxy.port,
@@ -62,7 +71,7 @@ class ProxyResponse(BaseModel):
             region=proxy.region,
             city=proxy.city,
             score=proxy.score,
-            response_time_ms=proxy.metrics.avg_response_time,
+            response_time_ms=proxy.metrics.response_time_ms,
             last_checked=proxy.last_checked
         )
 
@@ -74,9 +83,14 @@ class ProxyFilterRequest(BaseModel):
     countries: Optional[List[str]] = None
     min_score: Optional[float] = None
     max_response_time: Optional[int] = None
+    page: int = Field(default=1, ge=1, description="頁碼")
+    page_size: int = Field(default=50, ge=1, le=100, description="每頁大小")
+    order_by: str = Field(default="score", description="排序字段")
+    order_desc: bool = Field(default=True, description="是否降序")
     
-    def to_proxy_filter(self) -> ProxyFilter:
-        """轉換為 ProxyFilter 對象"""
+    @property
+    def filter(self) -> ProxyFilter:
+        """獲取 ProxyFilter 對象"""
         protocols = None
         if self.protocols:
             protocols = [ProxyProtocol(p) for p in self.protocols if p in [e.value for e in ProxyProtocol]]
@@ -92,6 +106,10 @@ class ProxyFilterRequest(BaseModel):
             min_score=self.min_score,
             max_response_time=self.max_response_time
         )
+    
+    def to_proxy_filter(self) -> ProxyFilter:
+        """轉換為 ProxyFilter 對象（向後兼容）"""
+        return self.filter
 
 
 class StatsResponse(BaseModel):
@@ -215,6 +233,9 @@ async def shutdown_event():
     if proxy_manager:
         await proxy_manager.stop()
         proxy_manager = None
+    
+    # 清理數據庫服務
+    await cleanup_database_service()
     
     logger.info("✅ 代理管理器 API 服務已關閉")
 
@@ -565,14 +586,177 @@ async def download_file(filename: str):
     )
 
 
+@app.get("/api/proxies/{proxy_id}", response_model=ProxyResponse, summary="獲取單個代理")
+async def get_proxy_by_id(proxy_id: str):
+    """根據ID獲取單個代理"""
+    try:
+        db_service = await get_database_service()
+        proxy = await db_service.get_proxy_by_id(proxy_id)
+        
+        if proxy:
+            return ProxyResponse(
+                success=True,
+                message="代理獲取成功",
+                data=ProxyNodeResponse.from_proxy_node(proxy).dict()
+            )
+        else:
+            return ProxyResponse(
+                success=False,
+                message="代理不存在",
+                data=None
+            )
+    except Exception as e:
+        logger.error(f"獲取代理失敗: {e}")
+        return ProxyResponse(
+            success=False,
+            message=f"獲取代理失敗: {str(e)}",
+            data=None
+        )
+
+
+@app.post("/api/proxies/batch", response_model=ProxyResponse, summary="批量獲取代理")
+async def get_proxies_batch(
+    filter_request: ProxyFilterRequest,
+    count: int = Query(10, ge=1, le=100, description="獲取數量"),
+    manager: ProxyManager = Depends(get_proxy_manager)
+):
+    """批量獲取代理"""
+    try:
+        # 轉換篩選條件
+        filter_criteria = filter_request.to_proxy_filter()
+        
+        # 獲取代理
+        proxies = await manager.get_proxies(count, filter_criteria)
+        
+        return ProxyResponse(
+            success=True,
+            message=f"成功獲取 {len(proxies)} 個代理",
+            data=[ProxyNodeResponse.from_proxy_node(proxy).dict() for proxy in proxies]
+        )
+        
+    except ValueError as e:
+        return ProxyResponse(
+            success=False,
+            message=f"參數錯誤: {e}",
+            data=None
+        )
+    except Exception as e:
+        logger.error(f"❌ 批量獲取代理失敗: {e}")
+        return ProxyResponse(
+            success=False,
+            message="批量獲取代理失敗",
+            data=None
+        )
+
+
+@app.post("/api/database/proxies", response_model=ProxyResponse, summary="從數據庫獲取代理")
+async def get_database_proxies(
+    page: int = Query(1, ge=1, description="頁碼"),
+    page_size: int = Query(20, ge=1, le=100, description="每頁數量"),
+    protocol: Optional[str] = Query(None, description="協議類型"),
+    anonymity: Optional[str] = Query(None, description="匿名度"),
+    country: Optional[str] = Query(None, description="國家代碼"),
+    min_score: Optional[float] = Query(None, ge=0, le=1, description="最低分數"),
+    max_response_time: Optional[int] = Query(None, gt=0, description="最大響應時間(毫秒)"),
+    order_by: str = Query("score", description="排序字段"),
+    order_desc: bool = Query(True, description="是否降序排列")
+):
+    """直接從數據庫獲取代理數據"""
+    try:
+        db_service = await get_database_service()
+        
+        # 構建篩選條件
+        filter_criteria = None
+        if any([protocol, anonymity, country, min_score, max_response_time]):
+            protocols = [ProxyProtocol(protocol)] if protocol else None
+            anonymity_levels = [ProxyAnonymity(anonymity)] if anonymity else None
+            countries = [country] if country else None
+            
+            filter_criteria = ProxyFilter(
+                protocols=protocols,
+                anonymity_levels=anonymity_levels,
+                countries=countries,
+                min_score=min_score,
+                max_response_time=max_response_time
+            )
+        
+        # 從數據庫獲取代理
+        result = await db_service.get_proxies(
+            filter_criteria=filter_criteria,
+            page=page,
+            page_size=page_size,
+            order_by=order_by,
+            order_desc=order_desc
+        )
+        
+        return ProxyResponse(
+            success=True,
+            message=f"成功獲取 {len(result.proxies)} 個代理",
+            data={
+                "proxies": [ProxyNodeResponse.from_proxy_node(proxy).dict() for proxy in result.proxies],
+                "pagination": {
+                    "page": result.page,
+                    "page_size": result.page_size,
+                    "total_count": result.total_count,
+                    "has_next": result.has_next,
+                    "has_prev": result.has_prev
+                }
+            }
+        )
+        
+    except ValueError as e:
+        return ProxyResponse(
+            success=False,
+            message=f"參數錯誤: {e}",
+            data=None
+        )
+    except Exception as e:
+        logger.error(f"從數據庫獲取代理失敗: {e}")
+        return ProxyResponse(
+            success=False,
+            message=f"從數據庫獲取代理失敗: {str(e)}",
+            data=None
+        )
+
+
+@app.get("/api/stats/detailed", summary="獲取詳細統計信息")
+async def get_detailed_stats(manager: ProxyManager = Depends(get_proxy_manager)):
+    """獲取詳細統計信息"""
+    try:
+        stats = manager.get_stats()
+        
+        return {
+            "success": True,
+            "data": {
+                "total_proxies": stats['pool_summary']['total_proxies'],
+                "total_active_proxies": stats['pool_summary']['total_active_proxies'],
+                "pool_distribution": stats['pool_summary']['pool_distribution'],
+                "overall_success_rate": stats['pool_summary']['overall_success_rate'],
+                "last_updated": stats['pool_summary']['last_updated'],
+                "manager_stats": stats['manager_stats'],
+                "pool_details": stats['pool_details']
+            },
+            "message": "統計信息獲取成功",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ 獲取詳細統計信息失敗: {e}")
+        raise HTTPException(status_code=500, detail="內部服務器錯誤")
+
+
 @app.get("/api/pools", summary="獲取池詳細信息")
 async def get_pools_info(manager: ProxyManager = Depends(get_proxy_manager)):
     """獲取所有池的詳細信息"""
     try:
         stats = manager.get_stats()
         return {
-            "pools": stats['pool_details'],
-            "summary": stats['pool_summary'],
+            "success": True,
+            "data": {
+                "pools": stats['pool_details'],
+                "summary": stats['pool_summary']
+            },
+            "message": "池信息獲取成功",
             "timestamp": datetime.now().isoformat()
         }
         

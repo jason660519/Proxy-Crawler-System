@@ -25,7 +25,10 @@ src/proxy_crawler_system.egg-info/top_level.txt
 src/proxy_manager/__init__.py
 src/proxy_manager/advanced_fetchers.py
 src/proxy_manager/api.py
+src/proxy_manager/cli.py
 src/proxy_manager/config.py
+src/proxy_manager/crawler_manager.py
+src/proxy_manager/database_service.py
 src/proxy_manager/fetchers.py
 src/proxy_manager/geolocation_enhanced.py
 src/proxy_manager/intelligent_detection.py
@@ -37,7 +40,14 @@ src/proxy_manager/scanner.py
 src/proxy_manager/server.py
 src/proxy_manager/validators.py
 src/proxy_manager/zmap_integration.py
+src/proxy_manager/crawlers/__init__.py
+src/proxy_manager/crawlers/base_crawler.py
+src/proxy_manager/crawlers/free_proxy_list_net__proxy_crawler__.py
+src/proxy_manager/crawlers/geonode_com__proxy_crawler__.py
+src/proxy_manager/crawlers/sslproxies_org__proxy_crawler__.py
 src/proxy_manager/tests/test_advanced_integration.py
+src/proxy_manager/validators/__init__.py
+src/proxy_manager/validators/proxy_validator.py
 tests/test_advanced_integration.py
 tests/test_enhanced_integration.py
 tests/test_html_to_markdown.py

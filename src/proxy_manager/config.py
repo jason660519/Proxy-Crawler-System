@@ -14,10 +14,22 @@ from typing import Dict, List, Optional, Any, TYPE_CHECKING
 from pathlib import Path
 
 # from .validators import ValidationConfig  # 暫時註解掉，ValidationConfig類尚未實現
-from .pools import PoolConfig
 
+@dataclass
+class ValidationConfig:
+    """驗證配置類"""
+    timeout: int = 10
+    max_retries: int = 3
+    test_urls: List[str] = field(default_factory=lambda: [
+        "http://httpbin.org/ip",
+        "https://httpbin.org/ip"
+    ])
+    
+    def get(self, key: str, default: Any = None) -> Any:
+        """獲取配置值"""
+        return getattr(self, key, default)
 if TYPE_CHECKING:
-    pass
+    from .pools import PoolConfig
 
 # 全局配置實例
 _global_config: Optional['ProxyManagerConfig'] = None
@@ -76,7 +88,7 @@ class ProxyManagerConfig:
         self.api = ApiConfig()
         self.scanner = ScannerConfig()
         self.validation = ValidationConfig()
-        self.pool = PoolConfig()
+        self._pool = None  # 延遲初始化以避免循環導入
         self.save_config = ConfigValidation()
         
         # 基本配置屬性
@@ -101,6 +113,19 @@ class ProxyManagerConfig:
         # 如果提供了配置檔案，則載入配置
         if config_file:
             self.load_config(config_file)
+    
+    @property
+    def pool(self):
+        """延遲初始化PoolConfig以避免循環導入"""
+        if self._pool is None:
+            from .pools import PoolConfig
+            self._pool = PoolConfig()
+        return self._pool
+    
+    @pool.setter
+    def pool(self, value):
+        """設置pool配置"""
+        self._pool = value
     
     def load_config(self, config_file: str) -> None:
         """從 YAML 檔案載入配置
