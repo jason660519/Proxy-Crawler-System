@@ -1,0 +1,96 @@
+api:
+  censys_api_id: null
+  censys_api_secret: null
+  github_token: null
+  ipapi_key: null
+  proxyscrape_api_key: null
+  shodan_api_key: null
+fetcher:
+  enable_censys: false
+  enable_github: true
+  enable_proxyscrape: true
+  enable_shodan: false
+  enable_web_scraping: true
+  fetch_interval_minutes: 60
+  github_sources:
+  - files:
+    - proxies/http.txt
+    - proxies/https.txt
+    - proxies/socks4.txt
+    - proxies/socks5.txt
+    format: txt
+    name: proxifly/free-proxy-list
+  - files:
+    - http.txt
+    - socks4.txt
+    - socks5.txt
+    format: txt
+    name: TheSpeedX/PROXY-List
+  - files:
+    - http.txt
+    - https.txt
+    - socks4.txt
+    - socks5.txt
+    format: txt
+    name: ShiftyTR/Proxy-List
+  max_proxies_per_source: 1000
+  proxyscrape_protocols:
+  - http
+  - socks4
+  - socks5
+logging:
+  backup_count: 5
+  enable_console: true
+  enable_file: true
+  file_path: logs/proxy_manager.log
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  level: INFO
+  max_file_size: 10MB
+performance:
+  cache_size: 10000
+  cache_ttl_minutes: 30
+  connection_pool_size: 100
+  dns_cache_ttl: 300
+  enable_compression: true
+  enable_connection_pooling: true
+  gc_threshold: 1000
+  max_memory_usage_mb: 512
+scanner:
+  anonymity_test_urls:
+  - http://httpbin.org/headers
+  - https://httpbin.org/headers
+  enable_fast_scan: true
+  fast_scan_concurrent: 1000
+  fast_scan_timeout: 3.0
+  max_concurrent: 100
+  retry_attempts: 3
+  retry_delay: 1.0
+  test_urls:
+  - http://httpbin.org/ip
+  - https://api.ipify.org?format=json
+  - http://icanhazip.com
+  - https://checkip.amazonaws.com
+  - http://ip-api.com/json
+  timeout: 10.0
+storage:
+  auto_backup: true
+  backup_directory: data/backups
+  backup_interval_hours: 24
+  data_directory: data/proxies
+  export_formats:
+  - json
+  - csv
+  - txt
+  max_backup_files: 7
+validation:
+  blocked_countries:
+  - CN
+  - RU
+  enable_anonymity_check: true
+  enable_geolocation_check: true
+  enable_speed_test: true
+  max_response_time: 10.0
+  min_speed: slow
+  required_anonymity: transparent
+  required_countries: null
+  required_protocols: null

@@ -1,0 +1,234 @@
+job_categories = [
+    # 管理類職業
+    "chief-executive", "general-manager", "senior-official", "administration-manager",
+    "sales-manager", "production-manager", "service-manager", "retail-manager",
+    "hospitality-manager", "transport-manager", "construction-manager", "it-manager",
+    "finance-manager", "human-resources-manager", "marketing-manager", "purchasing-manager",
+    "research-development-manager", "quality-assurance-manager", "facilities-manager",
+    
+    # 專業人士 - 科學和工程
+    "physicist", "chemist", "biologist", "geneticist", "microbiologist", "biotechnologist",
+    "environmental-scientist", "geologist", "geophysicist", "meteorologist", "astronomer",
+    "mathematician", "statistician", "actuary", "data-scientist", "research-scientist",
+    "civil-engineer", "structural-engineer", "mechanical-engineer", "electrical-engineer",
+    "electronics-engineer", "chemical-engineer", "materials-engineer", "industrial-engineer",
+    "manufacturing-engineer", "marine-engineer", "aeronautical-engineer", "mining-engineer",
+    "petroleum-engineer", "nuclear-engineer", "biomedical-engineer", "environmental-engineer",
+    
+    # 專業人士 - 醫療健康
+    "medical-doctor", "surgeon", "psychiatrist", "cardiologist", "neurologist", "pediatrician",
+    "gynecologist", "oncologist", "radiologist", "anesthesiologist", "pathologist",
+    "general-practitioner", "dentist", "orthodontist", "veterinarian", "pharmacist",
+    "nursing-professional", "midwife", "physiotherapist", "occupational-therapist",
+    "speech-therapist", "audiologist", "optometrist", "chiropractor", "osteopath",
+    "dietitian", "nutritionist", "paramedic", "emergency-medical-technician",
+    
+    # 專業人士 - 教育和研究
+    "university-professor", "college-lecturer", "secondary-teacher", "primary-teacher",
+    "early-childhood-teacher", "special-education-teacher", "adult-education-teacher",
+    "vocational-teacher", "language-teacher", "music-teacher", "art-teacher",
+    "physical-education-teacher", "education-adviser", "curriculum-developer",
+    "school-principal", "librarian", "archivist", "curator", "historian",
+    "philosopher", "theologian", "sociologist", "psychologist", "anthropologist",
+    "archaeologist", "political-scientist", "economist", "geographer",
+    
+    # 專業人士 - 商業和金融
+    "accountant", "auditor", "financial-analyst", "investment-analyst", "risk-analyst",
+    "treasury-analyst", "tax-adviser", "management-consultant", "business-analyst",
+    "policy-analyst", "actuary", "stockbroker", "investment-banker", "financial-adviser",
+    "insurance-underwriter", "claims-adjuster", "credit-analyst", "mortgage-broker",
+    "real-estate-appraiser", "valuer", "customs-broker", "export-agent", "import-agent",
+    
+    # 專業人士 - 信息和通信技術
+    "software-developer", "systems-analyst", "web-developer", "application-developer",
+    "database-administrator", "network-administrator", "systems-administrator",
+    "it-security-specialist", "cloud-architect", "devops-engineer", "ai-specialist",
+    "machine-learning-engineer", "data-engineer", "business-intelligence-analyst",
+    "it-project-manager", "quality-assurance-engineer", "technical-writer",
+    "ux-designer", "ui-designer", "multimedia-specialist", "web-content-manager",
+    
+    # 專業人士 - 法律和社會
+    "lawyer", "judge", "magistrate", "public-prosecutor", "legal-adviser",
+    "intellectual-property-lawyer", "corporate-lawyer", "family-lawyer",
+    "criminal-lawyer", "immigration-lawyer", "paralegal", "conveyancer",
+    "social-worker", "welfare-worker", "youth-worker", "community-worker",
+    "counsellor", "psychologist-clinical", "psychologist-organizational",
+    "probation-officer", "corrections-officer", "career-adviser", "human-resources-adviser",
+    
+    # 技術員和助理專業人員 - 科學和工程
+    "science-technician", "laboratory-technician", "medical-laboratory-technician",
+    "pharmacy-technician", "engineering-technician", "civil-engineering-technician",
+    "mechanical-engineering-technician", "electrical-engineering-technician",
+    "electronics-engineering-technician", "chemical-engineering-technician",
+    "mining-technician", "surveying-technician", "draughtsperson", "architectural-draughtsperson",
+    "it-technician", "computer-network-technician", "telecommunications-technician",
+    
+    # 技術員和助理專業人員 - 醫療健康
+    "medical-imaging-technician", "radiography-technician", "sonographer",
+    "pharmacy-assistant", "dental-assistant", "dental-hygienist", "dental-technician",
+    "optical-technician", "medical-records-officer", "community-health-worker",
+    "nursing-assistant", "aged-care-worker", "disability-support-worker",
+    "ambulance-officer", "first-aid-officer", "massage-therapist",
+    
+    # 技術員和助理專業人員 - 商業和行政
+    "bookkeeper", "accounting-clerk", "payroll-clerk", "bank-teller", "credit-loan-officer",
+    "insurance-agent", "real-estate-agent", "travel-agent", "employment-agent",
+    "marketing-assistant", "advertising-assistant", "public-relations-assistant",
+    "import-export-clerk", "customs-agent", "statistics-clerk", "human-resources-clerk",
+    
+    # 技術員和助理專業人員 - 法律和社會
+    "legal-secretary", "court-clerk", "police-officer", "detective", "private-investigator",
+    "security-consultant", "firefighter", "prison-officer", "border-protection-officer",
+    "immigration-officer", "taxation-officer", "social-research-interviewer",
+    
+    # 文書支援工作者
+    "office-clerk", "receptionist", "secretary", "personal-assistant", "typist",
+    "word-processor", "data-entry-clerk", "proofreader", "court-reporter",
+    "medical-secretary", "legal-secretary", "administrative-assistant",
+    "customer-service-clerk", "call-center-agent", "postal-clerk", "mail-sorter",
+    "filing-clerk", "records-management-clerk", "library-assistant",
+    
+    # 服務和銷售工作者
+    "retail-sales-assistant", "checkout-operator", "sales-representative",
+    "demonstrator", "model", "real-estate-salesperson", "telemarketer",
+    "door-to-door-salesperson", "market-researcher", "advertising-salesperson",
+    "insurance-salesperson", "travel-consultant", "sales-manager",
+    
+    # 個人服務工作者
+    "hairdresser", "beautician", "barber", "cosmetologist", "manicurist",
+    "makeup-artist", "beauty-therapist", "spa-therapist", "fitness-instructor",
+    "personal-trainer", "yoga-instructor", "dance-instructor", "swimming-instructor",
+    "massage-therapist", "astrologer", "fortune-teller", "funeral-director",
+    "embalmer", "wedding-planner", "event-planner", "concierge", "butler",
+    
+    # 保護服務工作者
+    "police-officer", "sheriff", "detective", "intelligence-officer", "security-officer",
+    "bodyguard", "bouncer", "lifeguard", "park-ranger", "forest-ranger",
+    "crossing-guard", "traffic-controller", "parking-inspector",
+    
+    # 酒店和旅遊工作者
+    "hotel-manager", "restaurant-manager", "chef", "cook", "baker", "pastry-cook",
+    "butcher", "bartender", "waiter", "waitress", "barista", "hotel-receptionist",
+    "concierge", "porter", "bellhop", "housekeeper", "laundry-worker",
+    "travel-agent", "tour-guide", "tourist-information-officer", "flight-attendant",
+    "cruise-ship-staff", "resort-staff", "casino-dealer", "gaming-attendant",
+    
+    # 藝術、文化和體育工作者
+    "author", "writer", "journalist", "editor", "proofreader", "translator",
+    "interpreter", "librarian", "archivist", "curator", "artist", "painter",
+    "sculptor", "illustrator", "cartoonist", "photographer", "photojournalist",
+    "videographer", "film-director", "producer", "actor", "dancer", "choreographer",
+    "musician", "singer", "composer", "music-teacher", "sound-engineer",
+    "fashion-designer", "industrial-designer", "graphic-designer", "interior-designer",
+    "landscape-architect", "urban-planner", "athlete", "sports-coach", "umpire",
+    "referee", "sports-official", "fitness-instructor", "yoga-teacher",
+    
+    # 技工和貿易工作者
+    "electrician", "plumber", "carpenter", "joiner", "bricklayer", "stonemason",
+    "roofer", "plasterer", "floor-finisher", "glazier", "painter", "decorator",
+    "wall-and-floor-tiler", "plumber", "gasfitter", "air-conditioning-mechanic",
+    "refrigeration-mechanic", "electrical-line-worker", "telecommunications-technician",
+    "electronics-trades-worker", "instrument-mechanic", "motor-mechanic",
+    "diesel-mechanic", "small-engine-mechanic", "automotive-electrician",
+    "vehicle-painter", "body-builder", "vehicle-trimmer", "panel-beater",
+    "watchmaker", "jeweller", "signwriter", "printing-machinist", "bookbinder",
+    "screen-printer", "sewing-machinist", "upholsterer", "cabinetmaker",
+    "wood-machinist", "turner", "furniture-finisher", "boat-builder",
+    "shipwright", "aircraft-mechanic", "blacksmith", "welder", "metal-fabricator",
+    "boilermaker", "sheet-metal-worker", "structural-steel-worker", "fitter",
+    "machinist", "toolmaker", "engineering-patternmaker", "precious-metal-worker",
+    "glassblower", "potter", "stonemason", "monumental-mason",
+    
+    # 機械操作員和司機
+    "forklift-driver", "crane-operator", "excavator-operator", "bulldozer-operator",
+    "grader-operator", "driller", "mining-plant-operator", "quarry-worker",
+    "printing-machinist", "paper-products-machine-operator", "plastics-machine-operator",
+    "rubber-products-machine-operator", "textile-machine-operator", "sewing-machinist",
+    "laundry-worker", "chemical-plant-operator", "power-generation-plant-operator",
+    "water-treatment-plant-operator", "waste-treatment-plant-operator",
+    "train-driver", "tram-driver", "bus-driver", "taxi-driver", "truck-driver",
+    "delivery-driver", "courier", "forklift-driver", "crane-operator",
+    "ship's-master", "ship's-officer", "ship's-engineer", "deck-hand", "fisher",
+    
+    # 勞力工作者
+    "construction-labourer", "demolition-worker", "scaffolder", "steelfixer",
+    "concrete-worker", "asphalt-worker", "road-worker", "railway-track-worker",
+    "mining-labourer", "quarry-labourer", "agricultural-labourer", "farm-worker",
+    "forestry-worker", "garden-labourer", "greenkeeper", "nursery-worker",
+    "fisher", "aquaculture-worker", "meat-processor", "poultry-processor",
+    "seafood-processor", "fruit-picker", "vegetable-picker", "dairy-farm-worker",
+    "shear-er", "viticulture-worker", "packer", "product-assembler",
+    "factory-hand", "storeperson", "warehouse-worker", "freight-handler",
+    "rubbish-collector", "recycling-worker", "cleaner", "commercial-cleaner",
+    "domestic-cleaner", "window-cleaner", "carpet-cleaner", "vehicle-cleaner",
+    "car-park-attendant", "service-station-attendant", "messenger", "mail-sorter",
+    "postal-delivery-officer", "kitchen-hand", "fast-food-cook", "sandwich-hand",
+    "bar-attendant", "cafe-worker", "catering-assistant", "laundry-worker",
+    "dry-cleaner", "ironer", "presser", "ticket-collector", "usher",
+    "theme-park-attendant", "zookeeper", "animal-attendant", "horse-trainer",
+    "dog-handler", "animal-control-officer", "pest-controller", "lifeguard",
+    "pool-attendant", "ski-instructor", "diving-instructor", "sailing-instructor",
+    
+    # 軍事職業
+    "army-officer", "navy-officer", "air-force-officer", "army-soldier",
+    "navy-sailor", "air-force-airman", "special-forces", "military-police",
+    "combat-engineer", "military-medic", "military-intelligence", "logistics-officer",
+    "artillery-officer", "armored-vehicle-crew", "helicopter-pilot", "fighter-pilot",
+    "submarine-crew", "warship-crew", "peacekeeping-forces", "military-instructor",
+    
+    # 新興和特殊職業
+    "social-media-manager", "digital-marketer", "seo-specialist", "content-creator",
+    "influencer", "podcast-producer", "vr-developer", "blockchain-developer",
+    "cryptocurrency-analyst", "sustainability-coordinator", "ethical-hacker",
+    "drone-operator", "robotics-technician", "3d-printing-specialist",
+    "nanotechnology-researcher", "renewable-energy-technician", "carbon-analyst",
+    "telemedicine-practitioner", "genetic-counselor", "bioinformatician",
+    "user-researcher", "product-owner", "scrum-master", "agile-coach",
+    "devops-engineer", "site-reliability-engineer", "growth-hacker",
+    "customer-success-manager", "community-manager", "remote-work-coordinator",
+    
+    # 傳統手工藝職業
+    "luthier", "book-restorer", "antique-restorer", "stained-glass-artist",
+    "weaver", "spinner", "dyer", "embroiderer", "lace-maker", "basket-weaver",
+    "potter", "ceramicist", "glass-artist", "metal-smith", "silversmith",
+    "goldsmith", "blacksmith", "coppersmith", "leather-worker", "saddler",
+    "bookbinder", "paper-maker", "printmaker", "wood-carver", "stone-carver",
+    "ivory-carver", "taxidermist", "clockmaker", "toy-maker", "doll-maker",
+    
+    # 農業和漁業
+    "farm-manager", "crop-farmer", "livestock-farmer", "mixed-farmer",
+    "viticulturist", "aquaculturist", "beekeeper", "worm-farmer",
+    "organic-farmer", "hydroponic-farmer", "agricultural-consultant",
+    "soil-scientist", "irrigation-specialist", "agricultural-engineer",
+    "fishing-skipper", "fishing-deckhand", "aquaculture-worker",
+    "fish-farm-worker", "pearl-diver", "seaweed-harvester",
+    
+    # 宗教和精神職業
+    "priest", "minister", "rabbi", "imam", "monk", "nun", "missionary",
+    "theologian", "religious-teacher", "chaplain", "spiritual-counselor",
+    "yoga-guru", "meditation-teacher", "reiki-practitioner", "faith-healer",
+    
+    # 政府和政治
+    "politician", "diplomat", "ambassador", "public-servant", "policy-adviser",
+    "legislative-drafter", "treaty-negotiator", "intelligence-analyst",
+    "public-affairs-officer", "election-officer", "census-collector",
+    "tax-inspector", "customs-officer", "immigration-officer", "police-commissioner",
+    "fire-chief", "emergency-services-coordinator", "disaster-management-officer",
+    
+    # 非傳統和新興領域
+    "esports-player", "game-streamer", "virtual-assistant", "online-tutor",
+    "digital-nomad", "sharing-economy-worker", "gig-economy-worker",
+    "crowdfunding-specialist", "cryptocurrency-miner", "nft-artist",
+    "metaverse-developer", "space-tourism-guide", "underwater-welder",
+    "adventure-tour-guide", "wildlife-photographer", "food-critic",
+    "sommelier", "cheese-monger", "chocolate-maker", "coffee-roaster",
+    "tea-master", "perfumer", "flavorist", "food-stylist",
+    "stunt-performer", "pyrotechnician", "special-effects-technician",
+    "forensic-scientist", "crime-scene-investigator", "fire-investigator",
+    "accident-reconstructionist", "handwriting-expert", "forensic-accountant",
+    
+    # 志願和慈善工作
+    "volunteer-coordinator", "fundraiser", "grant-writer", "nonprofit-director",
+    "charity-administrator", "community-organizer", "advocacy-officer",
+    "humanitarian-worker", "disaster-relief-worker", "international-aid-worker"
+]
