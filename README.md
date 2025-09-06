@@ -5,18 +5,21 @@
 ## 🚀 主要功能
 
 ### 1. HTML to Markdown 轉換服務
+
 - 支援多種轉換引擎（markdownify、html2text、pandoc）
 - RESTful API 介面
 - 批量轉換支援
 - 自動檔案儲存與時間戳記
 
 ### 2. 代理網站監控
+
 - 多來源代理網站可用性檢查
 - 支援 SSL Proxies、Geonode、GitHub 專案等
 - 異步並發檢查機制
 - 詳細的狀態報告
 
 ### 3. 智能代理管理系統 ✅
+
 - **多來源代理獲取**：支援 ProxyScrape、GitHub、Shodan、Censys 等
 - **智能代理池管理**：熱池、溫池、冷池、黑名單分類
 - **代理驗證與評分**：多維度代理品質評估
@@ -57,6 +60,7 @@ JasonSpider/
 ## 🛠️ 安裝與使用
 
 ### 環境需求
+
 - Python 3.11+
 - 推薦使用 `uv` 進行依賴管理
 
@@ -131,6 +135,7 @@ cp .env.example .env
 ```
 
 主要配置項目：
+
 - `HOST`: 服務器主機地址（預設：0.0.0.0）
 - `PORT`: 服務器端口（預設：8000）
 - `LOG_LEVEL`: 日誌級別（預設：INFO）
@@ -138,16 +143,19 @@ cp .env.example .env
 ## 📚 文檔
 
 ### 核心文檔
+
 - [API 參考文檔](API_REFERENCE.md) - 完整的 API 接口說明
 - [部署指南](DEPLOYMENT_GUIDE.md) - 詳細的部署和維護指南
 - [API 配置指南](API_CONFIGURATION.md) - API 金鑰配置說明
 
 ### 專案文檔
+
 - [專案總覽](Docs/PROJECT_OVERVIEW.md) - 完整的專案功能與架構說明
 - [架構設計總覽](Docs/架構設計總覽.md) - 系統架構設計文檔
 - [第一階段工作規劃](Docs/第一階段未完成工作細部規劃與注意事項.md) - 開發計劃和進度
 
 ### 技術文檔
+
 - [自建探測器開發總結](JasonSpider-Dev/DEVELOPMENT_SUMMARY.md) - 自建代理探測器實現
 - [ProxyScraper 整合分析](Docs/ProxyScraper整合分析與建議.md) - ProxyScraper 整合方案
 - [GitHub 專案分析](Docs/三個GitHub代理專案分析與整合建議.md) - GitHub 代理專案整合建議
@@ -166,6 +174,7 @@ cp .env.example .env
 ### 提交規範
 
 使用 Conventional Commits 格式：
+
 ```
 <type>(<scope>): <subject>
 

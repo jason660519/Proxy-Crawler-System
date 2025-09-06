@@ -1,0 +1,22 @@
+{
+  "scanner": {
+    "max_concurrent": 64,
+    "timeout": 5,
+    "retry_count": 2
+  },
+  "validation": {
+    "max_concurrent": 128,
+    "timeout": 10,
+    "retry_count": 2
+  },
+  "pools": {
+    "max_pool_size": 10000,
+    "auto_cleanup_enabled": true,
+    "cleanup_interval_hours": 6
+  },
+  "fetchers": {
+    "max_concurrent": 96,
+    "timeout": 30,
+    "retry_count": 3
+  }
+}

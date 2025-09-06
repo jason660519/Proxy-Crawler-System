@@ -17,20 +17,20 @@
 
 ### 最低要求
 
-| 組件 | 最低版本 | 推薦版本 |
-|------|----------|----------|
-| Python | 3.11+ | 3.12+ |
-| 記憶體 | 2GB | 8GB+ |
-| 磁盤空間 | 1GB | 10GB+ |
-| 網路 | 寬頻連接 | 高速連接 |
+| 組件     | 最低版本 | 推薦版本 |
+| -------- | -------- | -------- |
+| Python   | 3.11+    | 3.12+    |
+| 記憶體   | 2GB      | 8GB+     |
+| 磁盤空間 | 1GB      | 10GB+    |
+| 網路     | 寬頻連接 | 高速連接 |
 
 ### 依賴服務
 
-| 服務 | 用途 | 必需性 |
-|------|------|--------|
-| PostgreSQL | 數據存儲 | 可選 |
-| Redis | 緩存 | 可選 |
-| Docker | 容器化 | 可選 |
+| 服務       | 用途     | 必需性 |
+| ---------- | -------- | ------ |
+| PostgreSQL | 數據存儲 | 可選   |
+| Redis      | 緩存     | 可選   |
+| Docker     | 容器化   | 可選   |
 
 ## 安裝步驟
 
@@ -163,7 +163,7 @@ python setup_api_config.py show
 創建 `docker-compose.yml`：
 
 ```yaml
-version: '3.8'
+version: "3.8"
 
 services:
   jason-spider:
@@ -462,6 +462,7 @@ echo "備份完成: $BACKUP_DIR/data_$DATE.tar.gz"
 **症狀**：服務啟動失敗，日誌顯示錯誤
 
 **解決方案**：
+
 ```bash
 # 檢查 Python 版本
 python --version
@@ -481,6 +482,7 @@ netstat -tlnp | grep :8000
 **症狀**：無法獲取代理，API 錯誤
 
 **解決方案**：
+
 ```bash
 # 檢查 API 金鑰
 python setup_api_config.py show
@@ -497,6 +499,7 @@ sudo ufw status
 **症狀**：系統記憶體使用率過高
 
 **解決方案**：
+
 ```bash
 # 調整並發參數
 export MAX_CONCURRENT_SCANS=50
