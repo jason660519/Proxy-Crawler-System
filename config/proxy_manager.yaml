@@ -1,3 +1,11 @@
+# 自動任務配置
+auto_fetch_enabled: true
+auto_fetch_interval_hours: 1
+auto_cleanup_enabled: true
+auto_cleanup_interval_hours: 6
+auto_save_enabled: true
+auto_save_interval_minutes: 5
+
 api:
   censys_api_id: null
   censys_api_secret: null

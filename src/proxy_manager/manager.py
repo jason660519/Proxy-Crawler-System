@@ -20,7 +20,7 @@ from .models import ProxyNode, ProxyStatus, ProxyAnonymity, ProxyProtocol, Proxy
 from .fetchers import ProxyFetcherManager, JsonFileFetcher
 from .advanced_fetchers import AdvancedProxyFetcherManager
 from .scanner import ProxyScanner
-from .validators import ProxyValidator, ValidationConfig, BatchValidator
+from .validators import ProxyValidator
 from .pools import ProxyPoolManager, PoolConfig, PoolType
 from .config import ProxyManagerConfig as ConfigClass
 
