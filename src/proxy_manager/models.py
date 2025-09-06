@@ -97,6 +97,11 @@ class ProxyNode:
     tags: List[str] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
     
+    def __post_init__(self):
+        """初始化後處理"""
+        if not hasattr(self, 'proxy_id') or not self.proxy_id:
+            self.proxy_id = f"{self.host}:{self.port}"
+    
     @property
     def url(self) -> str:
         """獲取代理URL"""

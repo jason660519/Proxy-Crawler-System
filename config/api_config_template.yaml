@@ -1,0 +1,71 @@
+# API 配置模板
+# 複製此文件為 api_config.yaml 並填入您的 API 金鑰
+
+api:
+  # ProxyScrape API 金鑰 (可選)
+  # 獲取地址: https://proxyscrape.com/api
+  proxyscrape_api_key: ""
+
+  # GitHub Personal Access Token (可選)
+  # 獲取地址: https://github.com/settings/tokens
+  # 需要權限: public_repo (讀取公開倉庫)
+  github_token: ""
+
+  # Shodan API 金鑰 (可選)
+  # 獲取地址: https://account.shodan.io/
+  # 需要註冊並購買 API 額度
+  shodan_api_key: ""
+
+  # Censys API 憑證 (可選)
+  # 獲取地址: https://censys.io/account/api
+  # 需要註冊並獲取 API ID 和 Secret
+  # 免費版本每月有 250 次搜尋限制
+  censys_api_id: ""
+  censys_api_secret: ""
+
+# 掃描器配置
+scanner:
+  timeout: 5
+  max_concurrent: 100
+  port_ranges:
+    - [80, 80]
+    - [8080, 8080]
+    - [3128, 3128]
+    - [1080, 1080]
+    - [1081, 1081]
+  scan_timeout: 3
+  enable_fast_scan: true
+
+# 驗證配置
+validation:
+  timeout: 10
+  max_retries: 3
+  test_urls:
+    - "http://httpbin.org/ip"
+    - "https://httpbin.org/ip"
+    - "http://icanhazip.com"
+    - "https://api.ipify.org"
+
+# 數據目錄配置
+data_dir: "data/proxy_manager"
+backup_dir: "data/backups"
+
+# 功能開關
+enable_free_proxy: true
+enable_json_file: true
+json_file_path: "proxy_list.json"
+
+# 批量處理配置
+batch_validation_size: 100
+
+# 自動任務配置
+auto_fetch_enabled: false
+auto_cleanup_enabled: false
+auto_save_enabled: true
+
+# 自動任務間隔 (小時)
+auto_fetch_interval_hours: 6
+auto_cleanup_interval_hours: 12
+
+# 自動保存間隔 (分鐘)
+auto_save_interval_minutes: 5

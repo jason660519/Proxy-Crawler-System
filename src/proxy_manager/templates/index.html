@@ -320,21 +320,30 @@
         async function loadStats() {
             try {
                 const response = await fetch(`${API_BASE}/stats`);
-                const data = await response.json();
+                const result = await response.json();
                 
-                // 更新統計卡片
-                document.getElementById('total-proxies').textContent = data.total_proxies;
-                document.getElementById('active-proxies').textContent = data.total_active_proxies;
-                document.getElementById('success-rate').textContent = (data.overall_success_rate * 100).toFixed(1) + '%';
-                
-                // 更新池狀態
-                updatePoolStats(data.pool_distribution);
-                
-                // 更新運行時間
-                if (data.manager_stats.start_time) {
-                    const startTime = new Date(data.manager_stats.start_time);
-                    const uptime = Math.floor((Date.now() - startTime.getTime()) / 1000);
+                if (result.success && result.data) {
+                    const data = result.data;
+                    const basic = data.basic || {};
+                    
+                    // 更新統計卡片
+                    document.getElementById('total-proxies').textContent = basic.total_proxies || 0;
+                    document.getElementById('active-proxies').textContent = basic.recently_checked || 0;
+                    document.getElementById('success-rate').textContent = basic.avg_score ? basic.avg_score.toFixed(1) + '%' : '0%';
+                    
+                    // 更新運行時間（使用當前時間作為運行時間）
+                    const uptime = Math.floor(Date.now() / 1000) % 86400; // 簡化的運行時間
                     document.getElementById('uptime').textContent = formatUptime(uptime);
+                    
+                    // 更新池狀態（使用質量分布代替）
+                    const poolDistribution = {
+                        hot: basic.high_quality || 0,
+                        warm: basic.medium_quality || 0,
+                        cold: basic.low_quality || 0
+                    };
+                    updatePoolStats(poolDistribution);
+                } else {
+                    console.warn('統計數據格式異常:', result);
                 }
                 
             } catch (error) {
@@ -366,11 +375,38 @@
         // 載入代理列表
         async function loadProxies() {
             try {
-                const response = await fetch(`${API_BASE}/proxies?count=50`);
-                const proxies = await response.json();
+                // 使用新的數據庫代理端點
+                const params = new URLSearchParams({
+                    page: '1',
+                    page_size: '50',
+                    order_by: 'score',
+                    order_desc: 'true'
+                });
                 
-                currentProxies = proxies;
-                displayProxies(proxies);
+                const response = await fetch(`${API_BASE}/database/proxies?${params}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    // 新的數據結構包含proxies和pagination
+                    const proxies = result.data.proxies || [];
+                    currentProxies = proxies;
+                    displayProxies(proxies);
+                    
+                    // 顯示分頁信息（如果需要）
+                    if (result.data.pagination) {
+                        console.log('分頁信息:', result.data.pagination);
+                    }
+                } else {
+                    console.warn('代理數據格式異常:', result);
+                    currentProxies = [];
+                    displayProxies([]);
+                }
                 
             } catch (error) {
                 console.error('載入代理列表失敗:', error);
@@ -388,41 +424,50 @@
                 return;
             }
             
-            const html = proxies.map(proxy => `
-                <div class="proxy-item card mb-2 ${proxy.anonymity}">
+            const html = proxies.map(proxy => {
+                // 解析代理URL獲取host和port
+                const url = proxy.url || '';
+                const match = url.match(/^(\w+):\/\/([^:]+):(\d+)$/);
+                const protocol = match ? match[1] : (proxy.protocol || 'http');
+                const host = match ? match[2] : (proxy.host || '未知');
+                const port = match ? match[3] : (proxy.port || '0');
+                
+                return `
+                <div class="proxy-item card mb-2 ${proxy.anonymity_level || 'unknown'}">
                     <div class="card-body py-2">
                         <div class="row align-items-center">
                             <div class="col-md-4">
-                                <strong>${proxy.host}:${proxy.port}</strong>
-                                <span class="badge bg-primary ms-2">${proxy.protocol.toUpperCase()}</span>
+                                <strong>${host}:${port}</strong>
+                                <span class="badge bg-primary ms-2">${protocol.toUpperCase()}</span>
                             </div>
                             <div class="col-md-3">
-                                <span class="badge bg-${getAnonymityColor(proxy.anonymity)}">
-                                    ${getAnonymityText(proxy.anonymity)}
+                                <span class="badge bg-${getAnonymityColor(proxy.anonymity_level)}">
+                                    ${getAnonymityText(proxy.anonymity_level)}
                                 </span>
                             </div>
                             <div class="col-md-2">
                                 <small class="text-muted">
-                                    ${proxy.country || '未知'}
+                                    ${proxy.country || proxy.location || '未知'}
                                 </small>
                             </div>
                             <div class="col-md-2">
                                 <div class="d-flex align-items-center">
                                     <div class="progress flex-grow-1 me-2" style="height: 8px;">
-                                        <div class="progress-bar" style="width: ${proxy.score * 100}%"></div>
+                                        <div class="progress-bar" style="width: ${(proxy.score || 0) * 100}%"></div>
                                     </div>
-                                    <small>${(proxy.score * 100).toFixed(0)}</small>
+                                    <small>${((proxy.score || 0) * 100).toFixed(0)}</small>
                                 </div>
                             </div>
                             <div class="col-md-1">
-                                <button class="btn btn-sm btn-outline-primary" onclick="testProxy('${proxy.host}', ${proxy.port})">
+                                <button class="btn btn-sm btn-outline-primary" onclick="testProxy('${host}', ${port})">
                                     <i class="fas fa-vial"></i>
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
             
             container.innerHTML = html;
         }

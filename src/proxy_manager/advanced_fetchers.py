@@ -35,6 +35,7 @@ class ProxyFetcher(ABC):
             name: 獲取器名稱
         """
         self.name = name or self.__class__.__name__
+        self.enabled = True  # 添加 enabled 屬性
         self.stats = {
             'total_fetched': 0,
             'successful_fetches': 0,
@@ -548,6 +549,183 @@ class ShodanProxyFetcher(ProxyFetcher):
             self.session = None
 
 
+class CensysProxyFetcher(ProxyFetcher):
+    """Censys API 代理發現器
+    
+    使用 Censys 搜尋引擎發現開放的代理服務
+    """
+    
+    def __init__(self, api_id: str, api_secret: str):
+        super().__init__("censys-proxy")
+        self.api_id = api_id
+        self.api_secret = api_secret
+        self.base_url = "https://search.censys.io/api/v1"
+        self.session: Optional[aiohttp.ClientSession] = None
+        self.total_fetched = 0
+        self.fetch_errors = 0
+        self.last_fetch_time = None
+        
+        # Censys 搜尋查詢
+        self.search_queries = [
+            "services.port:8080 AND services.service_name:HTTP",
+            "services.port:3128 AND services.service_name:HTTP", 
+            "services.port:1080 AND services.service_name:SOCKS",
+            "services.port:1081 AND services.service_name:SOCKS",
+            "services.port:9050 AND services.service_name:TOR"
+        ]
+    
+    async def _get_session(self) -> aiohttp.ClientSession:
+        """獲取或創建 HTTP 會話"""
+        if not self.session:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+            timeout = aiohttp.ClientTimeout(total=60)
+            self.session = aiohttp.ClientSession(headers=headers, timeout=timeout)
+        return self.session
+    
+    async def fetch_proxies(self, limit: Optional[int] = None) -> List[ProxyNode]:
+        """從 Censys 發現代理"""
+        all_proxies = []
+        session = await self._get_session()
+        
+        for query in self.search_queries:
+            try:
+                proxies = await self._search_censys(session, query, limit=50)
+                all_proxies.extend(proxies)
+                
+                if limit and len(all_proxies) >= limit:
+                    break
+                
+                # Censys API 有速率限制
+                await asyncio.sleep(random.uniform(2, 4))
+                
+            except Exception as e:
+                logger.error(f"❌ Censys 搜尋失敗 '{query}': {e}")
+                self.fetch_errors += 1
+        
+        # 去重並限制數量
+        unique_proxies = self._deduplicate_proxies(all_proxies)
+        result = unique_proxies[:limit] if limit else unique_proxies
+        
+        self.last_fetch_time = datetime.now()
+        self.total_fetched += len(result)
+        
+        logger.info(f"✅ Censys 發現 {len(result)} 個潛在代理")
+        return result
+    
+    async def _search_censys(self, session: aiohttp.ClientSession, query: str, limit: int = 50) -> List[ProxyNode]:
+        """執行 Censys 搜尋"""
+        # 使用 Basic Auth
+        auth = aiohttp.BasicAuth(self.api_id, self.api_secret)
+        
+        params = {
+            "q": query,
+            "per_page": min(limit, 100),  # Censys 每頁最多 100 個結果
+            "page": 1
+        }
+        
+        url = f"{self.base_url}/hosts/search"
+        
+        async with session.get(url, params=params, auth=auth) as response:
+            if response.status == 200:
+                data = await response.json()
+                return self._parse_censys_results(data, query)
+            elif response.status == 401:
+                logger.error("❌ Censys API 憑證無效")
+                return []
+            else:
+                logger.warning(f"Censys API 響應錯誤: {response.status}")
+                return []
+    
+    def _parse_censys_results(self, data: Dict[str, Any], query: str) -> List[ProxyNode]:
+        """解析 Censys 搜尋結果"""
+        proxies = []
+        
+        for result in data.get("result", {}).get("hits", []):
+            try:
+                host = result.get("ip")
+                services = result.get("services", [])
+                
+                if not host or not services:
+                    continue
+                
+                # 從服務中提取端口和協議信息
+                for service in services:
+                    port = service.get("port")
+                    service_name = service.get("service_name", "").upper()
+                    
+                    if not port:
+                        continue
+                    
+                    # 根據服務名稱推測協議
+                    protocol = self._guess_protocol_from_service(service_name, port)
+                    
+                    # 提取地理位置信息
+                    location = result.get("location", {})
+                    
+                    proxy = ProxyNode(
+                        host=host,
+                        port=port,
+                        protocol=protocol,
+                        status=ProxyStatus.INACTIVE,
+                        country=location.get("country"),
+                        region=location.get("province"),
+                        city=location.get("city"),
+                        isp=result.get("autonomous_system", {}).get("name"),
+                        source=self.name,
+                        tags=["censys", "discovered"],
+                        metadata={
+                            "censys_query": query,
+                            "censys_data": {
+                                "asn": result.get("autonomous_system", {}).get("asn"),
+                                "protocols": [s.get("service_name") for s in services],
+                                "timestamp": result.get("timestamp")
+                            }
+                        }
+                    )
+                    
+                    proxies.append(proxy)
+                
+            except Exception as e:
+                logger.debug(f"解析 Censys 結果失敗: {e}")
+                continue
+        
+        return proxies
+    
+    def _guess_protocol_from_service(self, service_name: str, port: int) -> ProxyProtocol:
+        """根據服務名稱和端口推測協議類型"""
+        service_lower = service_name.lower()
+        
+        if "socks" in service_lower or port in [1080, 1081]:
+            return ProxyProtocol.SOCKS5
+        elif "tor" in service_lower or port in [9050, 9051]:
+            return ProxyProtocol.SOCKS5
+        elif "https" in service_lower or port in [443, 8443]:
+            return ProxyProtocol.HTTPS
+        else:
+            return ProxyProtocol.HTTP
+    
+    def _deduplicate_proxies(self, proxies: List[ProxyNode]) -> List[ProxyNode]:
+        """代理去重"""
+        seen = set()
+        unique_proxies = []
+        
+        for proxy in proxies:
+            key = f"{proxy.host}:{proxy.port}"
+            if key not in seen:
+                seen.add(key)
+                unique_proxies.append(proxy)
+        
+        return unique_proxies
+    
+    async def close(self):
+        """關閉會話"""
+        if self.session:
+            await self.session.close()
+            self.session = None
+
+
 class AdvancedProxyFetcherManager:
     """高級代理獲取器管理器
     
@@ -575,6 +753,14 @@ class AdvancedProxyFetcherManager:
             self.add_fetcher(ShodanProxyFetcher(shodan_key))
         else:
             logger.info("⚠️ 未配置 Shodan API 金鑰，跳過 Shodan 代理發現")
+        
+        # Censys（需要 API 憑證）
+        censys_api_id = self.config.get("censys_api_id")
+        censys_api_secret = self.config.get("censys_api_secret")
+        if censys_api_id and censys_api_secret:
+            self.add_fetcher(CensysProxyFetcher(censys_api_id, censys_api_secret))
+        else:
+            logger.info("⚠️ 未配置 Censys API 憑證，跳過 Censys 代理發現")
     
     def add_fetcher(self, fetcher: ProxyFetcher):
         """添加獲取器"""
@@ -632,6 +818,16 @@ class AdvancedProxyFetcherManager:
             "total_fetch_errors": total_errors,
             "success_rate": (total_fetched / (total_fetched + total_errors)) * 100 if (total_fetched + total_errors) > 0 else 0,
             "fetchers": [f.get_stats() for f in self.fetchers]
+        }
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """獲取統計信息"""
+        return {
+            'total_fetchers': len(self.fetchers),
+            'enabled_fetchers': len([f for f in self.fetchers if f.enabled]),
+            'total_proxies_fetched': sum(f.total_fetched for f in self.fetchers),
+            'total_fetch_errors': sum(f.fetch_errors for f in self.fetchers),
+            'fetchers': [f.get_stats() for f in self.fetchers]
         }
     
     async def close(self):

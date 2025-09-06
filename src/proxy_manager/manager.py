@@ -20,7 +20,7 @@ from .models import ProxyNode, ProxyStatus, ProxyAnonymity, ProxyProtocol, Proxy
 from .fetchers import ProxyFetcherManager, JsonFileFetcher
 from .advanced_fetchers import AdvancedProxyFetcherManager
 from .scanner import ProxyScanner
-from .validators import ProxyValidator
+from .validators import ProxyValidator, BatchValidator
 from .pools import ProxyPoolManager, PoolConfig, PoolType
 from .config import ProxyManagerConfig as ConfigClass
 
@@ -118,7 +118,7 @@ class ProxyManager:
         # 停止組件
         await self.pool_manager.stop()
         
-        if self.validator:
+        if self.validator and hasattr(self.validator, 'close'):
             await self.validator.close()
         
         await self.advanced_fetcher_manager.close()
@@ -140,7 +140,6 @@ class ProxyManager:
         
         # 初始化驗證器
         self.validator = ProxyValidator(self.config.validation)
-        await self.validator.start()
         
         self.batch_validator = BatchValidator(
             self.config.validation,
@@ -180,7 +179,7 @@ class ProxyManager:
         
         try:
             # 獲取原始代理（傳統來源）
-            raw_proxies = await self.fetcher_manager.fetch_all(sources)
+            raw_proxies = await self.fetcher_manager.fetch_all_proxies()
             
             # 獲取高級來源代理
             advanced_proxies = await self.advanced_fetcher_manager.fetch_all_proxies()
@@ -195,7 +194,7 @@ class ProxyManager:
             logger.info(f"📥 獲取到 {len(raw_proxies)} 個傳統代理，{len(advanced_proxies)} 個高級代理")
             
             # 使用掃描器進行快速預篩選（可選）
-            if self.config.scanner_config.enable_fast_scan:
+            if hasattr(self.config, 'scanner') and hasattr(self.config.scanner, 'enable_fast_scan') and self.config.scanner.enable_fast_scan:
                 logger.info("🔍 執行快速端口掃描預篩選...")
                 scanned_proxies = await self.scanner.scan_proxy_list(all_proxies)
                 all_proxies = scanned_proxies
@@ -206,10 +205,14 @@ class ProxyManager:
             logger.info(f"📥 總共處理 {len(raw_proxies)} 個代理")
             
             # 批量驗證
-            validation_results = await self.batch_validator.validate_large_batch(raw_proxies)
-            
-            # 提取有效代理
-            valid_proxies = [result.proxy for result in validation_results if result.is_working]
+            if self.batch_validator:
+                validation_results = await self.batch_validator.validate_large_batch(raw_proxies)
+                # 提取有效代理
+                valid_proxies = [result.proxy for result in validation_results if result.is_working]
+            else:
+                # 如果沒有批量驗證器，跳過驗證，直接使用所有代理
+                logger.warning("⚠️ 批量驗證器未初始化，跳過驗證")
+                valid_proxies = raw_proxies
             
             logger.info(f"✅ 驗證完成: {len(valid_proxies)}/{len(raw_proxies)} 個代理可用")
             
@@ -340,6 +343,7 @@ class ProxyManager:
             'pool_summary': pool_summary,
             'pool_details': {k: v.__dict__ for k, v in pool_stats.items()},
             'fetcher_stats': self.fetcher_manager.get_stats(),
+            'advanced_fetcher_stats': self.advanced_fetcher_manager.get_stats(),
             'config': {
                 'auto_fetch_enabled': self.config.auto_fetch_enabled,
                 'auto_fetch_interval_hours': self.config.auto_fetch_interval_hours,

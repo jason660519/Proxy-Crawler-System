@@ -70,6 +70,7 @@ dependencies = [
     "geopy>=2.4.0",
     "geoip2>=4.8.0", # IP地理位置數據庫
     "jinja2>=3.1.6",
+    "asyncpg>=0.30.0",
 ]
 
 [project.optional-dependencies]

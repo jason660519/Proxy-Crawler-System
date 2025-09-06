@@ -579,12 +579,124 @@ class ProxyETLPipeline:
     async def _load_to_database(self, proxies: List[ProxyNode]) -> int:
         """載入到 PostgreSQL 數據庫"""
         if not self.db_pool:
+            self.logger.warning("數據庫連接池未初始化，跳過數據庫載入")
             return 0
         
-        # 這裡需要實現數據庫表結構和插入邏輯
-        # 暫時返回代理數量
-        self.logger.info(f"數據庫載入功能待實現，代理數量: {len(proxies)}")
-        return len(proxies)
+        if not proxies:
+            self.logger.info("沒有代理數據需要載入")
+            return 0
+        
+        loaded_count = 0
+        failed_count = 0
+        
+        try:
+            async with self.db_pool.acquire() as conn:
+                # 開始事務
+                async with conn.transaction():
+                    for proxy in proxies:
+                        try:
+                            # 檢查代理是否已存在
+                            existing_proxy = await conn.fetchrow(
+                                """
+                                SELECT id FROM proxy_nodes 
+                                WHERE host = $1 AND port = $2 AND protocol = $3
+                                """,
+                                proxy.host, proxy.port, proxy.protocol.value
+                            )
+                            
+                            if existing_proxy:
+                                # 更新現有代理
+                                await conn.execute(
+                                    """
+                                    UPDATE proxy_nodes SET
+                                        anonymity = $1,
+                                        country = $2,
+                                        region = $3,
+                                        city = $4,
+                                        latitude = $5,
+                                        longitude = $6,
+                                        isp = $7,
+                                        organization = $8,
+                                        source = $9,
+                                        source_url = $10,
+                                        response_time_ms = $11,
+                                        score = $12,
+                                        last_checked = $13,
+                                        updated_at = NOW(),
+                                        metadata = $14
+                                    WHERE host = $15 AND port = $16 AND protocol = $17
+                                    """,
+                                    proxy.anonymity.value,
+                                    proxy.country,
+                                    proxy.region,
+                                    proxy.city,
+                                    proxy.latitude,
+                                    proxy.longitude,
+                                    proxy.isp,
+                                    proxy.organization,
+                                    proxy.source,
+                                    proxy.source_url,
+                                    proxy.metrics.avg_response_time if proxy.metrics else None,
+                                    proxy.score,
+                                    proxy.last_checked,
+                                    json.dumps(proxy.metadata) if proxy.metadata else '{}',
+                                    proxy.host,
+                                    proxy.port,
+                                    proxy.protocol.value
+                                )
+                                self.logger.debug(f"更新代理: {proxy.host}:{proxy.port}")
+                            else:
+                                # 插入新代理
+                                await conn.execute(
+                                    """
+                                    INSERT INTO proxy_nodes (
+                                        host, port, protocol, anonymity,
+                                        country, region, city, latitude, longitude,
+                                        isp, organization, source, source_url,
+                                        response_time_ms, score, last_checked,
+                                        metadata, created_at, updated_at
+                                    ) VALUES (
+                                        $1, $2, $3, $4, $5, $6, $7, $8, $9,
+                                        $10, $11, $12, $13, $14, $15, $16,
+                                        $17, NOW(), NOW()
+                                    )
+                                    """,
+                                    proxy.host,
+                                    proxy.port,
+                                    proxy.protocol.value,
+                                    proxy.anonymity.value,
+                                    proxy.country,
+                                    proxy.region,
+                                    proxy.city,
+                                    proxy.latitude,
+                                    proxy.longitude,
+                                    proxy.isp,
+                                    proxy.organization,
+                                    proxy.source,
+                                    proxy.source_url,
+                                    proxy.metrics.avg_response_time if proxy.metrics else None,
+                                    proxy.score,
+                                    proxy.last_checked,
+                                    json.dumps(proxy.metadata) if proxy.metadata else '{}'
+                                )
+                                self.logger.debug(f"插入新代理: {proxy.host}:{proxy.port}")
+                            
+                            loaded_count += 1
+                            
+                        except Exception as e:
+                            failed_count += 1
+                            self.logger.error(f"載入代理失敗 {proxy.host}:{proxy.port}: {e}")
+                            continue
+                    
+                    self.logger.info(
+                        f"數據庫載入完成: 成功 {loaded_count} 條，失敗 {failed_count} 條"
+                    )
+                    
+        except Exception as e:
+            self.logger.error(f"數據庫載入過程中發生錯誤: {e}")
+            raise
+        
+        return loaded_count
     
     async def _load_to_cache(self, proxies: List[ProxyNode]) -> int:
         """載入到 Redis 快取"""

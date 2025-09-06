@@ -14,10 +14,12 @@ from .proxy_validator import (
     ProxyStatus,
     AnonymityLevel
 )
+from .batch_validator import BatchValidator
 
 __all__ = [
     'ProxyValidator',
     'ValidationResult', 
     'ProxyStatus',
-    'AnonymityLevel'
+    'AnonymityLevel',
+    'BatchValidator'
 ]

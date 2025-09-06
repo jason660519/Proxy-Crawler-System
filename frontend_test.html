@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代理管理器測試頁面</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .proxy-item {
+            transition: all 0.3s ease;
+        }
+        .proxy-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .status-available { background-color: #28a745; }
+        .status-unavailable { background-color: #dc3545; }
+        .status-unknown { background-color: #6c757d; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="mb-4">
+                    <i class="fas fa-network-wired text-primary"></i>
+                    代理管理器測試頁面
+                </h1>
+            </div>
+        </div>
+
+        <!-- 統計卡片 -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 id="total-proxies">0</h4>
+                                <p class="mb-0">總代理數</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-server fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 id="active-proxies">0</h4>
+                                <p class="mb-0">活躍代理</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-check-circle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 id="success-rate">0%</h4>
+                                <p class="mb-0">平均評分</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-chart-line fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 id="last-update">未知</h4>
+                                <p class="mb-0">最後更新</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-clock fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">控制面板</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <button class="btn btn-primary me-2" onclick="loadStats()">
+                                    <i class="fas fa-sync-alt"></i> 刷新統計
+                                </button>
+                                <button class="btn btn-success me-2" onclick="loadProxies()">
+                                    <i class="fas fa-list"></i> 載入代理
+                                </button>
+                                <button class="btn btn-info" onclick="testConnection()">
+                                    <i class="fas fa-plug"></i> 測試連接
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="page-size" value="20" min="1" max="100">
+                                    <span class="input-group-text">每頁顯示</span>
+                                    <button class="btn btn-outline-secondary" onclick="loadProxiesWithPageSize()">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 代理列表 -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">代理列表</h5>
+                        <span class="badge bg-secondary" id="proxy-count">0 個代理</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="proxy-list">
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                                <p>點擊「載入代理」開始...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 日誌區域 -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">操作日誌</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="log-area" style="height: 200px; overflow-y: auto; background-color: #f8f9fa; padding: 10px; border-radius: 5px;">
+                            <div class="text-muted">等待操作...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // API 基礎URL
+        const API_BASE = 'http://localhost:8000/api';
+        
+        // 全局變量
+        let currentProxies = [];
+        
+        // 日誌函數
+        function addLog(message, type = 'info') {
+            const logArea = document.getElementById('log-area');
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = {
+                'info': 'text-info',
+                'success': 'text-success',
+                'error': 'text-danger',
+                'warning': 'text-warning'
+            }[type] || 'text-muted';
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = colorClass;
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            
+            logArea.appendChild(logEntry);
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+        
+        // 測試API連接
+        async function testConnection() {
+            addLog('正在測試API連接...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const result = await response.json();
+                
+                if (response.ok && result.status === 'healthy') {
+                    addLog('API連接成功！', 'success');
+                } else {
+                    addLog(`API連接異常: ${result.message || '未知錯誤'}`, 'error');
+                }
+            } catch (error) {
+                addLog(`API連接失敗: ${error.message}`, 'error');
+            }
+        }
+        
+        // 載入統計數據
+        async function loadStats() {
+            addLog('正在載入統計數據...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/stats`);
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    const data = result.data;
+                    const basic = data.basic || {};
+                    
+                    document.getElementById('total-proxies').textContent = basic.total_proxies || 0;
+                    document.getElementById('active-proxies').textContent = basic.recently_checked || 0;
+                    document.getElementById('success-rate').textContent = basic.avg_score ? basic.avg_score.toFixed(1) + '%' : '0%';
+                    document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+                    
+                    addLog(`統計數據載入成功: 總計 ${basic.total_proxies || 0} 個代理`, 'success');
+                } else {
+                    addLog(`統計數據格式異常: ${result.message || '未知錯誤'}`, 'warning');
+                }
+            } catch (error) {
+                addLog(`載入統計數據失敗: ${error.message}`, 'error');
+            }
+        }
+        
+        // 載入代理列表
+        async function loadProxies() {
+            const pageSize = parseInt(document.getElementById('page-size').value) || 20;
+            addLog(`正在載入代理列表 (每頁 ${pageSize} 個)...`, 'info');
+            
+            try {
+                const requestBody = {
+                    page: 1,
+                    page_size: pageSize,
+                    order_by: 'score',
+                    order_desc: true
+                };
+                
+                const response = await fetch(`${API_BASE}/proxies`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.data && result.data.proxies) {
+                    currentProxies = result.data.proxies;
+                    displayProxies(result.data.proxies);
+                    document.getElementById('proxy-count').textContent = `${result.data.proxies.length} 個代理`;
+                    addLog(`代理列表載入成功: ${result.data.proxies.length} 個代理`, 'success');
+                } else {
+                    addLog(`代理數據格式異常: ${result.message || '未知錯誤'}`, 'warning');
+                    displayProxies([]);
+                }
+            } catch (error) {
+                addLog(`載入代理列表失敗: ${error.message}`, 'error');
+                document.getElementById('proxy-list').innerHTML = 
+                    '<div class="text-center text-danger"><i class="fas fa-exclamation-triangle"></i> 載入失敗</div>';
+            }
+        }
+        
+        // 使用指定頁面大小載入代理
+        function loadProxiesWithPageSize() {
+            loadProxies();
+        }
+        
+        // 顯示代理列表
+        function displayProxies(proxies) {
+            const container = document.getElementById('proxy-list');
+            
+            if (proxies.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-4">暫無代理數據</div>';
+                return;
+            }
+            
+            const html = proxies.map((proxy, index) => {
+                // 解析代理URL獲取host和port
+                const url = proxy.url || '';
+                const match = url.match(/^(\w+):\/\/([^:]+):(\d+)$/);
+                const protocol = match ? match[1] : (proxy.protocol || 'http');
+                const host = match ? match[2] : (proxy.host || '未知');
+                const port = match ? match[3] : (proxy.port || '0');
+                
+                const statusClass = proxy.is_available ? 'status-available' : 
+                                  proxy.is_available === false ? 'status-unavailable' : 'status-unknown';
+                
+                return `
+                <div class="proxy-item card mb-2">
+                    <div class="card-body py-2">
+                        <div class="row align-items-center">
+                            <div class="col-md-1">
+                                <span class="badge bg-light text-dark">#${index + 1}</span>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center">
+                                    <span class="status-indicator ${statusClass}"></span>
+                                    <strong>${host}:${port}</strong>
+                                    <span class="badge bg-primary ms-2">${protocol.toUpperCase()}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <span class="badge bg-${getAnonymityColor(proxy.anonymity_level)}">
+                                    ${getAnonymityText(proxy.anonymity_level)}
+                                </span>
+                            </div>
+                            <div class="col-md-2">
+                                <small class="text-muted">
+                                    ${proxy.country || proxy.location || '未知'}
+                                </small>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="d-flex align-items-center">
+                                    <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                        <div class="progress-bar bg-${getScoreColor(proxy.score)}" 
+                                             style="width: ${(proxy.score || 0) * 100}%"></div>
+                                    </div>
+                                    <small>${((proxy.score || 0) * 100).toFixed(0)}</small>
+                                </div>
+                            </div>
+                            <div class="col-md-1">
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        onclick="testProxy('${host}', '${port}')" 
+                                        title="測試代理">
+                                    <i class="fas fa-vial"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+        
+        // 獲取匿名度顏色
+        function getAnonymityColor(anonymity) {
+            switch (anonymity) {
+                case 'elite': return 'success';
+                case 'anonymous': return 'warning';
+                case 'transparent': return 'danger';
+                default: return 'secondary';
+            }
+        }
+        
+        // 獲取匿名度文本
+        function getAnonymityText(anonymity) {
+            switch (anonymity) {
+                case 'elite': return '精英';
+                case 'anonymous': return '匿名';
+                case 'transparent': return '透明';
+                default: return '未知';
+            }
+        }
+        
+        // 獲取評分顏色
+        function getScoreColor(score) {
+            if (score >= 0.8) return 'success';
+            if (score >= 0.6) return 'warning';
+            if (score >= 0.4) return 'info';
+            return 'danger';
+        }
+        
+        // 測試單個代理
+        function testProxy(host, port) {
+            addLog(`正在測試代理 ${host}:${port}...`, 'info');
+            // 這裡可以添加實際的代理測試邏輯
+            setTimeout(() => {
+                addLog(`代理 ${host}:${port} 測試完成`, 'success');
+            }, 1000);
+        }
+        
+        // 頁面載入完成後初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('頁面載入完成，準備就緒', 'success');
+            testConnection();
+        });
+    </script>
+</body>
+</html>

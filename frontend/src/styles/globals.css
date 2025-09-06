@@ -1,0 +1,268 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 全域基礎樣式 */
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+  
+  html {
+    @apply h-full;
+  }
+  
+  body {
+    @apply h-full bg-vscode-dark-bg text-vscode-dark-text font-sans antialiased;
+    @apply dark:bg-vscode-dark-bg dark:text-vscode-dark-text;
+  }
+  
+  #root {
+    @apply h-full;
+  }
+}
+
+/* 組件樣式 */
+@layer components {
+  /* VS Code 風格按鈕 */
+  .btn-vscode {
+    @apply px-4 py-2 text-sm font-medium rounded-vscode transition-all duration-200;
+    @apply bg-vscode-dark-bg-secondary text-vscode-dark-text border border-vscode-dark-border;
+    @apply hover:bg-vscode-dark-bg-tertiary hover:border-vscode-dark-accent;
+    @apply focus:outline-none focus:ring-2 focus:ring-vscode-dark-accent focus:ring-opacity-50;
+    @apply active:scale-95;
+  }
+  
+  .btn-primary {
+    @apply btn-vscode bg-vscode-dark-accent text-white border-vscode-dark-accent;
+    @apply hover:bg-vscode-dark-accent-hover hover:border-vscode-dark-accent-hover;
+  }
+  
+  .btn-success {
+    @apply btn-vscode bg-vscode-dark-success text-white border-vscode-dark-success;
+    @apply hover:bg-green-600 hover:border-green-600;
+  }
+  
+  .btn-warning {
+    @apply btn-vscode bg-vscode-dark-warning text-black border-vscode-dark-warning;
+    @apply hover:bg-yellow-500 hover:border-yellow-500;
+  }
+  
+  .btn-error {
+    @apply btn-vscode bg-vscode-dark-error text-white border-vscode-dark-error;
+    @apply hover:bg-red-600 hover:border-red-600;
+  }
+  
+  /* VS Code 風格輸入框 */
+  .input-vscode {
+    @apply w-full px-3 py-2 text-sm rounded-vscode transition-all duration-200;
+    @apply bg-vscode-dark-bg-secondary text-vscode-dark-text border border-vscode-dark-border;
+    @apply placeholder:text-vscode-dark-text-muted;
+    @apply focus:outline-none focus:ring-2 focus:ring-vscode-dark-accent focus:ring-opacity-50;
+    @apply focus:border-vscode-dark-accent;
+  }
+  
+  /* VS Code 風格卡片 */
+  .card-vscode {
+    @apply bg-vscode-dark-bg-secondary border border-vscode-dark-border rounded-vscode;
+    @apply shadow-vscode transition-all duration-200;
+    @apply hover:shadow-vscode-hover;
+  }
+  
+  /* VS Code 風格側邊欄 */
+  .sidebar-vscode {
+    @apply bg-vscode-dark-sidebar border-r border-vscode-dark-border;
+    @apply transition-all duration-300 ease-in-out;
+  }
+  
+  /* VS Code 風格面板 */
+  .panel-vscode {
+    @apply bg-vscode-dark-panel border border-vscode-dark-border rounded-vscode;
+  }
+  
+  /* 狀態指示器 */
+  .status-online {
+    @apply bg-proxy-online text-white;
+  }
+  
+  .status-offline {
+    @apply bg-proxy-offline text-white;
+  }
+  
+  .status-testing {
+    @apply bg-proxy-testing text-black;
+  }
+  
+  .status-unknown {
+    @apply bg-proxy-unknown text-white;
+  }
+  
+  /* 表格樣式 */
+  .table-vscode {
+    @apply w-full border-collapse;
+  }
+  
+  .table-vscode th {
+    @apply bg-vscode-dark-bg-tertiary text-vscode-dark-text-secondary text-left;
+    @apply px-4 py-3 text-sm font-medium border-b border-vscode-dark-border;
+  }
+  
+  .table-vscode td {
+    @apply px-4 py-3 text-sm border-b border-vscode-dark-border;
+    @apply hover:bg-vscode-dark-bg-secondary transition-colors duration-150;
+  }
+  
+  /* 工具提示 */
+  .tooltip-vscode {
+    @apply bg-vscode-dark-bg-tertiary text-vscode-dark-text text-xs;
+    @apply px-2 py-1 rounded border border-vscode-dark-border;
+    @apply shadow-lg z-50;
+  }
+  
+  /* 載入動畫 */
+  .loading-dots {
+    @apply inline-flex space-x-1;
+  }
+  
+  .loading-dots > div {
+    @apply w-2 h-2 bg-vscode-dark-accent rounded-full animate-bounce;
+  }
+  
+  .loading-dots > div:nth-child(2) {
+    animation-delay: 0.1s;
+  }
+  
+  .loading-dots > div:nth-child(3) {
+    animation-delay: 0.2s;
+  }
+}
+
+/* 工具類 */
+@layer utilities {
+  /* 文字截斷 */
+  .text-ellipsis {
+    @apply truncate;
+  }
+  
+  /* 隱藏滾動條但保持功能 */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* 漸變遮罩 */
+  .gradient-mask-b {
+    mask-image: linear-gradient(to bottom, black 0%, black 90%, transparent 100%);
+  }
+  
+  .gradient-mask-r {
+    mask-image: linear-gradient(to right, black 0%, black 90%, transparent 100%);
+  }
+  
+  /* 動畫延遲 */
+  .animate-delay-100 {
+    animation-delay: 100ms;
+  }
+  
+  .animate-delay-200 {
+    animation-delay: 200ms;
+  }
+  
+  .animate-delay-300 {
+    animation-delay: 300ms;
+  }
+}
+
+/* 深色主題覆蓋 */
+.dark {
+  color-scheme: dark;
+}
+
+/* 淺色主題 */
+.light {
+  color-scheme: light;
+}
+
+.light body {
+  @apply bg-vscode-light-bg text-vscode-light-text;
+}
+
+.light .btn-vscode {
+  @apply bg-vscode-light-bg-secondary text-vscode-light-text border-vscode-light-border;
+  @apply hover:bg-vscode-light-bg-tertiary hover:border-vscode-light-accent;
+}
+
+.light .btn-primary {
+  @apply bg-vscode-light-accent border-vscode-light-accent;
+  @apply hover:bg-vscode-light-accent-hover hover:border-vscode-light-accent-hover;
+}
+
+.light .input-vscode {
+  @apply bg-vscode-light-bg-secondary text-vscode-light-text border-vscode-light-border;
+  @apply placeholder:text-vscode-light-text-muted;
+  @apply focus:border-vscode-light-accent;
+}
+
+.light .card-vscode {
+  @apply bg-vscode-light-bg-secondary border-vscode-light-border;
+}
+
+.light .sidebar-vscode {
+  @apply bg-vscode-light-sidebar border-vscode-light-border;
+}
+
+.light .panel-vscode {
+  @apply bg-vscode-light-panel border-vscode-light-border;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+  .mobile-hidden {
+    @apply hidden;
+  }
+  
+  .mobile-full {
+    @apply w-full;
+  }
+}
+
+@media (max-width: 640px) {
+  .sm-hidden {
+    @apply hidden;
+  }
+}
+
+/* 列印樣式 */
+@media print {
+  .print-hidden {
+    @apply hidden;
+  }
+  
+  body {
+    @apply bg-white text-black;
+  }
+}
+
+/* 高對比度模式 */
+@media (prefers-contrast: high) {
+  .btn-vscode {
+    @apply border-2;
+  }
+  
+  .input-vscode {
+    @apply border-2;
+  }
+}
+
+/* 減少動畫偏好 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

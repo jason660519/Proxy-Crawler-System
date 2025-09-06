@@ -20,6 +20,7 @@ from enum import Enum
 
 from .models import ProxyNode, ProxyStatus, ProxyAnonymity, ProxyProtocol, ProxyFilter
 from .validators import ProxyValidator, ValidationResult
+from .config import ValidationConfig
 
 logger = logging.getLogger(__name__)
 
@@ -267,7 +268,7 @@ class ProxyPoolManager:
         """啟動池管理器"""
         if not self._running:
             self.validator = ProxyValidator(ValidationConfig())
-            await self.validator.start()
+            # ProxyValidator 不需要 start 方法，直接初始化即可
             
             if self.config.auto_balance_enabled:
                 self._balance_task = asyncio.create_task(self._auto_balance_loop())

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="代理管理系統 - 專業的代理伺服器管理平台" />
+    <meta name="keywords" content="代理管理,proxy,代理伺服器,網路爬蟲,數據採集" />
+    <meta name="author" content="Proxy Manager Team" />
+    <title>代理管理系統 | Proxy Manager</title>
+    
+    <!-- Preload critical fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Theme color for mobile browsers -->
+    <meta name="theme-color" content="#1e1e1e" />
+    <meta name="msapplication-TileColor" content="#1e1e1e" />
+    
+    <!-- Prevent FOUC (Flash of Unstyled Content) -->
+    <style>
+      /* Critical CSS for initial load */
+      html {
+        background-color: #1e1e1e;
+        color: #cccccc;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+      
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      
+      #root {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      /* Loading spinner */
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #333333;
+        border-top: 3px solid #007acc;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      /* Hide loading spinner when app loads */
+      .app-loaded .loading-spinner {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <!-- Loading indicator -->
+      <div class="loading-spinner"></div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
