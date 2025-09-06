@@ -1,0 +1,308 @@
+# 代理管理器配置文件
+# Proxy Manager Configuration
+
+# 基本設置
+basic:
+  # 服務名稱
+  service_name: "代理管理器服務"
+  # 版本
+  version: "1.0.0"
+  # 調試模式
+  debug: false
+  # 日誌級別 (DEBUG, INFO, WARNING, ERROR)
+  log_level: "INFO"
+
+# 服務器設置
+server:
+  # 主機地址
+  host: "127.0.0.1"
+  # 端口
+  port: 8000
+  # 工作進程數 (生產環境)
+  workers: 1
+  # 自動重載 (開發環境)
+  reload: true
+
+# 代理獲取設置
+fetcher:
+  # 啟用的獲取器
+  enabled_fetchers:
+    - "json_file"       # JSON 文件
+    # - "web_scrape"    # 網頁爬取 (備用)
+    # - "api"           # API 接口 (備用)
+  
+  # 代理獲取通用設置
+  general:
+    # 獲取數量
+    count: 100
+    # 超時時間 (秒)
+    timeout: 10
+    # 重試次數
+    retry_count: 3
+    # 支持的協議
+    protocols: ["http", "https"]
+    # 支持的匿名度
+    anonymity_levels: ["elite", "anonymous", "transparent"]
+  
+  # JSON 文件設置
+  json_file:
+    # 文件路徑
+    file_path: "proxy_list.json"
+    # 自動重載間隔 (分鐘)
+    reload_interval: 30
+  
+  # 網頁爬取設置 (備用)
+  web_scrape:
+    # 目標網站列表
+    target_sites:
+      - "https://www.sslproxies.org"
+      - "https://geonode.com/free-proxy-list"
+    # 請求間隔 (秒)
+    request_delay: 2
+    # User-Agent
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+
+# 代理驗證設置
+validator:
+  # 驗證超時 (秒)
+  timeout: 10
+  # 並發數
+  max_concurrent: 50
+  # 重試次數
+  retry_count: 2
+  
+  # 測試 URL 列表
+  test_urls:
+    - "http://httpbin.org/ip"
+    - "https://httpbin.org/ip"
+    - "http://icanhazip.com"
+  
+  # 匿名度檢測
+  anonymity_check:
+    # 啟用匿名度檢測
+    enabled: true
+    # 檢測 URL
+    check_url: "http://httpbin.org/headers"
+    # 真實 IP (用於對比)
+    real_ip: null  # 自動檢測
+  
+  # 地理位置檢測
+  geo_check:
+    # 啟用地理位置檢測
+    enabled: false
+    # 檢測 API
+    api_url: "http://ip-api.com/json/{ip}"
+    # API 密鑰 (如需要)
+    api_key: null
+
+# 代理池設置
+pool:
+  # 熱池設置 (高質量代理)
+  hot_pool:
+    # 最大容量
+    max_size: 50
+    # 最小響應時間 (毫秒)
+    min_response_time: 1000
+    # 最小成功率
+    min_success_rate: 0.9
+    # 驗證間隔 (分鐘)
+    validation_interval: 5
+  
+  # 溫池設置 (中等質量代理)
+  warm_pool:
+    # 最大容量
+    max_size: 200
+    # 最小響應時間 (毫秒)
+    min_response_time: 3000
+    # 最小成功率
+    min_success_rate: 0.7
+    # 驗證間隔 (分鐘)
+    validation_interval: 15
+  
+  # 冷池設置 (備用代理)
+  cold_pool:
+    # 最大容量
+    max_size: 500
+    # 最小響應時間 (毫秒)
+    min_response_time: 10000
+    # 最小成功率
+    min_success_rate: 0.5
+    # 驗證間隔 (分鐘)
+    validation_interval: 60
+  
+  # 黑名單設置
+  blacklist:
+    # 最大容量
+    max_size: 1000
+    # 自動清理間隔 (小時)
+    cleanup_interval: 24
+    # 重新測試間隔 (小時)
+    retest_interval: 168  # 7 天
+
+# 自動任務設置
+tasks:
+  # 代理獲取任務
+  fetch_task:
+    # 啟用
+    enabled: true
+    # 執行間隔 (分鐘)
+    interval: 30
+    # 每次獲取數量
+    batch_size: 50
+  
+  # 代理驗證任務
+  validation_task:
+    # 啟用
+    enabled: true
+    # 執行間隔 (分鐘)
+    interval: 10
+    # 每次驗證數量
+    batch_size: 20
+  
+  # 池平衡任務
+  balance_task:
+    # 啟用
+    enabled: true
+    # 執行間隔 (分鐘)
+    interval: 5
+  
+  # 清理任務
+  cleanup_task:
+    # 啟用
+    enabled: true
+    # 執行間隔 (小時)
+    interval: 6
+
+# 數據存儲設置
+storage:
+  # 數據目錄
+  data_dir: "data/proxy_manager"
+  # 備份目錄
+  backup_dir: "data/backups"
+  # 導出目錄
+  export_dir: "data/exports"
+  
+  # 自動備份
+  auto_backup:
+    # 啟用
+    enabled: true
+    # 備份間隔 (小時)
+    interval: 12
+    # 保留天數
+    retention_days: 7
+  
+  # 數據格式
+  formats:
+    # 默認導出格式
+    default_export: "json"
+    # 支持的格式
+    supported: ["json", "csv", "txt", "yaml"]
+
+# 監控設置
+monitoring:
+  # 啟用監控
+  enabled: true
+  # 統計間隔 (秒)
+  stats_interval: 60
+  # 性能監控
+  performance:
+    # 啟用
+    enabled: true
+    # 監控指標
+    metrics:
+      - "response_time"
+      - "success_rate"
+      - "pool_sizes"
+      - "validation_speed"
+  
+  # 告警設置
+  alerts:
+    # 啟用告警
+    enabled: false
+    # 告警閾值
+    thresholds:
+      # 熱池代理數量低於此值時告警
+      hot_pool_min: 10
+      # 總成功率低於此值時告警
+      success_rate_min: 0.6
+      # 平均響應時間超過此值時告警 (毫秒)
+      response_time_max: 5000
+
+# API 設置
+api:
+  # API 前綴
+  prefix: "/api"
+  # 文檔路徑
+  docs_url: "/api/docs"
+  # ReDoc 路徑
+  redoc_url: "/api/redoc"
+  # 啟用 CORS
+  enable_cors: true
+  # 允許的來源
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://127.0.0.1:3000"
+  
+  # 速率限制
+  rate_limit:
+    # 啟用
+    enabled: false
+    # 每分鐘請求數
+    requests_per_minute: 60
+    # 每小時請求數
+    requests_per_hour: 1000
+
+# 安全設置
+security:
+  # API 密鑰驗證
+  api_key:
+    # 啟用
+    enabled: false
+    # 密鑰 (生產環境請使用環境變量)
+    key: "your-secret-api-key"
+    # 密鑰頭名稱
+    header_name: "X-API-Key"
+  
+  # IP 白名單
+  ip_whitelist:
+    # 啟用
+    enabled: false
+    # 允許的 IP 列表
+    allowed_ips:
+      - "127.0.0.1"
+      - "::1"
+
+# 日誌設置
+logging:
+  # 日誌目錄
+  log_dir: "logs"
+  # 日誌文件名
+  log_file: "proxy_manager.log"
+  # 日誌格式
+  format: "{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}"
+  # 日誌輪轉
+  rotation:
+    # 文件大小
+    size: "10 MB"
+    # 保留天數
+    retention: "7 days"
+    # 壓縮
+    compression: "zip"
+  
+  # 不同模塊的日誌級別
+  loggers:
+    "proxy_manager": "INFO"
+    "uvicorn": "INFO"
+    "fastapi": "INFO"
+    "aiohttp": "WARNING"
+
+# 開發設置
+development:
+  # 啟用開發模式
+  enabled: false
+  # 模擬數據
+  mock_data: false
+  # 調試代理
+  debug_proxy: null
+  # 測試模式
+  test_mode: false

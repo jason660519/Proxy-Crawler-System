@@ -1,0 +1,614 @@
+"""代理管理器 FastAPI 服務接口
+
+提供 REST API 接口供外部使用：
+- 代理獲取接口
+- 統計信息接口
+- 管理操作接口
+- 健康檢查接口
+"""
+
+import asyncio
+import logging
+from typing import List, Optional, Dict, Any, Union
+from datetime import datetime
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException, Depends, Query, BackgroundTasks, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel, Field
+import uvicorn
+
+from .manager import ProxyManager, ProxyManagerConfig
+from .models import ProxyNode, ProxyStatus, ProxyAnonymity, ProxyProtocol, ProxyFilter
+from .pools import PoolType
+from .validators import ValidationConfig
+
+logger = logging.getLogger(__name__)
+
+# Pydantic 模型定義
+class ProxyResponse(BaseModel):
+    """代理響應模型"""
+    host: str
+    port: int
+    protocol: str
+    anonymity: str
+    country: Optional[str] = None
+    region: Optional[str] = None
+    city: Optional[str] = None
+    score: float
+    response_time_ms: Optional[int] = None
+    last_checked: Optional[datetime] = None
+    
+    @classmethod
+    def from_proxy_node(cls, proxy: ProxyNode) -> "ProxyResponse":
+        return cls(
+            host=proxy.host,
+            port=proxy.port,
+            protocol=proxy.protocol.value,
+            anonymity=proxy.anonymity.value,
+            country=proxy.country,
+            region=proxy.region,
+            city=proxy.city,
+            score=proxy.score,
+            response_time_ms=proxy.metrics.avg_response_time,
+            last_checked=proxy.last_checked
+        )
+
+
+class ProxyFilterRequest(BaseModel):
+    """代理篩選請求模型"""
+    protocols: Optional[List[str]] = None
+    anonymity_levels: Optional[List[str]] = None
+    countries: Optional[List[str]] = None
+    min_score: Optional[float] = None
+    max_response_time: Optional[int] = None
+    
+    def to_proxy_filter(self) -> ProxyFilter:
+        """轉換為 ProxyFilter 對象"""
+        protocols = None
+        if self.protocols:
+            protocols = [ProxyProtocol(p) for p in self.protocols if p in [e.value for e in ProxyProtocol]]
+        
+        anonymity_levels = None
+        if self.anonymity_levels:
+            anonymity_levels = [ProxyAnonymity(a) for a in self.anonymity_levels if a in [e.value for e in ProxyAnonymity]]
+        
+        return ProxyFilter(
+            protocols=protocols,
+            anonymity_levels=anonymity_levels,
+            countries=self.countries,
+            min_score=self.min_score,
+            max_response_time=self.max_response_time
+        )
+
+
+class StatsResponse(BaseModel):
+    """統計信息響應模型"""
+    total_proxies: int
+    total_active_proxies: int
+    pool_distribution: Dict[str, int]
+    overall_success_rate: float
+    last_updated: str
+    manager_stats: Dict[str, Any]
+    pool_details: Dict[str, Any]
+
+
+class HealthResponse(BaseModel):
+    """健康檢查響應模型"""
+    status: str
+    timestamp: datetime
+    uptime_seconds: Optional[float] = None
+    total_proxies: int
+    active_proxies: int
+    version: str = "1.0.0"
+
+
+class FetchRequest(BaseModel):
+    """獲取代理請求模型"""
+    sources: Optional[List[str]] = None
+    validate: bool = True
+
+
+class ExportRequest(BaseModel):
+    """導出請求模型"""
+    format_type: str = Field(default="json", pattern="^(json|txt|csv)$")
+    pool_types: Optional[List[str]] = None
+    filename: Optional[str] = None
+
+
+# 全局代理管理器實例
+proxy_manager: Optional[ProxyManager] = None
+
+
+def get_proxy_manager() -> ProxyManager:
+    """獲取代理管理器實例"""
+    if proxy_manager is None:
+        raise HTTPException(status_code=503, detail="代理管理器未初始化")
+    return proxy_manager
+
+
+# 創建 FastAPI 應用
+app = FastAPI(
+    title="代理管理器 API",
+    description="提供代理獲取、管理和統計功能的 REST API 服務",
+    version="1.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc"
+)
+
+# 設置模板和靜態文件
+templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+
+# 掛載靜態文件（如果有的話）
+# app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# 添加 CORS 中間件
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 生產環境中應該限制具體域名
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """應用啟動事件"""
+    global proxy_manager
+    
+    logger.info("🚀 啟動代理管理器 API 服務...")
+    
+    try:
+        # 創建配置
+        config = ProxyManagerConfig(
+            data_dir=Path("data/proxy_manager"),
+            auto_fetch_enabled=True,
+            auto_fetch_interval_hours=6,
+            auto_cleanup_enabled=True,
+            auto_save_enabled=True
+        )
+        
+        # 創建並啟動代理管理器
+        proxy_manager = ProxyManager(config)
+        await proxy_manager.start()
+        
+        logger.info("✅ 代理管理器 API 服務啟動成功")
+        
+    except Exception as e:
+        logger.error(f"❌ 啟動失敗: {e}")
+        raise
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """應用關閉事件"""
+    global proxy_manager
+    
+    logger.info("🛑 關閉代理管理器 API 服務...")
+    
+    if proxy_manager:
+        await proxy_manager.stop()
+        proxy_manager = None
+    
+    logger.info("✅ 代理管理器 API 服務已關閉")
+
+
+# API 路由定義
+
+@app.get("/", response_class=HTMLResponse, summary="Web管理界面")
+async def web_interface(request: Request):
+    """Web管理界面"""
+    return templates.TemplateResponse("index.html", {"request": request})
+
+
+@app.get("/api", summary="API根路徑")
+async def api_root():
+    """API根路徑，返回 API 基本信息"""
+    return {
+        "name": "代理管理器 API",
+        "version": "1.0.0",
+        "description": "提供代理獲取、管理和統計功能的 REST API 服務",
+        "docs_url": "/api/docs",
+        "health_check": "/api/health",
+        "web_interface": "/"
+    }
+
+
+@app.get("/api/health", response_model=HealthResponse, summary="健康檢查")
+async def health_check(manager: ProxyManager = Depends(get_proxy_manager)):
+    """健康檢查接口"""
+    stats = manager.get_stats()
+    
+    uptime = None
+    if stats['manager_stats']['start_time']:
+        start_time = stats['manager_stats']['start_time']
+        uptime = (datetime.now() - start_time).total_seconds()
+    
+    return HealthResponse(
+        status="healthy" if stats['status']['running'] else "unhealthy",
+        timestamp=datetime.now(),
+        uptime_seconds=uptime,
+        total_proxies=stats['pool_summary']['total_proxies'],
+        active_proxies=stats['pool_summary']['total_active_proxies']
+    )
+
+
+@app.get("/api/proxy", response_model=ProxyResponse, summary="獲取單個代理")
+async def get_proxy(
+    protocol: Optional[str] = Query(None, description="協議類型 (http, https, socks4, socks5)"),
+    anonymity: Optional[str] = Query(None, description="匿名度 (transparent, anonymous, elite)"),
+    country: Optional[str] = Query(None, description="國家代碼"),
+    min_score: Optional[float] = Query(None, ge=0, le=1, description="最低分數"),
+    max_response_time: Optional[int] = Query(None, gt=0, description="最大響應時間(毫秒)"),
+    pool_preference: Optional[str] = Query("hot,warm,cold", description="池優先級 (逗號分隔)"),
+    manager: ProxyManager = Depends(get_proxy_manager)
+):
+    """獲取單個代理"""
+    try:
+        # 構建篩選條件
+        filter_criteria = None
+        if any([protocol, anonymity, country, min_score, max_response_time]):
+            protocols = [ProxyProtocol(protocol)] if protocol else None
+            anonymity_levels = [ProxyAnonymity(anonymity)] if anonymity else None
+            countries = [country] if country else None
+            
+            filter_criteria = ProxyFilter(
+                protocols=protocols,
+                anonymity_levels=anonymity_levels,
+                countries=countries,
+                min_score=min_score,
+                max_response_time=max_response_time
+            )
+        
+        # 解析池優先級
+        pool_types = []
+        if pool_preference:
+            for pool_name in pool_preference.split(','):
+                pool_name = pool_name.strip().lower()
+                if pool_name == 'hot':
+                    pool_types.append(PoolType.HOT)
+                elif pool_name == 'warm':
+                    pool_types.append(PoolType.WARM)
+                elif pool_name == 'cold':
+                    pool_types.append(PoolType.COLD)
+        
+        if not pool_types:
+            pool_types = [PoolType.HOT, PoolType.WARM, PoolType.COLD]
+        
+        # 獲取代理
+        proxy = await manager.get_proxy(filter_criteria, pool_types)
+        
+        if not proxy:
+            raise HTTPException(status_code=404, detail="沒有找到符合條件的代理")
+        
+        return ProxyResponse.from_proxy_node(proxy)
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"參數錯誤: {e}")
+    except Exception as e:
+        logger.error(f"❌ 獲取代理失敗: {e}")
+        raise HTTPException(status_code=500, detail="內部服務器錯誤")
+
+
+@app.get("/api/proxies", response_model=List[ProxyResponse], summary="批量獲取代理")
+async def get_proxies(
+    count: int = Query(10, ge=1, le=100, description="獲取數量"),
+    protocol: Optional[str] = Query(None, description="協議類型"),
+    anonymity: Optional[str] = Query(None, description="匿名度"),
+    country: Optional[str] = Query(None, description="國家代碼"),
+    min_score: Optional[float] = Query(None, ge=0, le=1, description="最低分數"),
+    max_response_time: Optional[int] = Query(None, gt=0, description="最大響應時間(毫秒)"),
+    pool_preference: Optional[str] = Query("hot,warm,cold", description="池優先級"),
+    manager: ProxyManager = Depends(get_proxy_manager)
+):
+    """批量獲取代理"""
+    try:
+        # 構建篩選條件（與單個代理接口相同邏輯）
+        filter_criteria = None
+        if any([protocol, anonymity, country, min_score, max_response_time]):
+            protocols = [ProxyProtocol(protocol)] if protocol else None
+            anonymity_levels = [ProxyAnonymity(anonymity)] if anonymity else None
+            countries = [country] if country else None
+            
+            filter_criteria = ProxyFilter(
+                protocols=protocols,
+                anonymity_levels=anonymity_levels,
+                countries=countries,
+                min_score=min_score,
+                max_response_time=max_response_time
+            )
+        
+        # 解析池優先級
+        pool_types = []
+        if pool_preference:
+            for pool_name in pool_preference.split(','):
+                pool_name = pool_name.strip().lower()
+                if pool_name == 'hot':
+                    pool_types.append(PoolType.HOT)
+                elif pool_name == 'warm':
+                    pool_types.append(PoolType.WARM)
+                elif pool_name == 'cold':
+                    pool_types.append(PoolType.COLD)
+        
+        if not pool_types:
+            pool_types = [PoolType.HOT, PoolType.WARM, PoolType.COLD]
+        
+        # 批量獲取代理
+        proxies = await manager.get_proxies(count, filter_criteria, pool_types)
+        
+        return [ProxyResponse.from_proxy_node(proxy) for proxy in proxies]
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"參數錯誤: {e}")
+    except Exception as e:
+        logger.error(f"❌ 批量獲取代理失敗: {e}")
+        raise HTTPException(status_code=500, detail="內部服務器錯誤")
+
+
+@app.post("/api/proxies/filter", response_model=List[ProxyResponse], summary="使用複雜條件篩選代理")
+async def filter_proxies(
+    filter_request: ProxyFilterRequest,
+    count: int = Query(10, ge=1, le=100, description="獲取數量"),
+    pool_preference: Optional[str] = Query("hot,warm,cold", description="池優先級"),
+    manager: ProxyManager = Depends(get_proxy_manager)
+):
+    """使用複雜條件篩選代理"""
+    try:
+        # 轉換篩選條件
+        filter_criteria = filter_request.to_proxy_filter()
+        
+        # 解析池優先級
+        pool_types = []
+        if pool_preference:
+            for pool_name in pool_preference.split(','):
+                pool_name = pool_name.strip().lower()
+                if pool_name == 'hot':
+                    pool_types.append(PoolType.HOT)
+                elif pool_name == 'warm':
+                    pool_types.append(PoolType.WARM)
+                elif pool_name == 'cold':
+                    pool_types.append(PoolType.COLD)
+        
+        if not pool_types:
+            pool_types = [PoolType.HOT, PoolType.WARM, PoolType.COLD]
+        
+        # 獲取代理
+        proxies = await manager.get_proxies(count, filter_criteria, pool_types)
+        
+        return [ProxyResponse.from_proxy_node(proxy) for proxy in proxies]
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"參數錯誤: {e}")
+    except Exception as e:
+        logger.error(f"❌ 篩選代理失敗: {e}")
+        raise HTTPException(status_code=500, detail="內部服務器錯誤")
+
+
+@app.get("/api/stats", response_model=StatsResponse, summary="獲取統計信息")
+async def get_stats(manager: ProxyManager = Depends(get_proxy_manager)):
+    """獲取統計信息"""
+    try:
+        stats = manager.get_stats()
+        
+        return StatsResponse(
+            total_proxies=stats['pool_summary']['total_proxies'],
+            total_active_proxies=stats['pool_summary']['total_active_proxies'],
+            pool_distribution=stats['pool_summary']['pool_distribution'],
+            overall_success_rate=stats['pool_summary']['overall_success_rate'],
+            last_updated=stats['pool_summary']['last_updated'],
+            manager_stats=stats['manager_stats'],
+            pool_details=stats['pool_details']
+        )
+        
+    except Exception as e:
+        logger.error(f"❌ 獲取統計信息失敗: {e}")
+        raise HTTPException(status_code=500, detail="內部服務器錯誤")
+
+
+@app.post("/api/fetch", summary="手動獲取代理")
+async def fetch_proxies(
+    fetch_request: FetchRequest,
+    background_tasks: BackgroundTasks,
+    manager: ProxyManager = Depends(get_proxy_manager)
+):
+    """手動觸發代理獲取"""
+    try:
+        # 在後台執行獲取任務
+        background_tasks.add_task(
+            manager.fetch_proxies,
+            fetch_request.sources
+        )
+        
+        return {
+            "message": "代理獲取任務已啟動",
+            "sources": fetch_request.sources,
+            "validate": fetch_request.validate,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ 啟動獲取任務失敗: {e}")
+        raise HTTPException(status_code=500, detail="內部服務器錯誤")
+
+
+@app.post("/api/validate", summary="手動驗證代理池")
+async def validate_pools(
+    background_tasks: BackgroundTasks,
+    manager: ProxyManager = Depends(get_proxy_manager)
+):
+    """手動觸發代理池驗證"""
+    try:
+        # 在後台執行驗證任務
+        background_tasks.add_task(manager.validate_pools)
+        
+        return {
+            "message": "代理池驗證任務已啟動",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ 啟動驗證任務失敗: {e}")
+        raise HTTPException(status_code=500, detail="內部服務器錯誤")
+
+
+@app.post("/api/cleanup", summary="手動清理代理池")
+async def cleanup_pools(
+    background_tasks: BackgroundTasks,
+    manager: ProxyManager = Depends(get_proxy_manager)
+):
+    """手動觸發代理池清理"""
+    try:
+        # 在後台執行清理任務
+        background_tasks.add_task(manager.cleanup_pools)
+        
+        return {
+            "message": "代理池清理任務已啟動",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ 啟動清理任務失敗: {e}")
+        raise HTTPException(status_code=500, detail="內部服務器錯誤")
+
+
+@app.post("/api/export", summary="導出代理")
+async def export_proxies(
+    export_request: ExportRequest,
+    manager: ProxyManager = Depends(get_proxy_manager)
+):
+    """導出代理到文件"""
+    try:
+        # 解析池類型
+        pool_types = []
+        if export_request.pool_types:
+            for pool_name in export_request.pool_types:
+                pool_name = pool_name.strip().lower()
+                if pool_name == 'hot':
+                    pool_types.append(PoolType.HOT)
+                elif pool_name == 'warm':
+                    pool_types.append(PoolType.WARM)
+                elif pool_name == 'cold':
+                    pool_types.append(PoolType.COLD)
+        
+        if not pool_types:
+            pool_types = [PoolType.HOT, PoolType.WARM, PoolType.COLD]
+        
+        # 生成文件名
+        if not export_request.filename:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"proxies_{timestamp}.{export_request.format_type}"
+        else:
+            filename = export_request.filename
+        
+        file_path = Path("data/exports") / filename
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # 導出代理
+        count = await manager.export_proxies(
+            file_path,
+            export_request.format_type,
+            pool_types
+        )
+        
+        return {
+            "message": "代理導出成功",
+            "filename": filename,
+            "format": export_request.format_type,
+            "count": count,
+            "download_url": f"/download/{filename}",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ 導出代理失敗: {e}")
+        raise HTTPException(status_code=500, detail=f"導出失敗: {e}")
+
+
+@app.get("/api/download/{filename}", summary="下載導出文件")
+async def download_file(filename: str):
+    """下載導出的文件"""
+    file_path = Path("data/exports") / filename
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="文件不存在")
+    
+    return FileResponse(
+        path=str(file_path),
+        filename=filename,
+        media_type='application/octet-stream'
+    )
+
+
+@app.get("/api/pools", summary="獲取池詳細信息")
+async def get_pools_info(manager: ProxyManager = Depends(get_proxy_manager)):
+    """獲取所有池的詳細信息"""
+    try:
+        stats = manager.get_stats()
+        return {
+            "pools": stats['pool_details'],
+            "summary": stats['pool_summary'],
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ 獲取池信息失敗: {e}")
+        raise HTTPException(status_code=500, detail="內部服務器錯誤")
+
+
+# 錯誤處理
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": exc.detail,
+            "timestamp": datetime.now().isoformat(),
+            "path": str(request.url)
+        }
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request, exc):
+    logger.error(f"❌ 未處理的異常: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "內部服務器錯誤",
+            "timestamp": datetime.now().isoformat(),
+            "path": str(request.url)
+        }
+    )
+
+
+# 啟動服務器的函數
+def start_server(
+    host: str = "0.0.0.0",
+    port: int = 8000,
+    reload: bool = False,
+    log_level: str = "info"
+):
+    """啟動 FastAPI 服務器"""
+    uvicorn.run(
+        "proxy_manager.api:app",
+        host=host,
+        port=port,
+        reload=reload,
+        log_level=log_level,
+        access_log=True
+    )
+
+
+if __name__ == "__main__":
+    # 配置日誌
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    
+    # 啟動服務器
+    start_server(reload=True)

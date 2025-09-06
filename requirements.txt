@@ -1,0 +1,68 @@
+# Proxy Crawler & Management System 主要依賴
+# 基於 Python 3.11+ 的代理爬蟲和管理系統
+
+# Web 框架和 API
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+
+# HTTP 客戶端和網路請求
+aiohttp>=3.8.0
+httpx>=0.24.0
+requests>=2.31.0
+
+# HTML 解析和處理
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+parsel>=1.8.0
+
+# HTML to Markdown 轉換引擎
+markdownify>=0.11.6             # HTML 轉 Markdown（主要引擎）
+trafilatura>=1.6.0              # 網頁內容提取和轉換（推薦）
+html2text>=2020.1.16            # 經典 HTML 轉 Markdown 工具
+readability-lxml>=0.8.1         # 可讀性內容提取
+
+# 數據處理和驗證
+pydantic>=2.0.0
+dataclasses-json>=0.6.0         # dataclass JSON 序列化
+pandas>=2.1.0
+numpy>=1.24.0
+
+# 異步處理
+aiofiles>=23.0.0
+
+# 數據庫和快取
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+redis>=4.6.0
+aiosqlite>=0.19.0
+
+# 日誌和監控
+loguru>=0.7.0
+structlog>=23.0.0
+
+# 配置管理
+python-dotenv>=1.0.0
+PyYAML>=6.0
+
+# 工具庫
+tqdm>=4.66.0
+rich>=13.0.0
+click>=8.1.0
+typer>=0.9.0
+
+# 文本處理
+chardet>=5.0.0
+python-dateutil>=2.8.0
+textstat>=0.7.0                 # 文本統計和可讀性分析
+
+# 可選圖片處理
+Pillow>=10.0.0                  # 圖片處理
+
+# 開發和測試
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+black>=23.0.0
+ruff>=0.0.280
+mypy>=1.5.0

@@ -1,0 +1,209 @@
+# 代理管理器配置示例
+# 此文件展示了新的高級代理整合系統的完整配置選項
+
+# 基本配置
+data_dir: "data/proxy_manager"
+backup_dir: "data/proxy_manager/backups"
+max_backup_files: 10
+
+# API 配置 - 高級代理來源
+api_config:
+  # ProxyScrape API
+  proxyscrape_api_key: "your_proxyscrape_api_key_here"  # 請替換為實際密鑰
+  enable_proxyscrape: true
+  proxyscrape_timeout: 30
+  proxyscrape_formats:
+    - "textplain"
+    - "json"
+  proxyscrape_protocols:
+    - "http"
+    - "https"
+    - "socks4"
+    - "socks5"
+  
+  # GitHub 開源專案
+  enable_github_sources: true
+  github_timeout: 30
+  github_update_interval_hours: 12
+  github_sources:
+    - "clarketm/proxy-list"
+    - "TheSpeedX/PROXY-List"
+    - "monosans/proxy-list"
+    - "proxifly/free-proxy-list"
+  
+  # Shodan API (需要付費訂閱)
+  shodan_api_key: "your_shodan_api_key_here"  # 請替換為實際密鑰
+  enable_shodan: false  # 預設關閉，需要付費 API
+  shodan_timeout: 60
+  shodan_query: "port:8080,3128,1080 country:US,GB,DE"
+  shodan_max_results: 1000
+
+# 掃描器配置 - 高速代理掃描與驗證
+scanner_config:
+  # 快速掃描
+  enable_fast_scan: true
+  scan_timeout: 5.0
+  max_concurrent_scans: 100
+  batch_size: 50
+  
+  # 掃描方法
+  port_scan_method: "connect"  # connect, syn, udp
+  enable_port_range_scan: false
+  custom_port_ranges:
+    - [8080, 8090]
+    - [3128, 3130]
+  
+  # 代理驗證
+  enable_proxy_validation: true
+  validation_timeout: 10.0
+  max_validation_retries: 2
+  
+  # 匿名度檢測
+  enable_anonymity_detection: true
+  anonymity_test_urls:
+    - "http://httpbin.org/ip"
+    - "https://api.ipify.org"
+    - "http://icanhazip.com"
+  
+  # 地理位置檢測
+  enable_geolocation: true
+  geolocation_api_key: "your_geolocation_api_key"  # 可選
+  geolocation_timeout: 15.0
+  
+  # 性能測試
+  enable_speed_test: true
+  speed_test_urls:
+    - "http://httpbin.org/delay/1"
+    - "https://httpbin.org/bytes/1024"
+  speed_test_timeout: 20.0
+
+# 驗證配置 - 傳統驗證系統
+validation_config:
+  timeout: 10
+  test_urls:
+    - "http://httpbin.org/ip"
+    - "https://api.ipify.org"
+    - "http://icanhazip.com"
+  max_retries: 2
+  verify_anonymity: true
+  check_geolocation: true
+  user_agents:
+    - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    - "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+    - "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
+
+# 批量驗證配置
+batch_validation_size: 100
+batch_validation_timeout: 300
+max_concurrent_validations: 50
+
+# 代理池配置
+pool_config:
+  # 池大小限制
+  hot_pool_size: 100
+  warm_pool_size: 500
+  cold_pool_size: 1000
+  
+  # 評分閾值
+  hot_pool_min_score: 0.8
+  warm_pool_min_score: 0.5
+  cold_pool_min_score: 0.2
+  
+  # 自動重新平衡
+  enable_auto_rebalance: true
+  rebalance_interval_minutes: 30
+  
+  # 黑名單管理
+  blacklist_threshold: 3
+  blacklist_duration_hours: 24
+  enable_auto_blacklist_cleanup: true
+
+# 自動任務配置
+auto_fetch_enabled: true
+auto_fetch_interval_hours: 6
+auto_cleanup_enabled: true
+auto_cleanup_interval_hours: 24
+auto_save_enabled: true
+auto_save_interval_minutes: 30
+
+# 性能優化配置
+performance_config:
+  # 並發控制
+  max_concurrent_fetchers: 10
+  max_concurrent_validators: 50
+  max_concurrent_scanners: 100
+  
+  # 記憶體管理
+  enable_memory_optimization: true
+  max_memory_usage_mb: 512
+  garbage_collection_interval_minutes: 15
+  
+  # 快取配置
+  enable_caching: true
+  cache_ttl_minutes: 60
+  max_cache_size: 10000
+
+# 日誌配置
+logging_config:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_path: "logs/proxy_manager.log"
+  max_file_size_mb: 10
+  backup_count: 5
+  enable_console_output: true
+
+# 監控配置
+monitoring_config:
+  enable_metrics: true
+  metrics_port: 8090
+  enable_health_check: true
+  health_check_port: 8091
+  
+  # 警報配置
+  enable_alerts: false
+  alert_webhook_url: "https://your-webhook-url.com"
+  alert_thresholds:
+    min_active_proxies: 10
+    max_failure_rate: 0.5
+    max_response_time_ms: 5000
+
+# 安全配置
+security_config:
+  # API 密鑰加密
+  encrypt_api_keys: true
+  encryption_key_file: "config/.encryption_key"
+  
+  # 請求限制
+  enable_rate_limiting: true
+  max_requests_per_minute: 100
+  
+  # 代理使用限制
+  max_proxy_usage_per_hour: 1000
+  enable_proxy_rotation: true
+  rotation_interval_minutes: 5
+
+# 實驗性功能
+experimental_features:
+  # AI 輔助代理評分
+  enable_ai_scoring: false
+  ai_model_path: "models/proxy_scorer.pkl"
+  
+  # 機器學習代理預測
+  enable_ml_prediction: false
+  ml_model_path: "models/proxy_predictor.pkl"
+  
+  # 區塊鏈代理驗證
+  enable_blockchain_verification: false
+  blockchain_api_endpoint: "https://api.blockchain-proxy-verify.com"
+
+# 開發配置
+development_config:
+  enable_debug_mode: false
+  debug_log_level: "DEBUG"
+  enable_profiling: false
+  profiling_output_dir: "profiling"
+  
+  # 測試配置
+  enable_test_mode: false
+  test_proxy_count: 10
+  mock_external_apis: false

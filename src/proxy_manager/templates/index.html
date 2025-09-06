@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代理管理器 - 控制面板</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .card-stats {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .card-pool {
+            transition: transform 0.2s;
+        }
+        .card-pool:hover {
+            transform: translateY(-5px);
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-healthy { background-color: #28a745; }
+        .status-warning { background-color: #ffc107; }
+        .status-danger { background-color: #dc3545; }
+        .proxy-item {
+            border-left: 4px solid #007bff;
+            margin-bottom: 10px;
+        }
+        .proxy-item.elite { border-left-color: #28a745; }
+        .proxy-item.anonymous { border-left-color: #ffc107; }
+        .proxy-item.transparent { border-left-color: #dc3545; }
+        .refresh-btn {
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-network-wired me-2"></i>
+                代理管理器
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text">
+                    <span class="status-indicator status-healthy"></span>
+                    系統運行中
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- 統計卡片 -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card card-stats">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h5 class="card-title">總代理數</h5>
+                                <h2 id="total-proxies">-</h2>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-server fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card card-stats">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h5 class="card-title">可用代理</h5>
+                                <h2 id="active-proxies">-</h2>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-check-circle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card card-stats">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h5 class="card-title">成功率</h5>
+                                <h2 id="success-rate">-</h2>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-chart-line fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card card-stats">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h5 class="card-title">運行時間</h5>
+                                <h2 id="uptime">-</h2>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-clock fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作按鈕 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">快速操作</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-primary me-2" onclick="fetchProxies()">
+                            <i class="fas fa-download"></i> 獲取代理
+                        </button>
+                        <button class="btn btn-success me-2" onclick="validateProxies()">
+                            <i class="fas fa-check"></i> 驗證代理
+                        </button>
+                        <button class="btn btn-warning me-2" onclick="cleanupProxies()">
+                            <i class="fas fa-trash"></i> 清理代理
+                        </button>
+                        <button class="btn btn-info me-2" onclick="refreshData()">
+                            <i class="fas fa-sync-alt" id="refresh-icon"></i> 刷新數據
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportProxies()">
+                            <i class="fas fa-file-export"></i> 導出代理
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 代理池狀態 -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card card-pool border-success">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="fas fa-fire"></i> 熱池 (Hot Pool)</h6>
+                    </div>
+                    <div class="card-body">
+                        <h4 id="hot-pool-count">-</h4>
+                        <p class="text-muted mb-0">高質量代理</p>
+                        <div class="progress mt-2">
+                            <div class="progress-bar bg-success" id="hot-pool-progress" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-pool border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0"><i class="fas fa-thermometer-half"></i> 溫池 (Warm Pool)</h6>
+                    </div>
+                    <div class="card-body">
+                        <h4 id="warm-pool-count">-</h4>
+                        <p class="text-muted mb-0">中等質量代理</p>
+                        <div class="progress mt-2">
+                            <div class="progress-bar bg-warning" id="warm-pool-progress" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-pool border-info">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0"><i class="fas fa-snowflake"></i> 冷池 (Cold Pool)</h6>
+                    </div>
+                    <div class="card-body">
+                        <h4 id="cold-pool-count">-</h4>
+                        <p class="text-muted mb-0">待驗證代理</p>
+                        <div class="progress mt-2">
+                            <div class="progress-bar bg-info" id="cold-pool-progress" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 代理列表 -->
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">最新代理列表</h5>
+                        <div>
+                            <select class="form-select form-select-sm" id="pool-filter" onchange="filterProxies()">
+                                <option value="all">所有池</option>
+                                <option value="hot">熱池</option>
+                                <option value="warm">溫池</option>
+                                <option value="cold">冷池</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                        <div id="proxy-list">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-spinner fa-spin"></i> 載入中...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">系統日誌</h5>
+                    </div>
+                    <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                        <div id="system-logs">
+                            <div class="text-muted small">
+                                <i class="fas fa-info-circle"></i> 系統啟動完成<br>
+                                <span class="text-muted">剛剛</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模態框 -->
+    <div class="modal fade" id="exportModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">導出代理</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="exportForm">
+                        <div class="mb-3">
+                            <label class="form-label">導出格式</label>
+                            <select class="form-select" id="exportFormat">
+                                <option value="json">JSON</option>
+                                <option value="txt">TXT</option>
+                                <option value="csv">CSV</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">選擇池</label>
+                            <div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="hot" id="exportHot" checked>
+                                    <label class="form-check-label" for="exportHot">熱池</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="warm" id="exportWarm" checked>
+                                    <label class="form-check-label" for="exportWarm">溫池</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="cold" id="exportCold">
+                                    <label class="form-check-label" for="exportCold">冷池</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">文件名 (可選)</label>
+                            <input type="text" class="form-control" id="exportFilename" placeholder="留空自動生成">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="doExport()">導出</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // API 基礎 URL
+        const API_BASE = '/api';
+        
+        // 全局變量
+        let currentProxies = [];
+        let refreshInterval;
+        
+        // 頁面載入完成後初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadInitialData();
+            startAutoRefresh();
+        });
+        
+        // 載入初始數據
+        async function loadInitialData() {
+            await Promise.all([
+                loadStats(),
+                loadProxies()
+            ]);
+        }
+        
+        // 載入統計數據
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE}/stats`);
+                const data = await response.json();
+                
+                // 更新統計卡片
+                document.getElementById('total-proxies').textContent = data.total_proxies;
+                document.getElementById('active-proxies').textContent = data.total_active_proxies;
+                document.getElementById('success-rate').textContent = (data.overall_success_rate * 100).toFixed(1) + '%';
+                
+                // 更新池狀態
+                updatePoolStats(data.pool_distribution);
+                
+                // 更新運行時間
+                if (data.manager_stats.start_time) {
+                    const startTime = new Date(data.manager_stats.start_time);
+                    const uptime = Math.floor((Date.now() - startTime.getTime()) / 1000);
+                    document.getElementById('uptime').textContent = formatUptime(uptime);
+                }
+                
+            } catch (error) {
+                console.error('載入統計數據失敗:', error);
+                showToast('載入統計數據失敗', 'error');
+            }
+        }
+        
+        // 更新池統計
+        function updatePoolStats(poolDistribution) {
+            const total = Object.values(poolDistribution).reduce((a, b) => a + b, 0);
+            
+            // 熱池
+            const hotCount = poolDistribution.hot || 0;
+            document.getElementById('hot-pool-count').textContent = hotCount;
+            document.getElementById('hot-pool-progress').style.width = total > 0 ? (hotCount / total * 100) + '%' : '0%';
+            
+            // 溫池
+            const warmCount = poolDistribution.warm || 0;
+            document.getElementById('warm-pool-count').textContent = warmCount;
+            document.getElementById('warm-pool-progress').style.width = total > 0 ? (warmCount / total * 100) + '%' : '0%';
+            
+            // 冷池
+            const coldCount = poolDistribution.cold || 0;
+            document.getElementById('cold-pool-count').textContent = coldCount;
+            document.getElementById('cold-pool-progress').style.width = total > 0 ? (coldCount / total * 100) + '%' : '0%';
+        }
+        
+        // 載入代理列表
+        async function loadProxies() {
+            try {
+                const response = await fetch(`${API_BASE}/proxies?count=50`);
+                const proxies = await response.json();
+                
+                currentProxies = proxies;
+                displayProxies(proxies);
+                
+            } catch (error) {
+                console.error('載入代理列表失敗:', error);
+                document.getElementById('proxy-list').innerHTML = 
+                    '<div class="text-center text-danger"><i class="fas fa-exclamation-triangle"></i> 載入失敗</div>';
+            }
+        }
+        
+        // 顯示代理列表
+        function displayProxies(proxies) {
+            const container = document.getElementById('proxy-list');
+            
+            if (proxies.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted">暫無代理數據</div>';
+                return;
+            }
+            
+            const html = proxies.map(proxy => `
+                <div class="proxy-item card mb-2 ${proxy.anonymity}">
+                    <div class="card-body py-2">
+                        <div class="row align-items-center">
+                            <div class="col-md-4">
+                                <strong>${proxy.host}:${proxy.port}</strong>
+                                <span class="badge bg-primary ms-2">${proxy.protocol.toUpperCase()}</span>
+                            </div>
+                            <div class="col-md-3">
+                                <span class="badge bg-${getAnonymityColor(proxy.anonymity)}">
+                                    ${getAnonymityText(proxy.anonymity)}
+                                </span>
+                            </div>
+                            <div class="col-md-2">
+                                <small class="text-muted">
+                                    ${proxy.country || '未知'}
+                                </small>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="d-flex align-items-center">
+                                    <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                        <div class="progress-bar" style="width: ${proxy.score * 100}%"></div>
+                                    </div>
+                                    <small>${(proxy.score * 100).toFixed(0)}</small>
+                                </div>
+                            </div>
+                            <div class="col-md-1">
+                                <button class="btn btn-sm btn-outline-primary" onclick="testProxy('${proxy.host}', ${proxy.port})">
+                                    <i class="fas fa-vial"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+        }
+        
+        // 獲取匿名度顏色
+        function getAnonymityColor(anonymity) {
+            switch (anonymity) {
+                case 'elite': return 'success';
+                case 'anonymous': return 'warning';
+                case 'transparent': return 'danger';
+                default: return 'secondary';
+            }
+        }
+        
+        // 獲取匿名度文本
+        function getAnonymityText(anonymity) {
+            switch (anonymity) {
+                case 'elite': return '精英';
+                case 'anonymous': return '匿名';
+                case 'transparent': return '透明';
+                default: return '未知';
+            }
+        }
+        
+        // 格式化運行時間
+        function formatUptime(seconds) {
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            
+            if (days > 0) {
+                return `${days}天 ${hours}時`;
+            } else if (hours > 0) {
+                return `${hours}時 ${minutes}分`;
+            } else {
+                return `${minutes}分鐘`;
+            }
+        }
+        
+        // 操作函數
+        async function fetchProxies() {
+            try {
+                showToast('正在獲取代理...', 'info');
+                const response = await fetch(`${API_BASE}/fetch`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ validate: true })
+                });
+                
+                if (response.ok) {
+                    showToast('代理獲取任務已啟動', 'success');
+                    setTimeout(refreshData, 3000); // 3秒後刷新數據
+                } else {
+                    throw new Error('獲取失敗');
+                }
+            } catch (error) {
+                showToast('獲取代理失敗', 'error');
+            }
+        }
+        
+        async function validateProxies() {
+            try {
+                showToast('正在驗證代理...', 'info');
+                const response = await fetch(`${API_BASE}/validate`, { method: 'POST' });
+                
+                if (response.ok) {
+                    showToast('代理驗證任務已啟動', 'success');
+                    setTimeout(refreshData, 3000);
+                } else {
+                    throw new Error('驗證失敗');
+                }
+            } catch (error) {
+                showToast('驗證代理失敗', 'error');
+            }
+        }
+        
+        async function cleanupProxies() {
+            try {
+                showToast('正在清理代理...', 'info');
+                const response = await fetch(`${API_BASE}/cleanup`, { method: 'POST' });
+                
+                if (response.ok) {
+                    showToast('代理清理任務已啟動', 'success');
+                    setTimeout(refreshData, 3000);
+                } else {
+                    throw new Error('清理失敗');
+                }
+            } catch (error) {
+                showToast('清理代理失敗', 'error');
+            }
+        }
+        
+        function refreshData() {
+            const icon = document.getElementById('refresh-icon');
+            icon.classList.add('refresh-btn');
+            
+            loadInitialData().finally(() => {
+                setTimeout(() => {
+                    icon.classList.remove('refresh-btn');
+                }, 1000);
+            });
+        }
+        
+        function exportProxies() {
+            const modal = new bootstrap.Modal(document.getElementById('exportModal'));
+            modal.show();
+        }
+        
+        async function doExport() {
+            try {
+                const format = document.getElementById('exportFormat').value;
+                const filename = document.getElementById('exportFilename').value;
+                
+                const poolTypes = [];
+                if (document.getElementById('exportHot').checked) poolTypes.push('hot');
+                if (document.getElementById('exportWarm').checked) poolTypes.push('warm');
+                if (document.getElementById('exportCold').checked) poolTypes.push('cold');
+                
+                const requestData = {
+                    format_type: format,
+                    pool_types: poolTypes
+                };
+                
+                if (filename) {
+                    requestData.filename = filename;
+                }
+                
+                const response = await fetch(`${API_BASE}/export`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showToast(`導出成功: ${result.count} 個代理`, 'success');
+                    
+                    // 自動下載
+                    const downloadUrl = `${API_BASE}${result.download_url}`;
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = result.filename;
+                    a.click();
+                    
+                    // 關閉模態框
+                    bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();
+                } else {
+                    throw new Error('導出失敗');
+                }
+            } catch (error) {
+                showToast('導出失敗', 'error');
+            }
+        }
+        
+        function filterProxies() {
+            const filter = document.getElementById('pool-filter').value;
+            // 這裡可以實現池篩選邏輯
+            // 由於當前 API 不直接提供池信息，這裡僅作為 UI 演示
+            loadProxies();
+        }
+        
+        async function testProxy(host, port) {
+            showToast(`正在測試 ${host}:${port}...`, 'info');
+            // 這裡可以實現單個代理測試邏輯
+            // 目前作為 UI 演示
+            setTimeout(() => {
+                showToast('測試完成', 'success');
+            }, 2000);
+        }
+        
+        // 自動刷新
+        function startAutoRefresh() {
+            refreshInterval = setInterval(() => {
+                loadStats();
+            }, 30000); // 每30秒刷新統計數據
+        }
+        
+        // 顯示提示消息
+        function showToast(message, type = 'info') {
+            // 創建 toast 元素
+            const toastHtml = `
+                <div class="toast align-items-center text-white bg-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'primary'} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            
+            // 添加到頁面
+            let toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toast-container';
+                toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                document.body.appendChild(toastContainer);
+            }
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            
+            // 顯示 toast
+            const toastElement = toastContainer.lastElementChild;
+            const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
+            toast.show();
+            
+            // 自動移除
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
+        }
+        
+        // 頁面卸載時清理
+        window.addEventListener('beforeunload', () => {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>

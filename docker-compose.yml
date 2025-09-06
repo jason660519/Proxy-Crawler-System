@@ -1,0 +1,174 @@
+# 簡化的 Docker Compose 配置
+# 使用新的資料庫配置管理器
+
+version: '3.8'
+
+services:
+  # PostgreSQL 資料庫
+  postgres_db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${DB_USER:-proxyadmin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-proxypool}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-proxyadmin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - proxy_crawler_network
+
+  # Redis 快取
+  redis_cache:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - proxy_crawler_network
+    # 如果需要 Redis 密碼認證，取消註解下面的行
+    # command: redis-server --requirepass ${REDIS_PASSWORD}
+
+  # Proxy 爬蟲應用程式
+  proxy_crawler:
+    build: .
+    environment:
+      # 核心配置 - 只需要這 4 個變數
+      - ENVIRONMENT=docker
+      - DB_USER=${DB_USER:-proxyadmin}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-proxypool}
+      
+      # 可選配置（如果需要）
+      # - REDIS_PASSWORD=${REDIS_PASSWORD}
+      # - DB_SERVICE=postgres_db
+      # - REDIS_SERVICE=redis_cache
+    
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+      redis_cache:
+        condition: service_healthy
+    
+    volumes:
+      # 日誌目錄映射
+      - ./logs:/app/logs
+      # ETL 資料流程目錄映射
+      - ./data:/app/data
+      # HTML to Markdown 專用目錄映射
+      - ./data/raw:/app/input
+      - ./data/processed:/app/processing
+      - ./data/transformed:/app/output
+      # 配置檔案映射
+      - ./src:/app/src
+      - ./requirements_html_to_markdown.txt:/app/requirements_html_to_markdown.txt
+    
+    restart: unless-stopped
+    
+    # 如果需要暴露 API 端口
+    ports:
+      - "8000:8000"
+    
+    networks:
+      - proxy_crawler_network
+
+  # HTML to Markdown 處理服務
+  html_to_markdown:
+    build:
+      context: .
+      dockerfile: docker/html-to-markdown/Dockerfile
+    environment:
+      - ENVIRONMENT=docker
+      - DB_USER=${DB_USER:-proxyadmin}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-proxypool}
+      # ETL 流程專用環境變數
+      - INPUT_DIR=/app/input
+      - PROCESSING_DIR=/app/processing
+      - OUTPUT_DIR=/app/output
+      - BATCH_SIZE=100
+      - QUALITY_THRESHOLD=0.7
+    
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+      redis_cache:
+        condition: service_healthy
+    
+    volumes:
+      # ETL 資料流程目錄映射
+      - ./data/raw/html-to-markdown:/app/input
+      - ./data/processed/html-to-markdown:/app/processing
+      - ./data/transformed/html-to-markdown:/app/output
+      # 日誌目錄
+      - ./logs:/app/logs
+      # 源碼映射（開發模式）
+      - ./src/html_to_markdown:/app/src/html_to_markdown
+    
+    restart: unless-stopped
+    
+    # API 端口
+    ports:
+      - "8001:8001"
+    
+    networks:
+      - proxy_crawler_network
+
+  # 可選：資料庫管理工具 (pgAdmin)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres_db
+    networks:
+      - proxy_crawler_network
+    profiles:
+      - tools  # 使用 docker-compose --profile tools up 來啟動
+
+  # 可選：Redis 管理工具
+  redis_commander:
+    image: rediscommander/redis-commander:latest
+    environment:
+      - REDIS_HOSTS=local:redis_cache:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis_cache
+    networks:
+      - proxy_crawler_network
+    profiles:
+      - tools  # 使用 docker-compose --profile tools up 來啟動
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  proxy_crawler_network:
+    driver: bridge
+
+# 使用說明：
+# 1. 複製 .env.example 為 .env 並設定密碼
+# 2. 執行：docker-compose up -d
+# 3. 包含管理工具：docker-compose --profile tools up -d
+# 4. 查看日誌：docker-compose logs -f proxy_crawler
+# 5. 停止服務：docker-compose down

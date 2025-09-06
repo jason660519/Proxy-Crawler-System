@@ -1,0 +1,88 @@
+# 代理管理器核心依賴
+# Proxy Manager Core Dependencies
+
+# Web 框架和 API
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+jinja2>=3.1.2  # FastAPI 模板支持
+python-multipart>=0.0.6  # 文件上傳支持
+
+# HTTP 客戶端
+aiohttp>=3.9.0
+httpx>=0.25.0
+requests>=2.31.0
+
+# 代理相關庫
+# free-proxy>=1.1.1  # 已移除，改用其他代理來源
+# proxy-scraper-checker>=0.1.0  # 此包不存在，已移除
+
+# 數據驗證和序列化
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# 異步支持
+aiofiles>=23.2.1
+
+# 日誌
+loguru>=0.7.2
+
+# 配置文件處理
+PyYAML>=6.0.1
+toml>=0.10.2
+
+# 數據處理
+pandas>=2.1.0
+numpy>=1.24.0
+
+# 時間處理
+python-dateutil>=2.8.2
+
+# 環境變量
+python-dotenv>=1.0.0
+
+# 命令行界面
+click>=8.1.7
+typer>=0.9.0
+
+# 進度條
+tqdm>=4.66.0
+
+# 重試機制
+tenacity>=8.2.3
+
+# 網頁解析 (備用爬蟲功能)
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# 用戶代理輪換
+fake-useragent>=1.4.0
+
+# 地理位置檢測 (可選)
+geoip2>=4.7.0
+
+# 數據庫支持 (可選)
+sqlalchemy>=2.0.0
+aiosqlite>=0.19.0
+
+# 緩存支持 (可選)
+redis>=5.0.0
+aioredis>=2.0.0
+
+# 監控和指標 (可選)
+prometheus-client>=0.19.0
+
+# 測試依賴 (開發環境)
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+httpx>=0.25.0  # 測試 HTTP 客戶端
+
+# 代碼質量工具 (開發環境)
+ruff>=0.1.0
+black>=23.0.0
+isort>=5.12.0
+mypy>=1.7.0
+
+# 文檔生成 (可選)
+mkdocs>=1.5.0
+mkdocs-material>=9.4.0

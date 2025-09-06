@@ -1,0 +1,151 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "proxy-crawler-system"
+version = "1.0.0"
+description = "專業的代理伺服器爬取與管理系統"
+authors = [{name = "Jason", email = "jason@example.com"}]
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    # Web 框架和 API
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "python-multipart>=0.0.6",
+    # HTTP 客戶端和網路請求
+    "aiohttp>=3.8.0",
+    "httpx>=0.24.0",
+    "requests>=2.31.0",
+    # HTML 解析和處理
+    "beautifulsoup4>=4.12.0",
+    "lxml>=4.9.0",
+    "parsel>=1.8.0",
+    # HTML to Markdown 轉換引擎
+    "markdownify>=0.11.6",
+    "trafilatura>=1.6.0",
+    "html2text>=2020.1.16",
+    "readability-lxml>=0.8.1",
+    # 數據處理和驗證
+    "pydantic>=2.0.0",
+    "dataclasses-json>=0.6.0",
+    "pandas>=2.1.0",
+    "numpy>=1.24.0",
+    # 異步處理
+    "aiofiles>=23.0.0",
+    # 數據庫和快取
+    "sqlalchemy>=2.0.0",
+    "psycopg2-binary>=2.9.0",
+    "redis>=4.6.0",
+    "aiosqlite>=0.19.0",
+    # 日誌和監控
+    "loguru>=0.7.0",
+    "structlog>=23.0.0",
+    # 配置管理
+    "python-dotenv>=1.0.0",
+    "PyYAML>=6.0",
+    # 工具庫
+    "tqdm>=4.66.0",
+    "rich>=13.0.0",
+    "click>=8.1.0",
+    "typer>=0.9.0",
+    # 文本處理
+    "chardet>=5.0.0",
+    "python-dateutil>=2.8.0",
+    "textstat>=0.7.0",
+    # 可選圖片處理
+    "Pillow>=10.0.0",
+    # 地理位置處理
+    "geopy>=2.4.0",
+    "geoip2>=4.8.0",  # IP地理位置數據庫
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "ruff>=0.0.280",
+    "mypy>=1.5.0",
+]
+
+browser-automation = [
+    "playwright>=1.40.0",
+    "selenium>=4.15.0",
+    "undetected-chromedriver>=3.5.5",
+    "webdriver-manager>=4.0.1",
+]
+
+proxy-management = [
+    "PySocks>=1.7.1",
+    "fake-useragent>=1.4.0",
+]
+
+scrapy-framework = [
+    "scrapy>=2.11.0",
+    "scrapy-playwright>=0.0.28",
+]
+
+monitoring = [
+    "prometheus-client>=0.19.0",
+    "tenacity>=8.2.3",
+    "retrying>=1.3.4",
+]
+
+[project.urls]
+Homepage = "https://github.com/jason/proxy-crawler-system"
+Repository = "https://github.com/jason/proxy-crawler-system.git"
+Issues = "https://github.com/jason/proxy-crawler-system/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+
+[tool.ruff]
+select = ["E", "F", "W", "C90", "I", "N", "UP", "YTT", "S", "BLE", "FBT", "B", "A", "COM", "C4", "DTZ", "T10", "EM", "EXE", "ISC", "ICN", "G", "INP", "PIE", "T20", "PYI", "PT", "Q", "RSE", "RET", "SLF", "SIM", "TID", "TCH", "ARG", "PTH", "ERA", "PD", "PGH", "PL", "TRY", "NPY", "RUF"]
+ignore = ["E501", "S101", "S311"]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.per-file-ignores]
+"tests/*" = ["S101"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers --strict-config"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.1.0",
+    "pytest-cov>=6.3.0",
+]
