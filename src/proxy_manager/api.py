@@ -144,8 +144,8 @@ app = FastAPI(
     title="代理管理器 API",
     description="提供代理獲取、管理和統計功能的 REST API 服務",
     version="1.0.0",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc"
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
 # 設置模板和靜態文件
@@ -176,20 +176,32 @@ async def startup_event():
     """應用啟動事件"""
     global proxy_manager
     
+    print("[DEBUG] startup_event 被調用")
     logger.info("🚀 啟動代理管理器 API 服務...")
     
     try:
+        print("[DEBUG] 開始創建配置")
         # 創建配置
         config = ProxyManagerConfig()
+        print("[DEBUG] 配置創建成功")
         
+        print("[DEBUG] 開始創建代理管理器")
         # 創建並啟動代理管理器
         proxy_manager = ProxyManager(config)
+        print("[DEBUG] 代理管理器創建成功，開始啟動")
+        
         await proxy_manager.start()
+        print("[DEBUG] 代理管理器啟動成功")
         
         logger.info("✅ 代理管理器 API 服務啟動成功")
         
     except Exception as e:
+        print(f"[DEBUG] 啟動過程中發生錯誤: {e}")
         logger.error(f"❌ 啟動失敗: {e}")
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"[DEBUG] 詳細錯誤信息: {error_details}")
+        logger.error(f"詳細錯誤信息: {error_details}")
         raise
 
 

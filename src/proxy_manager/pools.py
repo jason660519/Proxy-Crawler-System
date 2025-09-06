@@ -19,7 +19,7 @@ from pathlib import Path
 from enum import Enum
 
 from .models import ProxyNode, ProxyStatus, ProxyAnonymity, ProxyProtocol, ProxyFilter
-from .validators import ProxyValidator, ValidationResult, ValidationConfig
+from .validators import ProxyValidator, ValidationResult
 
 logger = logging.getLogger(__name__)
 

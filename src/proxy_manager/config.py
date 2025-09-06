@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any, TYPE_CHECKING
 from pathlib import Path
 
-from .validators import ValidationConfig
+# from .validators import ValidationConfig  # 暫時註解掉，ValidationConfig類尚未實現
 from .pools import PoolConfig
 
 if TYPE_CHECKING:
@@ -81,6 +81,7 @@ class ProxyManagerConfig:
         
         # 基本配置屬性
         self.data_dir = Path("data/proxy_manager")
+        self.backup_dir = Path("data/backups")
         self.enable_free_proxy = True
         self.enable_json_file = True
         self.json_file_path = Path("proxy_list.json")
@@ -94,6 +95,8 @@ class ProxyManagerConfig:
         self.auto_cleanup_interval = 1800  # 30分鐘
         self.auto_save_interval = 300  # 5分鐘
         self.auto_save_interval_minutes = 5  # 自動保存間隔（分鐘）
+        self.auto_fetch_interval_hours = 6  # 自動獲取間隔（小時）
+        self.auto_cleanup_interval_hours = 12  # 自動清理間隔（小時）
         
         # 如果提供了配置檔案，則載入配置
         if config_file:
@@ -147,6 +150,9 @@ class ProxyManagerConfig:
         if 'data_dir' in config_data:
             self.data_dir = Path(config_data['data_dir'])
         
+        if 'backup_dir' in config_data:
+            self.backup_dir = Path(config_data['backup_dir'])
+        
         if 'enable_free_proxy' in config_data:
             self.enable_free_proxy = config_data['enable_free_proxy']
         
@@ -158,6 +164,25 @@ class ProxyManagerConfig:
         
         if 'batch_validation_size' in config_data:
             self.batch_validation_size = config_data['batch_validation_size']
+        
+        # 更新自動任務配置
+        if 'auto_fetch_enabled' in config_data:
+            self.auto_fetch_enabled = config_data['auto_fetch_enabled']
+        
+        if 'auto_cleanup_enabled' in config_data:
+            self.auto_cleanup_enabled = config_data['auto_cleanup_enabled']
+        
+        if 'auto_save_enabled' in config_data:
+            self.auto_save_enabled = config_data['auto_save_enabled']
+        
+        if 'auto_fetch_interval_hours' in config_data:
+            self.auto_fetch_interval_hours = config_data['auto_fetch_interval_hours']
+        
+        if 'auto_cleanup_interval_hours' in config_data:
+            self.auto_cleanup_interval_hours = config_data['auto_cleanup_interval_hours']
+        
+        if 'auto_save_interval_minutes' in config_data:
+            self.auto_save_interval_minutes = config_data['auto_save_interval_minutes']
     
     def to_dict(self) -> Dict[str, Any]:
         """將配置轉換為字典
@@ -184,10 +209,17 @@ class ProxyManagerConfig:
                 'retry_count': self.validation.retry_count
             },
             'data_dir': str(self.data_dir),
+            'backup_dir': str(self.backup_dir),
             'enable_free_proxy': self.enable_free_proxy,
             'enable_json_file': self.enable_json_file,
             'json_file_path': str(self.json_file_path),
-            'batch_validation_size': self.batch_validation_size
+            'batch_validation_size': self.batch_validation_size,
+            'auto_fetch_enabled': self.auto_fetch_enabled,
+            'auto_cleanup_enabled': self.auto_cleanup_enabled,
+            'auto_save_enabled': self.auto_save_enabled,
+            'auto_fetch_interval_hours': self.auto_fetch_interval_hours,
+            'auto_cleanup_interval_hours': self.auto_cleanup_interval_hours,
+            'auto_save_interval_minutes': self.auto_save_interval_minutes
         }
     
     def save_to_file(self, config_file: str) -> None:
