@@ -1,5 +1,12 @@
 README.md
 pyproject.toml
+src/config/config_loader.py
+src/etl/data_validator.py
+src/etl/database_schema.py
+src/etl/etl_api.py
+src/etl/monitoring_dashboard.py
+src/etl/proxy_etl_pipeline.py
+src/etl/test_etl_pipeline.py
 src/html_to_markdown/__init__.py
 src/html_to_markdown/adapters.py
 src/html_to_markdown/api_server.py

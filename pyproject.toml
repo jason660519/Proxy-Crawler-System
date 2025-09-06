@@ -68,7 +68,8 @@ dependencies = [
     "Pillow>=10.0.0",
     # 地理位置處理
     "geopy>=2.4.0",
-    "geoip2>=4.8.0",  # IP地理位置數據庫
+    "geoip2>=4.8.0", # IP地理位置數據庫
+    "jinja2>=3.1.6",
 ]
 
 [project.optional-dependencies]

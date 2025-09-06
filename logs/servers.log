@@ -1,0 +1,30 @@
+2025-09-07 04:46:25 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
+2025-09-07 04:46:26 | ERROR    | __main__:start_main_api_server:120 - ❌ 主 API 服務器啟動失敗: jinja2 must be installed to use Jinja2Templates
+2025-09-07 04:46:26 | ERROR    | __main__:main:463 - ❌ 啟動失敗: jinja2 must be installed to use Jinja2Templates
+2025-09-07 04:46:26 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
+2025-09-07 04:46:26 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
+2025-09-07 04:47:11 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
+2025-09-07 04:47:44 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
+2025-09-07 04:48:17 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
+2025-09-07 04:48:44 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
+2025-09-07 04:51:33 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
+2025-09-07 04:52:30 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
+2025-09-07 04:55:16 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
+2025-09-07 04:55:16 | ERROR    | __main__:start_main_api_server:120 - ❌ 主 API 服務器啟動失敗: cannot import name 'get_config' from 'src.proxy_manager.config' (C:\Users\a0922\OneDrive\Desktop\Jason_Spyder\JasonSpider\src\proxy_manager\config.py)
+2025-09-07 04:55:16 | ERROR    | __main__:main:463 - ❌ 啟動失敗: cannot import name 'get_config' from 'src.proxy_manager.config' (C:\Users\a0922\OneDrive\Desktop\Jason_Spyder\JasonSpider\src\proxy_manager\config.py)
+2025-09-07 04:55:16 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
+2025-09-07 04:55:16 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
+2025-09-07 04:55:57 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
+2025-09-07 04:55:57 | ERROR    | __main__:start_main_api_server:120 - ❌ 主 API 服務器啟動失敗: name 'ProxyManagerConfig' is not defined
+2025-09-07 04:55:57 | ERROR    | __main__:main:463 - ❌ 啟動失敗: name 'ProxyManagerConfig' is not defined
+2025-09-07 04:55:57 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
+2025-09-07 04:55:57 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
+2025-09-07 04:56:24 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
+2025-09-07 04:57:12 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
+2025-09-07 04:57:52 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
+2025-09-07 04:57:54 | ERROR    | __main__:start_main_api_server:120 - ❌ 主 API 服務器啟動失敗: Neither host/port nor sock were specified
+2025-09-07 04:57:54 | ERROR    | __main__:main:463 - ❌ 啟動失敗: Neither host/port nor sock were specified
+2025-09-07 04:57:54 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
+2025-09-07 04:57:54 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
+2025-09-07 04:59:10 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
+2025-09-07 04:59:47 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000

@@ -39,9 +39,15 @@ class ProxyManager:
         
         # 核心組件
         self.fetcher_manager = ProxyFetcherManager()
-        self.advanced_fetcher_manager = AdvancedProxyFetcherManager(self.config)
-        self.scanner = ProxyScanner(self.config.scanner_config)
-        self.pool_manager = ProxyPoolManager(self.config.pool_config)
+        # 為 AdvancedProxyFetcherManager 準備字典格式的配置
+        advanced_config = {
+            "proxyscrape_api_key": getattr(self.config.api, 'proxyscrape_api_key', None),
+            "github_token": getattr(self.config.api, 'github_token', None),
+            "shodan_api_key": getattr(self.config.api, 'shodan_api_key', None)
+        }
+        self.advanced_fetcher_manager = AdvancedProxyFetcherManager(advanced_config)
+        self.scanner = ProxyScanner(self.config.scanner)
+        self.pool_manager = ProxyPoolManager()
         self.validator: Optional[ProxyValidator] = None
         self.batch_validator: Optional[BatchValidator] = None
         
@@ -123,8 +129,9 @@ class ProxyManager:
     async def _initialize_components(self):
         """初始化組件"""
         # 初始化獲取器
-        if self.config.enable_free_proxy:
-            self.fetcher_manager.add_fetcher(FreeProxyFetcher())
+        # FreeProxyFetcher 已移除，改用其他代理來源
+        # if self.config.enable_free_proxy:
+        #     self.fetcher_manager.add_fetcher(FreeProxyFetcher())
         
         if self.config.enable_json_file and self.config.json_file_path.exists():
             self.fetcher_manager.add_fetcher(
@@ -132,11 +139,11 @@ class ProxyManager:
             )
         
         # 初始化驗證器
-        self.validator = ProxyValidator(self.config.validation_config)
+        self.validator = ProxyValidator(self.config.validation)
         await self.validator.start()
         
         self.batch_validator = BatchValidator(
-            self.config.validation_config,
+            self.config.validation,
             self.config.batch_validation_size
         )
         

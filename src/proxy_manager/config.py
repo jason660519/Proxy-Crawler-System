@@ -1,426 +1,260 @@
 """代理管理器配置模組
 
-統一管理所有代理相關配置：
-- API 金鑰管理
-- 掃描參數配置
-- 驗證規則設定
-- 性能調優參數
+提供統一的配置管理功能，包括：
+- 主配置類 ProxyManagerConfig
+- API 配置 ApiConfig
+- 掃描器配置 ScannerConfig
+- 配置驗證功能
 """
 
 import os
 import yaml
-import json
-from typing import Dict, Any, Optional, List
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Any, TYPE_CHECKING
 from pathlib import Path
-from dataclasses import dataclass, asdict
-import logging
-from datetime import timedelta
 
-from .models import ProxyProtocol, ProxyAnonymity, ProxySpeed
+from .validators import ValidationConfig
+from .pools import PoolConfig
 
-logger = logging.getLogger(__name__)
+if TYPE_CHECKING:
+    pass
+
+# 全局配置實例
+_global_config: Optional['ProxyManagerConfig'] = None
 
 
 @dataclass
 class ApiConfig:
-    """API 配置"""
-    shodan_api_key: Optional[str] = None
-    censys_api_id: Optional[str] = None
-    censys_api_secret: Optional[str] = None
+    """API 配置類"""
     proxyscrape_api_key: Optional[str] = None
     github_token: Optional[str] = None
-    ipapi_key: Optional[str] = None
+    shodan_api_key: Optional[str] = None
+    
+    def get(self, key: str, default: Any = None) -> Any:
+        """獲取配置值"""
+        return getattr(self, key, default)
 
 
 @dataclass
 class ScannerConfig:
-    """掃描器配置"""
+    """掃描器配置類"""
+    timeout: int = 5
     max_concurrent: int = 100
-    timeout: float = 10.0
-    retry_attempts: int = 3
-    retry_delay: float = 1.0
-    enable_fast_scan: bool = True
-    fast_scan_timeout: float = 3.0
-    fast_scan_concurrent: int = 1000
+    port_ranges: List[tuple] = field(default_factory=lambda: [(80, 80), (8080, 8080), (3128, 3128)])
+    scan_timeout: int = 3
     
-    # 測試 URL 配置
-    test_urls: List[str] = None
-    anonymity_test_urls: List[str] = None
-    
-    def __post_init__(self):
-        if self.test_urls is None:
-            self.test_urls = [
-                "http://httpbin.org/ip",
-                "https://api.ipify.org?format=json",
-                "http://icanhazip.com",
-                "https://checkip.amazonaws.com",
-                "http://ip-api.com/json"
-            ]
-        
-        if self.anonymity_test_urls is None:
-            self.anonymity_test_urls = [
-                "http://httpbin.org/headers",
-                "https://httpbin.org/headers"
-            ]
+    def get(self, key: str, default: Any = None) -> Any:
+        """獲取配置值"""
+        return getattr(self, key, default)
 
 
 @dataclass
-class ValidationConfig:
-    """驗證配置"""
-    min_speed: ProxySpeed = ProxySpeed.SLOW
-    required_anonymity: ProxyAnonymity = ProxyAnonymity.TRANSPARENT
-    max_response_time: float = 10.0
-    required_countries: Optional[List[str]] = None
-    blocked_countries: Optional[List[str]] = None
-    required_protocols: Optional[List[ProxyProtocol]] = None
-    enable_geolocation_check: bool = True
-    enable_anonymity_check: bool = True
-    enable_speed_test: bool = True
+class ConfigValidation:
+    """配置驗證類"""
+    strict_mode: bool = False
+    validate_on_load: bool = True
     
-    def __post_init__(self):
-        if self.blocked_countries is None:
-            self.blocked_countries = ["CN", "RU"]  # 示例配置
-
-
-@dataclass
-class FetcherConfig:
-    """獲取器配置"""
-    enable_proxyscrape: bool = True
-    enable_github: bool = True
-    enable_shodan: bool = False  # 需要 API 金鑰
-    enable_censys: bool = False  # 需要 API 金鑰
-    enable_web_scraping: bool = True
-    
-    # 獲取限制
-    max_proxies_per_source: int = 1000
-    fetch_interval_minutes: int = 60
-    
-    # GitHub 配置
-    github_sources: List[Dict[str, Any]] = None
-    
-    # ProxyScrape 配置
-    proxyscrape_protocols: List[str] = None
-    
-    def __post_init__(self):
-        if self.github_sources is None:
-            self.github_sources = [
-                {
-                    "name": "proxifly/free-proxy-list",
-                    "files": ["proxies/http.txt", "proxies/https.txt", "proxies/socks4.txt", "proxies/socks5.txt"],
-                    "format": "txt"
-                },
-                {
-                    "name": "TheSpeedX/PROXY-List",
-                    "files": ["http.txt", "socks4.txt", "socks5.txt"],
-                    "format": "txt"
-                },
-                {
-                    "name": "ShiftyTR/Proxy-List",
-                    "files": ["http.txt", "https.txt", "socks4.txt", "socks5.txt"],
-                    "format": "txt"
-                }
-            ]
-        
-        if self.proxyscrape_protocols is None:
-            self.proxyscrape_protocols = ["http", "socks4", "socks5"]
-
-
-@dataclass
-class StorageConfig:
-    """存儲配置"""
-    data_directory: str = "data/proxies"
-    backup_directory: str = "data/backups"
-    export_formats: List[str] = None
-    auto_backup: bool = True
-    backup_interval_hours: int = 24
-    max_backup_files: int = 7
-    
-    def __post_init__(self):
-        if self.export_formats is None:
-            self.export_formats = ["json", "csv", "txt"]
-
-
-@dataclass
-class LoggingConfig:
-    """日誌配置"""
-    level: str = "INFO"
-    format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    file_path: Optional[str] = "logs/proxy_manager.log"
-    max_file_size: str = "10MB"
-    backup_count: int = 5
-    enable_console: bool = True
-    enable_file: bool = True
-
-
-@dataclass
-class PerformanceConfig:
-    """性能配置"""
-    cache_size: int = 10000
-    cache_ttl_minutes: int = 30
-    enable_connection_pooling: bool = True
-    connection_pool_size: int = 100
-    dns_cache_ttl: int = 300
-    enable_compression: bool = True
-    
-    # 記憶體管理
-    max_memory_usage_mb: int = 512
-    gc_threshold: int = 1000
+    def get(self, key: str, default: Any = None) -> Any:
+        """獲取配置值"""
+        return getattr(self, key, default)
 
 
 class ProxyManagerConfig:
-    """代理管理器主配置類"""
+    """代理管理器主配置類
+    
+    整合所有子配置模組，提供統一的配置接口。
+    支援從 YAML 檔案載入配置。
+    """
     
     def __init__(self, config_file: Optional[str] = None):
-        self.config_file = config_file or "config/proxy_manager.yaml"
+        """初始化配置
         
-        # 初始化各個配置模組
+        Args:
+            config_file: 配置檔案路徑，如果為 None 則使用預設配置
+        """
+        # 初始化子配置模組
         self.api = ApiConfig()
         self.scanner = ScannerConfig()
         self.validation = ValidationConfig()
-        self.fetcher = FetcherConfig()
-        self.storage = StorageConfig()
-        self.logging = LoggingConfig()
-        self.performance = PerformanceConfig()
+        self.pool = PoolConfig()
+        self.save_config = ConfigValidation()
         
-        # 載入配置
-        self.load_config()
-        self._load_environment_variables()
-    
-    def load_config(self, config_file: Optional[str] = None) -> bool:
-        """載入配置文件"""
+        # 基本配置屬性
+        self.data_dir = Path("data/proxy_manager")
+        self.enable_free_proxy = True
+        self.enable_json_file = True
+        self.json_file_path = Path("proxy_list.json")
+        self.batch_validation_size = 100
+        
+        # 自動任務配置
+        self.auto_fetch_enabled = False
+        self.auto_cleanup_enabled = False
+        self.auto_save_enabled = True
+        self.auto_fetch_interval = 3600  # 1小時
+        self.auto_cleanup_interval = 1800  # 30分鐘
+        self.auto_save_interval = 300  # 5分鐘
+        self.auto_save_interval_minutes = 5  # 自動保存間隔（分鐘）
+        
+        # 如果提供了配置檔案，則載入配置
         if config_file:
-            self.config_file = config_file
+            self.load_config(config_file)
+    
+    def load_config(self, config_file: str) -> None:
+        """從 YAML 檔案載入配置
         
-        config_path = Path(self.config_file)
-        
-        if not config_path.exists():
-            logger.warning(f"配置文件不存在: {config_path}，使用默認配置")
-            self.save_config()  # 創建默認配置文件
-            return False
-        
+        Args:
+            config_file: 配置檔案路徑
+        """
         try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                if config_path.suffix.lower() == '.yaml' or config_path.suffix.lower() == '.yml':
+            config_path = Path(config_file)
+            if config_path.exists():
+                with open(config_path, 'r', encoding='utf-8') as f:
                     config_data = yaml.safe_load(f)
-                else:
-                    config_data = json.load(f)
-            
-            self._update_from_dict(config_data)
-            logger.info(f"✅ 配置文件載入成功: {config_path}")
-            return True
-        
+                
+                # 更新配置
+                self._update_from_dict(config_data)
+            else:
+                print(f"配置檔案不存在: {config_file}，使用預設配置")
         except Exception as e:
-            logger.error(f"❌ 配置文件載入失敗: {e}")
-            return False
+            print(f"載入配置檔案失敗: {e}，使用預設配置")
     
-    def save_config(self, config_file: Optional[str] = None) -> bool:
-        """保存配置到文件"""
-        if config_file:
-            self.config_file = config_file
+    def _update_from_dict(self, config_data: Dict[str, Any]) -> None:
+        """從字典更新配置
         
-        config_path = Path(self.config_file)
-        config_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        try:
-            config_data = self.to_dict()
-            
-            with open(config_path, 'w', encoding='utf-8') as f:
-                if config_path.suffix.lower() == '.yaml' or config_path.suffix.lower() == '.yml':
-                    yaml.dump(config_data, f, default_flow_style=False, allow_unicode=True, indent=2)
-                else:
-                    json.dump(config_data, f, indent=2, ensure_ascii=False)
-            
-            logger.info(f"✅ 配置文件保存成功: {config_path}")
-            return True
-        
-        except Exception as e:
-            logger.error(f"❌ 配置文件保存失敗: {e}")
-            return False
-    
-    def _load_environment_variables(self):
-        """從環境變量載入敏感配置"""
-        # API 金鑰
-        if os.getenv('SHODAN_API_KEY'):
-            self.api.shodan_api_key = os.getenv('SHODAN_API_KEY')
-        
-        if os.getenv('CENSYS_API_ID'):
-            self.api.censys_api_id = os.getenv('CENSYS_API_ID')
-        
-        if os.getenv('CENSYS_API_SECRET'):
-            self.api.censys_api_secret = os.getenv('CENSYS_API_SECRET')
-        
-        if os.getenv('PROXYSCRAPE_API_KEY'):
-            self.api.proxyscrape_api_key = os.getenv('PROXYSCRAPE_API_KEY')
-        
-        if os.getenv('GITHUB_TOKEN'):
-            self.api.github_token = os.getenv('GITHUB_TOKEN')
-        
-        if os.getenv('IPAPI_KEY'):
-            self.api.ipapi_key = os.getenv('IPAPI_KEY')
-        
-        # 其他環境變量
-        if os.getenv('PROXY_MANAGER_LOG_LEVEL'):
-            self.logging.level = os.getenv('PROXY_MANAGER_LOG_LEVEL')
-        
-        if os.getenv('PROXY_MANAGER_DATA_DIR'):
-            self.storage.data_directory = os.getenv('PROXY_MANAGER_DATA_DIR')
-    
-    def _update_from_dict(self, config_data: Dict[str, Any]):
-        """從字典更新配置"""
+        Args:
+            config_data: 配置字典
+        """
+        # 更新 API 配置
         if 'api' in config_data:
-            self._update_dataclass(self.api, config_data['api'])
+            api_config = config_data['api']
+            self.api.proxyscrape_api_key = api_config.get('proxyscrape_api_key')
+            self.api.github_token = api_config.get('github_token')
+            self.api.shodan_api_key = api_config.get('shodan_api_key')
         
+        # 更新掃描器配置
         if 'scanner' in config_data:
-            self._update_dataclass(self.scanner, config_data['scanner'])
+            scanner_config = config_data['scanner']
+            self.scanner.timeout = scanner_config.get('timeout', self.scanner.timeout)
+            self.scanner.max_concurrent = scanner_config.get('max_concurrent', self.scanner.max_concurrent)
         
+        # 更新驗證配置
         if 'validation' in config_data:
-            self._update_dataclass(self.validation, config_data['validation'])
+            validation_config = config_data['validation']
+            self.validation.timeout = validation_config.get('timeout', self.validation.timeout)
+            self.validation.max_concurrent = validation_config.get('max_concurrent', self.validation.max_concurrent)
         
-        if 'fetcher' in config_data:
-            self._update_dataclass(self.fetcher, config_data['fetcher'])
+        # 更新基本配置
+        if 'data_dir' in config_data:
+            self.data_dir = Path(config_data['data_dir'])
         
-        if 'storage' in config_data:
-            self._update_dataclass(self.storage, config_data['storage'])
+        if 'enable_free_proxy' in config_data:
+            self.enable_free_proxy = config_data['enable_free_proxy']
         
-        if 'logging' in config_data:
-            self._update_dataclass(self.logging, config_data['logging'])
+        if 'enable_json_file' in config_data:
+            self.enable_json_file = config_data['enable_json_file']
         
-        if 'performance' in config_data:
-            self._update_dataclass(self.performance, config_data['performance'])
-    
-    def _update_dataclass(self, obj, data: Dict[str, Any]):
-        """更新 dataclass 對象"""
-        for key, value in data.items():
-            if hasattr(obj, key):
-                # 處理枚舉類型
-                if key in ['min_speed', 'required_anonymity'] and isinstance(value, str):
-                    if key == 'min_speed':
-                        setattr(obj, key, ProxySpeed[value.upper()])
-                    elif key == 'required_anonymity':
-                        setattr(obj, key, ProxyAnonymity[value.upper()])
-                elif key == 'required_protocols' and isinstance(value, list):
-                    protocols = [ProxyProtocol[p.upper()] for p in value if hasattr(ProxyProtocol, p.upper())]
-                    setattr(obj, key, protocols)
-                else:
-                    setattr(obj, key, value)
+        if 'json_file_path' in config_data:
+            self.json_file_path = Path(config_data['json_file_path'])
+        
+        if 'batch_validation_size' in config_data:
+            self.batch_validation_size = config_data['batch_validation_size']
     
     def to_dict(self) -> Dict[str, Any]:
-        """轉換為字典"""
-        def convert_dataclass(obj):
-            result = asdict(obj)
-            # 處理枚舉類型
-            for key, value in result.items():
-                if hasattr(value, 'name'):
-                    result[key] = value.name.lower()
-                elif isinstance(value, list) and value and hasattr(value[0], 'name'):
-                    result[key] = [v.name.lower() for v in value]
-            return result
+        """將配置轉換為字典
         
+        Returns:
+            配置字典
+        """
         return {
-            'api': convert_dataclass(self.api),
-            'scanner': convert_dataclass(self.scanner),
-            'validation': convert_dataclass(self.validation),
-            'fetcher': convert_dataclass(self.fetcher),
-            'storage': convert_dataclass(self.storage),
-            'logging': convert_dataclass(self.logging),
-            'performance': convert_dataclass(self.performance)
+            'api': {
+                'proxyscrape_api_key': self.api.proxyscrape_api_key,
+                'github_token': self.api.github_token,
+                'shodan_api_key': self.api.shodan_api_key
+            },
+            'scanner': {
+                'timeout': self.scanner.timeout,
+                'max_concurrent': self.scanner.max_concurrent,
+                'port_ranges': self.scanner.port_ranges,
+                'scan_timeout': self.scanner.scan_timeout
+            },
+            'validation': {
+                'timeout': self.validation.timeout,
+                'max_concurrent': self.validation.max_concurrent,
+                'test_urls': self.validation.test_urls,
+                'retry_count': self.validation.retry_count
+            },
+            'data_dir': str(self.data_dir),
+            'enable_free_proxy': self.enable_free_proxy,
+            'enable_json_file': self.enable_json_file,
+            'json_file_path': str(self.json_file_path),
+            'batch_validation_size': self.batch_validation_size
         }
     
-    def get_api_config(self) -> Dict[str, Any]:
-        """獲取 API 配置字典"""
-        return {
-            'shodan_api_key': self.api.shodan_api_key,
-            'censys_api_id': self.api.censys_api_id,
-            'censys_api_secret': self.api.censys_api_secret,
-            'proxyscrape_api_key': self.api.proxyscrape_api_key,
-            'github_token': self.api.github_token,
-            'ipapi_key': self.api.ipapi_key
-        }
-    
-    def validate_config(self) -> List[str]:
-        """驗證配置有效性"""
-        errors = []
+    def save_to_file(self, config_file: str) -> None:
+        """將配置保存到 YAML 檔案
         
-        # 檢查必要目錄
+        Args:
+            config_file: 配置檔案路徑
+        """
         try:
-            Path(self.storage.data_directory).mkdir(parents=True, exist_ok=True)
-            Path(self.storage.backup_directory).mkdir(parents=True, exist_ok=True)
-            if self.logging.file_path:
-                Path(self.logging.file_path).parent.mkdir(parents=True, exist_ok=True)
+            config_path = Path(config_file)
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(config_path, 'w', encoding='utf-8') as f:
+                yaml.dump(self.to_dict(), f, default_flow_style=False, allow_unicode=True)
+            
+            print(f"配置已保存到: {config_file}")
         except Exception as e:
-            errors.append(f"目錄創建失敗: {e}")
-        
-        # 檢查數值範圍
-        if self.scanner.max_concurrent <= 0:
-            errors.append("scanner.max_concurrent 必須大於 0")
-        
-        if self.scanner.timeout <= 0:
-            errors.append("scanner.timeout 必須大於 0")
-        
-        if self.performance.cache_size <= 0:
-            errors.append("performance.cache_size 必須大於 0")
-        
-        # 檢查 API 金鑰（如果啟用相應功能）
-        if self.fetcher.enable_shodan and not self.api.shodan_api_key:
-            errors.append("啟用 Shodan 但未配置 API 金鑰")
-        
-        if self.fetcher.enable_censys and (not self.api.censys_api_id or not self.api.censys_api_secret):
-            errors.append("啟用 Censys 但未配置 API 金鑰")
-        
-        return errors
+            print(f"保存配置檔案失敗: {e}")
     
-    def get_summary(self) -> Dict[str, Any]:
-        """獲取配置摘要"""
-        return {
-            "config_file": self.config_file,
-            "api_keys_configured": {
-                "shodan": bool(self.api.shodan_api_key),
-                "censys": bool(self.api.censys_api_id and self.api.censys_api_secret),
-                "proxyscrape": bool(self.api.proxyscrape_api_key),
-                "github": bool(self.api.github_token),
-                "ipapi": bool(self.api.ipapi_key)
-            },
-            "enabled_fetchers": {
-                "proxyscrape": self.fetcher.enable_proxyscrape,
-                "github": self.fetcher.enable_github,
-                "shodan": self.fetcher.enable_shodan,
-                "censys": self.fetcher.enable_censys,
-                "web_scraping": self.fetcher.enable_web_scraping
-            },
-            "scanner_settings": {
-                "max_concurrent": self.scanner.max_concurrent,
-                "timeout": self.scanner.timeout,
-                "fast_scan_enabled": self.scanner.enable_fast_scan
-            },
-            "validation_settings": {
-                "min_speed": self.validation.min_speed.name,
-                "required_anonymity": self.validation.required_anonymity.name,
-                "geolocation_check": self.validation.enable_geolocation_check,
-                "anonymity_check": self.validation.enable_anonymity_check
-            }
-        }
-
-
-# 全局配置實例
-_global_config: Optional[ProxyManagerConfig] = None
+    def get(self, key: str, default: Any = None) -> Any:
+        """獲取配置值
+        
+        Args:
+            key: 配置鍵
+            default: 預設值
+            
+        Returns:
+            配置值
+        """
+        return getattr(self, key, default)
+    
+    def __repr__(self) -> str:
+        """字串表示"""
+        return f"ProxyManagerConfig(data_dir={self.data_dir}, enable_free_proxy={self.enable_free_proxy})"
 
 
 def get_config() -> ProxyManagerConfig:
-    """獲取全局配置實例"""
+    """獲取全局配置實例
+    
+    Returns:
+        ProxyManagerConfig: 全局配置實例
+    """
     global _global_config
     if _global_config is None:
         _global_config = ProxyManagerConfig()
     return _global_config
 
 
-def set_config(config: ProxyManagerConfig):
-    """設置全局配置實例"""
+def set_config(config: ProxyManagerConfig) -> None:
+    """設置全局配置實例
+    
+    Args:
+        config: 配置實例
+    """
     global _global_config
     _global_config = config
 
 
 def load_config_from_file(config_file: str) -> ProxyManagerConfig:
-    """從文件載入配置"""
+    """從檔案載入配置並設為全局配置
+    
+    Args:
+        config_file: 配置檔案路徑
+        
+    Returns:
+        ProxyManagerConfig: 載入的配置實例
+    """
     config = ProxyManagerConfig(config_file)
     set_config(config)
     return config

@@ -1,0 +1,123 @@
+database:
+  postgresql:
+    database: proxy_manager
+    host: localhost
+    max_overflow: 20
+    password: password
+    pool_recycle: 3600
+    pool_size: 10
+    pool_timeout: 30
+    port: 5432
+    username: postgres
+  redis:
+    database: 0
+    host: localhost
+    max_connections: 10
+    password: null
+    port: 6379
+    socket_connect_timeout: 5
+    socket_timeout: 5
+etl:
+  batch_size: 1000
+  max_workers: 4
+  retry_attempts: 3
+  retry_delay: 5
+  scheduler:
+    enabled: true
+    interval: 3600
+    max_concurrent_jobs: 2
+  timeout: 300
+  validation:
+    error_threshold: 0.05
+    max_errors: 100
+    strict_mode: true
+etl_api:
+  access_log: true
+  log_level: info
+  port: 8001
+  reload: true
+  workers: 1
+feature_flags:
+  api_documentation: true
+  data_validation: true
+  etl_pipeline: true
+  geo_filtering: true
+  metrics_export: true
+  monitoring_dashboard: true
+  proxy_rotation: true
+  speed_testing: true
+logging:
+  console:
+    colorize: true
+    enabled: true
+  file:
+    compression: gz
+    enabled: true
+    path: logs
+    retention: 7 days
+    rotation: 1 day
+  format: '<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level>
+    | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>'
+  level: INFO
+main_api:
+  access_log: true
+  log_level: info
+  port: 8000
+  reload: true
+  workers: 1
+monitoring:
+  alerts:
+    email_notifications: false
+    enabled: true
+    rules: []
+    webhook_url: null
+  metrics:
+    collection_interval: 60
+    enabled: true
+    retention_days: 30
+  port: 8002
+proxy:
+  filtering:
+    min_reliability: 0.8
+    min_speed: 1.0
+    required_anonymity: anonymous
+  scoring:
+    anonymity_weight: 0.2
+    location_weight: 0.1
+    reliability_weight: 0.3
+    speed_weight: 0.4
+  validation:
+    max_concurrent: 50
+    test_urls:
+    - http://httpbin.org/ip
+    - https://httpbin.org/ip
+    - http://icanhazip.com
+    timeout: 10
+security:
+  api_keys:
+    enabled: false
+    header_name: X-API-Key
+    keys: []
+  cors:
+    allow_credentials: true
+    allow_headers:
+    - '*'
+    allow_methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+    - OPTIONS
+    allow_origins:
+    - http://localhost:3000
+    - http://localhost:8080
+    - http://127.0.0.1:3000
+    - http://127.0.0.1:8080
+  rate_limiting:
+    burst_size: 10
+    enabled: true
+    requests_per_minute: 100
+server:
+  debug: true
+  environment: development
+  host: 0.0.0.0
