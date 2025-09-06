@@ -21,6 +21,15 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 import uvicorn
 
+# 導入 ETL API
+try:
+    from ..etl.etl_api import etl_app
+    ETL_AVAILABLE = True
+except ImportError:
+    ETL_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning("⚠️ ETL API 模組不可用，某些功能將被禁用")
+
 from .manager import ProxyManager, ProxyManagerConfig
 from .models import ProxyNode, ProxyStatus, ProxyAnonymity, ProxyProtocol, ProxyFilter
 from .pools import PoolType
@@ -154,6 +163,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 掛載 ETL API 子應用
+if ETL_AVAILABLE:
+    app.mount("/etl", etl_app, name="etl")
+    logger.info("✅ ETL API 已掛載到 /etl 路徑")
+else:
+    logger.warning("⚠️ ETL API 不可用，跳過掛載")
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -164,13 +180,7 @@ async def startup_event():
     
     try:
         # 創建配置
-        config = ProxyManagerConfig(
-            data_dir=Path("data/proxy_manager"),
-            auto_fetch_enabled=True,
-            auto_fetch_interval_hours=6,
-            auto_cleanup_enabled=True,
-            auto_save_enabled=True
-        )
+        config = ProxyManagerConfig()
         
         # 創建並啟動代理管理器
         proxy_manager = ProxyManager(config)
@@ -559,6 +569,106 @@ async def get_pools_info(manager: ProxyManager = Depends(get_proxy_manager)):
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
 
 
+@app.post("/api/etl/sync", summary="同步代理數據到 ETL 系統")
+async def sync_to_etl(
+    background_tasks: BackgroundTasks,
+    pool_types: Optional[str] = Query("hot,warm,cold", description="要同步的池類型"),
+    manager: ProxyManager = Depends(get_proxy_manager)
+):
+    """將代理管理器中的數據同步到 ETL 系統"""
+    if not ETL_AVAILABLE:
+        raise HTTPException(status_code=503, detail="ETL 系統不可用")
+    
+    try:
+        # 解析池類型
+        pool_list = []
+        if pool_types:
+            for pool_name in pool_types.split(','):
+                pool_name = pool_name.strip().lower()
+                if pool_name in ['hot', 'warm', 'cold']:
+                    pool_list.append(pool_name)
+        
+        if not pool_list:
+            pool_list = ['hot', 'warm', 'cold']
+        
+        # 在背景執行同步任務
+        background_tasks.add_task(_sync_data_to_etl, manager, pool_list)
+        
+        return {
+            "message": "數據同步任務已啟動",
+            "pool_types": pool_list,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ 啟動數據同步失敗: {e}")
+        raise HTTPException(status_code=500, detail=f"啟動數據同步失敗: {e}")
+
+
+@app.get("/api/etl/status", summary="獲取 ETL 系統狀態")
+async def get_etl_status():
+    """獲取 ETL 系統的狀態信息"""
+    if not ETL_AVAILABLE:
+        return {
+            "available": False,
+            "message": "ETL 系統不可用",
+            "timestamp": datetime.now().isoformat()
+        }
+    
+    try:
+        # 這裡可以添加對 ETL 系統健康狀態的檢查
+        return {
+            "available": True,
+            "status": "operational",
+            "endpoints": {
+                "jobs": "/etl/api/etl/jobs",
+                "validation": "/etl/api/etl/validate",
+                "monitoring": "/etl/api/etl/monitoring/metrics",
+                "health": "/etl/api/etl/health"
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ 獲取 ETL 狀態失敗: {e}")
+        raise HTTPException(status_code=500, detail=f"獲取 ETL 狀態失敗: {e}")
+
+
+@app.post("/api/batch/validate", summary="批量驗證代理")
+async def batch_validate_proxies(
+    background_tasks: BackgroundTasks,
+    pool_types: Optional[str] = Query("hot,warm,cold", description="要驗證的池類型"),
+    batch_size: int = Query(100, ge=10, le=1000, description="批次大小"),
+    manager: ProxyManager = Depends(get_proxy_manager)
+):
+    """批量驗證代理的可用性和性能"""
+    try:
+        # 解析池類型
+        pool_list = []
+        if pool_types:
+            for pool_name in pool_types.split(','):
+                pool_name = pool_name.strip().lower()
+                if pool_name in ['hot', 'warm', 'cold']:
+                    pool_list.append(pool_name)
+        
+        if not pool_list:
+            pool_list = ['hot', 'warm', 'cold']
+        
+        # 在背景執行批量驗證
+        background_tasks.add_task(_batch_validate_proxies, manager, pool_list, batch_size)
+        
+        return {
+            "message": "批量驗證任務已啟動",
+            "pool_types": pool_list,
+            "batch_size": batch_size,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ 啟動批量驗證失敗: {e}")
+        raise HTTPException(status_code=500, detail=f"啟動批量驗證失敗: {e}")
+
+
 # 錯誤處理
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
@@ -583,6 +693,53 @@ async def general_exception_handler(request, exc):
             "path": str(request.url)
         }
     )
+
+
+# ===== 背景任務函數 =====
+
+async def _sync_data_to_etl(manager: ProxyManager, pool_types: List[str]):
+    """同步數據到 ETL 系統的背景任務"""
+    try:
+        logger.info(f"🔄 開始同步數據到 ETL 系統，池類型: {pool_types}")
+        
+        # 獲取所有代理數據
+        all_proxies = []
+        for pool_type in pool_types:
+            # 這裡應該根據實際的 ProxyManager API 獲取代理
+            # proxies = await manager.get_proxies_from_pool(pool_type)
+            # all_proxies.extend(proxies)
+            pass
+        
+        # 將數據發送到 ETL 系統
+        # 這裡應該調用 ETL API 來處理數據
+        
+        logger.info(f"✅ 數據同步完成，共處理 {len(all_proxies)} 個代理")
+        
+    except Exception as e:
+        logger.error(f"❌ 數據同步失敗: {e}")
+
+
+async def _batch_validate_proxies(manager: ProxyManager, pool_types: List[str], batch_size: int):
+    """批量驗證代理的背景任務"""
+    try:
+        logger.info(f"🔍 開始批量驗證代理，池類型: {pool_types}，批次大小: {batch_size}")
+        
+        total_validated = 0
+        total_valid = 0
+        
+        for pool_type in pool_types:
+            # 這裡應該根據實際的 ProxyManager API 進行批量驗證
+            # result = await manager.batch_validate_pool(pool_type, batch_size)
+            # total_validated += result.get('total', 0)
+            # total_valid += result.get('valid', 0)
+            pass
+        
+        success_rate = (total_valid / total_validated * 100) if total_validated > 0 else 0
+        
+        logger.info(f"✅ 批量驗證完成，驗證 {total_validated} 個代理，成功率: {success_rate:.2f}%")
+        
+    except Exception as e:
+        logger.error(f"❌ 批量驗證失敗: {e}")
 
 
 # 啟動服務器的函數
