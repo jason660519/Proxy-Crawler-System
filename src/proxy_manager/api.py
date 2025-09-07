@@ -13,13 +13,14 @@ from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Depends, Query, BackgroundTasks, Request
+from fastapi import FastAPI, HTTPException, Depends, Query, BackgroundTasks, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 import redis.asyncio as aioredis
+from src.config.settings import settings
 import uvicorn
 
 # 導入 ETL API
@@ -147,6 +148,14 @@ class ExportRequest(BaseModel):
     filename: Optional[str] = None
 
 
+# 簡單的 API Key 驗證依賴
+async def require_api_key(x_api_key: Optional[str] = Header(default=None)):
+    if not settings.api_key_enabled:
+        return
+    if not x_api_key or x_api_key not in settings.api_keys:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
+
 # 全局代理管理器實例
 proxy_manager: Optional[ProxyManager] = None
 
@@ -176,7 +185,7 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 # 添加 CORS 中間件
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 生產環境中應該限制具體域名
+    allow_origins=settings.cors_allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -507,7 +516,7 @@ async def fetch_proxies(
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
 
 
-@app.post("/api/validate", summary="手動驗證代理池")
+@app.post("/api/validate", summary="手動驗證代理池", dependencies=[Depends(require_api_key)])
 async def validate_pools(
     background_tasks: BackgroundTasks,
     manager: ProxyManager = Depends(get_proxy_manager)
@@ -527,7 +536,7 @@ async def validate_pools(
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
 
 
-@app.post("/api/cleanup", summary="手動清理代理池")
+@app.post("/api/cleanup", summary="手動清理代理池", dependencies=[Depends(require_api_key)])
 async def cleanup_pools(
     background_tasks: BackgroundTasks,
     manager: ProxyManager = Depends(get_proxy_manager)
@@ -547,7 +556,7 @@ async def cleanup_pools(
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
 
 
-@app.post("/api/export", summary="導出代理")
+@app.post("/api/export", summary="導出代理", dependencies=[Depends(require_api_key)])
 async def export_proxies(
     export_request: ExportRequest,
     manager: ProxyManager = Depends(get_proxy_manager)
@@ -794,7 +803,7 @@ async def get_pools_info(manager: ProxyManager = Depends(get_proxy_manager)):
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
 
 
-@app.post("/api/etl/sync", summary="同步代理數據到 ETL 系統")
+@app.post("/api/etl/sync", summary="同步代理數據到 ETL 系統", dependencies=[Depends(require_api_key)])
 async def sync_to_etl(
     background_tasks: BackgroundTasks,
     pool_types: Optional[str] = Query("hot,warm,cold", description="要同步的池類型"),
@@ -859,7 +868,7 @@ async def get_etl_status():
         raise HTTPException(status_code=500, detail=f"獲取 ETL 狀態失敗: {e}")
 
 
-@app.post("/api/batch/validate", summary="批量驗證代理")
+@app.post("/api/batch/validate", summary="批量驗證代理", dependencies=[Depends(require_api_key)])
 async def batch_validate_proxies(
     background_tasks: BackgroundTasks,
     pool_types: Optional[str] = Query("hot,warm,cold", description="要驗證的池類型"),

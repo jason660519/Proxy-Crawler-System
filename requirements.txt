@@ -63,6 +63,7 @@ tqdm>=4.66.0
 rich>=13.0.0
 click>=8.1.0
 typer>=0.9.0
+pydantic-settings>=2.6.1
 
 # 文本處理
 chardet>=5.0.0
