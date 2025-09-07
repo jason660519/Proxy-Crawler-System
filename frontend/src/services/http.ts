@@ -18,6 +18,7 @@ const getEnvVar = (key: string, defaultValue: string): string => {
 const API_BASE_URL = getEnvVar('VITE_API_BASE_URL', '');
 const ETL_BASE_URL = getEnvVar('VITE_ETL_BASE_URL', 'http://localhost:8001');
 const REQUEST_TIMEOUT = parseInt(getEnvVar('VITE_REQUEST_TIMEOUT', '15000'));
+const API_KEY = getEnvVar('VITE_API_KEY', '');
 
 // 請求攔截器：添加通用標頭
 const requestInterceptor = (config: any): any => {
@@ -33,6 +34,7 @@ const requestInterceptor = (config: any): any => {
   config.headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    ...(API_KEY ? { 'X-API-Key': API_KEY } : {}),
     ...config.headers
   };
 
