@@ -1,8 +1,16 @@
-# Deprecated (Replaced by ETL_Pipeline_Overview.md)
+# ETL Pipeline (Brief)
 
-This document is superseded by `ETL_Pipeline_Overview.md` (English). Please refer to the new document for the up-to-date pipeline description aligned with the current architecture.
+This brief points to the authoritative English overview and highlights the current integration.
 
----
+- Main reference: `Docs/ETL_Pipeline_Overview.md`
+- Services:
+  - Main API (8000): exposes `/api/*`, health `/api/health`, metrics `/metrics`
+  - HTML→Markdown (8001): exposes `/health`, `/convert`, `/convert/batch`, `/upload`
+- Data directories (via Docker Compose): `data/raw`, `data/processed`, `data/transformed`, `data/validated`, `data/reports`
+- Migrations: Alembic runs on container start
+- Monitoring: Prometheus scrapes `proxy_crawler:8000/metrics` and `html_to_markdown:8001/metrics`; Grafana on host `3001`
+
+For full diagrams, storage paths and operational notes, see `ETL_Pipeline_Overview.md`.
 
 ## **2\. ETL 流程圖**
 
