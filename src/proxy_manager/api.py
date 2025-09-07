@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 import redis.asyncio as aioredis
 from src.config.settings import settings
 import uvicorn
+from prometheus_client import Counter, Gauge, generate_latest, CONTENT_TYPE_LATEST
 
 # 導入 ETL API
 try:
@@ -146,6 +147,11 @@ class ExportRequest(BaseModel):
     format_type: str = Field(default="json", pattern="^(json|txt|csv)$")
     pool_types: Optional[List[str]] = None
     filename: Optional[str] = None
+# Prometheus metrics
+REQUEST_COUNT = Counter("proxy_api_requests_total", "Total API requests", ["endpoint", "method", "status"])
+POOL_ACTIVE = Gauge("proxy_pool_active", "Active proxies in pool")
+POOL_TOTAL = Gauge("proxy_pool_total", "Total proxies in pool")
+
 
 
 # 簡單的 API Key 驗證依賴
@@ -308,6 +314,14 @@ async def health_check(manager: ProxyManager = Depends(get_proxy_manager)):
         overall = "degraded"
     else:
         overall = "unhealthy"
+
+    # 更新 metrics
+    try:
+        stats_summary = stats['pool_summary']
+        POOL_TOTAL.set(stats_summary['total_proxies'])
+        POOL_ACTIVE.set(stats_summary['total_active_proxies'])
+    except Exception:
+        pass
 
     return HealthResponse(
         status=overall,
@@ -906,6 +920,10 @@ async def batch_validate_proxies(
 # 錯誤處理
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
+    try:
+        REQUEST_COUNT.labels(endpoint=str(request.url.path), method=request.method, status=str(exc.status_code)).inc()
+    except Exception:
+        pass
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -919,6 +937,10 @@ async def http_exception_handler(request, exc):
 @app.exception_handler(Exception)
 async def general_exception_handler(request, exc):
     logger.error(f"❌ 未處理的異常: {exc}")
+    try:
+        REQUEST_COUNT.labels(endpoint=str(request.url.path), method=request.method, status="500").inc()
+    except Exception:
+        pass
     return JSONResponse(
         status_code=500,
         content={
@@ -992,6 +1014,11 @@ def start_server(
         log_level=log_level,
         access_log=True
     )
+
+
+@app.get("/metrics", include_in_schema=False)
+async def metrics():
+    return HTMLResponse(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 if __name__ == "__main__":
