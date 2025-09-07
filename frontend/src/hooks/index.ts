@@ -576,6 +576,10 @@ export function useTheme() {
       try {
         applyCssVariables(newTheme);
       } catch {}
+      // 同步 data-theme 屬性，確保 MutationObserver 與非事件路徑也能感知
+      try {
+        document.documentElement.setAttribute('data-theme', newTheme);
+      } catch {}
       return newTheme;
     });
   }, [setTheme, applyCssVariables]);
