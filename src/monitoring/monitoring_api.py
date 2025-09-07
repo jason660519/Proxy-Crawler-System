@@ -329,3 +329,4 @@ async def get_monitoring_config() -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"❌ 獲取監控配置失敗: {e}")
         raise HTTPException(status_code=500, detail=f"獲取配置失敗: {str(e)}")
+
