@@ -158,7 +158,7 @@ async def convert_html(request: ConversionRequest):
         start_time = datetime.now()
         
         # 執行轉換
-        result = await pipeline.run_complete_pipeline(
+        result = await pipeline.run_full_pipeline(
             html_content=request.html_content,
             source_url=request.source_url or "api://single-conversion",
             metadata=request.metadata or {}
@@ -210,7 +210,7 @@ async def convert_html_batch(request: BatchConversionRequest, background_tasks: 
         for item in request.items:
             try:
                 # 執行單一轉換
-                result = await pipeline.run_complete_pipeline(
+                result = await pipeline.run_full_pipeline(
                     html_content=item.html_content,
                     source_url=item.source_url or f"api://batch-conversion-{len(results)}",
                     metadata=item.metadata or {}
@@ -275,7 +275,7 @@ async def upload_html_file(file: UploadFile = File(...)):
         html_content = content.decode('utf-8')
         
         # 執行轉換
-        result = await pipeline.run_complete_pipeline(
+        result = await pipeline.run_full_pipeline(
             html_content=html_content,
             source_url=f"upload://{file.filename}",
             metadata={"filename": file.filename, "file_size": len(content)}

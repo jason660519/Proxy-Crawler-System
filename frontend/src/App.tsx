@@ -1,7 +1,5 @@
 import React, { Suspense, useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 
@@ -84,20 +82,7 @@ const App: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
 
-  // React Query 客戶端配置
-  const [queryClient] = useState(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 5 * 60 * 1000, // 5分鐘
-        cacheTime: 10 * 60 * 1000, // 10分鐘
-        retry: 3,
-        refetchOnWindowFocus: false,
-      },
-      mutations: {
-        retry: 1,
-      },
-    },
-  }));
+
 
   // 響應式斷點檢測
   useEffect(() => {
@@ -424,9 +409,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ErrorBoundary>
-        <Router>
+    <ErrorBoundary>
           <Layout
             activityBar={
               <ActivityBar
@@ -509,14 +492,7 @@ const App: React.FC = () => {
               },
             }}
           />
-        </Router>
-      </ErrorBoundary>
-      
-      {/* React Query 開發工具 */}
-      {process.env.NODE_ENV === 'development' && (
-        <ReactQueryDevtools initialIsOpen={false} />
-      )}
-    </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 

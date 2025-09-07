@@ -1,7 +1,7 @@
 # 簡化的 Docker Compose 配置
 # 使用新的資料庫配置管理器
 
-version: '3.8'
+version: "3.8"
 
 services:
   # PostgreSQL 資料庫
@@ -51,18 +51,18 @@ services:
       - DB_USER=${DB_USER:-proxyadmin}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME:-proxypool}
-      
+
       # 可選配置（如果需要）
       # - REDIS_PASSWORD=${REDIS_PASSWORD}
       # - DB_SERVICE=postgres_db
       # - REDIS_SERVICE=redis_cache
-    
+
     depends_on:
       postgres_db:
         condition: service_healthy
       redis_cache:
         condition: service_healthy
-    
+
     volumes:
       # 日誌目錄映射
       - ./logs:/app/logs
@@ -75,13 +75,13 @@ services:
       # 配置檔案映射
       - ./src:/app/src
       - ./requirements_html_to_markdown.txt:/app/requirements_html_to_markdown.txt
-    
+
     restart: unless-stopped
-    
+
     # 如果需要暴露 API 端口
     ports:
       - "8000:8000"
-    
+
     networks:
       - proxy_crawler_network
 
@@ -101,13 +101,13 @@ services:
       - OUTPUT_DIR=/app/output
       - BATCH_SIZE=100
       - QUALITY_THRESHOLD=0.7
-    
+
     depends_on:
       postgres_db:
         condition: service_healthy
       redis_cache:
         condition: service_healthy
-    
+
     volumes:
       # ETL 資料流程目錄映射
       - ./data/raw/html-to-markdown:/app/input
@@ -117,13 +117,21 @@ services:
       - ./logs:/app/logs
       # 源碼映射（開發模式）
       - ./src/html_to_markdown:/app/src/html_to_markdown
-    
+
     restart: unless-stopped
-    
+
     # API 端口
     ports:
       - "8001:8001"
-    
+
+    # 健康檢查
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
     networks:
       - proxy_crawler_network
 
@@ -140,7 +148,7 @@ services:
     networks:
       - proxy_crawler_network
     profiles:
-      - tools  # 使用 docker-compose --profile tools up 來啟動
+      - tools # 使用 docker-compose --profile tools up 來啟動
 
   # 可選：Redis 管理工具
   redis_commander:
@@ -154,7 +162,7 @@ services:
     networks:
       - proxy_crawler_network
     profiles:
-      - tools  # 使用 docker-compose --profile tools up 來啟動
+      - tools # 使用 docker-compose --profile tools up 來啟動
 
 volumes:
   postgres_data:
@@ -165,7 +173,6 @@ volumes:
 networks:
   proxy_crawler_network:
     driver: bridge
-
 # 使用說明：
 # 1. 複製 .env.example 為 .env 並設定密碼
 # 2. 執行：docker-compose up -d

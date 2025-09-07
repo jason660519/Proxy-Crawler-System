@@ -1,0 +1,9 @@
+2025-09-07 00:04:07 | INFO | __main__:main:325 - 正在啟動 HTML to Markdown API 服務器於 0.0.0.0:8001
+2025-09-07 00:04:07 | INFO | src.html_to_markdown.api_server:startup_event:91 - 正在啟動 HTML to Markdown API 服務...
+2025-09-07 00:04:07 | INFO | src.html_to_markdown.data_pipeline:__init__:90 - 資料流程管理器已初始化，來源：html-to-markdown
+2025-09-07 00:04:07 | INFO | src.html_to_markdown.api_server:startup_event:101 - API 服務已啟動，資料目錄：/app
+2025-09-07 00:04:12 | INFO | src.html_to_markdown.data_pipeline:run_full_pipeline:368 - 開始執行完整的 HTML to Markdown 資料流程
+2025-09-07 00:04:12 | INFO | src.html_to_markdown.data_pipeline:stage1_save_raw_markdown:118 - 開始階段1：HTML 轉換為 Markdown
+2025-09-07 00:04:12 | ERROR | src.html_to_markdown.data_pipeline:stage1_save_raw_markdown:141 - 階段1處理失敗：HTML 轉換失敗：轉換後內容過短 (25 < 100)
+2025-09-07 00:04:12 | ERROR | src.html_to_markdown.data_pipeline:run_full_pipeline:390 - 資料流程執行失敗：HTML 轉換失敗：轉換後內容過短 (25 < 100)
+2025-09-07 00:04:12 | ERROR | src.html_to_markdown.api_server:convert_html:191 - 轉換過程中發生錯誤：HTML 轉換失敗：轉換後內容過短 (25 < 100)
