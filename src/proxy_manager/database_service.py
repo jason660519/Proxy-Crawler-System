@@ -71,6 +71,18 @@ class DatabaseService:
         if self.db_pool:
             await self.db_pool.close()
             self.logger.info("數據庫連接池已關閉")
+
+    async def ping(self) -> bool:
+        """輕量檢查資料庫連線可用性"""
+        if not self.db_pool:
+            raise RuntimeError("數據庫連接池未初始化")
+        try:
+            async with self.db_pool.acquire() as conn:
+                val = await conn.fetchval("SELECT 1")
+                return val == 1
+        except Exception as e:
+            self.logger.error(f"資料庫 ping 失敗: {e}")
+            return False
     
     async def get_proxies(
         self,

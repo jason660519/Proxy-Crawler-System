@@ -10,13 +10,10 @@ import { TrendChart } from './TrendChart';
 import { TaskBoard } from './TaskBoard';
 import { LogViewer } from './LogViewer';
 import { spacing } from '../../styles';
-import type { DashboardLayout } from '../../types';
-
 // ============= 類型定義 =============
 
 interface DashboardProps {
   className?: string;
-  layout?: DashboardLayout;
 }
 
 interface GridItemProps {
@@ -93,60 +90,15 @@ const RefreshButton = styled.button`
   }
 `;
 
-const LayoutToggle = styled.div`
-  display: flex;
-  background: var(--color-background-secondary);
-  border-radius: var(--border-radius-md);
-  padding: ${spacing[1]};
-  gap: ${spacing[1]};
-`;
 
-const LayoutButton = styled.button<{ active: boolean }>`
-  padding: ${spacing[1]} ${spacing[2]};
-  background: ${({ active }) => active ? 'var(--color-primary-500)' : 'transparent'};
-  color: ${({ active }) => active ? 'var(--color-white)' : 'var(--color-text-secondary)'};
-  border: none;
-  border-radius: var(--border-radius-sm);
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
 
-  &:hover {
-    background: ${({ active }) => active ? 'var(--color-primary-600)' : 'var(--color-background-hover)'};
-  }
-`;
-
-const DashboardGrid = styled.div<{ layout: DashboardLayout }>`
+const DashboardGrid = styled.div`
   display: grid;
   gap: ${spacing[6]};
-  
-  ${({ layout }) => {
-    switch (layout) {
-      case 'compact':
-        return `
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-          grid-template-areas:
-            "health health"
-            "trends tasks"
-            "logs logs";
-        `;
-      case 'wide':
-        return `
-          grid-template-columns: 1fr 1fr 1fr;
-          grid-template-areas:
-            "health trends tasks"
-            "logs logs logs";
-        `;
-      case 'detailed':
-      default:
-        return `
-          grid-template-columns: 1fr 1fr;
-          grid-template-areas:
-            "health trends"
-            "tasks logs";
-        `;
-    }
-  }}
+  grid-template-columns: 1fr 1fr;
+  grid-template-areas:
+    "health trends"
+    "tasks logs";
   
   @media (max-width: 1200px) {
     grid-template-columns: 1fr;
@@ -231,10 +183,8 @@ const LoadingSpinner = styled.div`
  * 主要儀表板組件
  */
 export const Dashboard: React.FC<DashboardProps> = ({ 
-  className,
-  layout = 'detailed'
+  className
 }) => {
-  const [currentLayout, setCurrentLayout] = useState<DashboardLayout>(layout);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
@@ -277,27 +227,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
         
         <HeaderActions>
-          <LayoutToggle>
-            <LayoutButton
-              active={currentLayout === 'compact'}
-              onClick={() => setCurrentLayout('compact')}
-            >
-              緊湊
-            </LayoutButton>
-            <LayoutButton
-              active={currentLayout === 'detailed'}
-              onClick={() => setCurrentLayout('detailed')}
-            >
-              詳細
-            </LayoutButton>
-            <LayoutButton
-              active={currentLayout === 'wide'}
-              onClick={() => setCurrentLayout('wide')}
-            >
-              寬版
-            </LayoutButton>
-          </LayoutToggle>
-          
           <RefreshButton
             onClick={handleRefresh}
             disabled={isRefreshing}
@@ -335,7 +264,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </StatCard>
       </StatsOverview>
 
-      <DashboardGrid layout={currentLayout}>
+      <DashboardGrid>
         <GridItem gridArea="health" minHeight="300px">
           <HealthCard />
         </GridItem>

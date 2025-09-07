@@ -19,6 +19,7 @@ from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
+import redis.asyncio as aioredis
 import uvicorn
 
 # 導入 ETL API
@@ -263,16 +264,44 @@ async def api_root():
 
 @app.get("/api/health", response_model=HealthResponse, summary="健康檢查")
 async def health_check(manager: ProxyManager = Depends(get_proxy_manager)):
-    """健康檢查接口"""
+    """健康檢查接口（包含 DB 與 Redis 連線檢查）"""
     stats = manager.get_stats()
-    
+
     uptime = None
     if stats['manager_stats']['start_time']:
         start_time = stats['manager_stats']['start_time']
         uptime = (datetime.now() - start_time).total_seconds()
-    
+
+    # 驗證資料庫
+    db_ok = False
+    try:
+        db_service = await get_database_service()
+        db_ok = await db_service.ping()
+    except Exception as e:
+        logger.error(f"DB health check failed: {e}")
+        db_ok = False
+
+    # 驗證 Redis
+    redis_ok = False
+    try:
+        redis_url = DatabaseConfig().get_redis_url()
+        redis_client = aioredis.from_url(redis_url, decode_responses=True)
+        redis_ok = await redis_client.ping()
+        await redis_client.close()
+    except Exception as e:
+        logger.error(f"Redis health check failed: {e}")
+        redis_ok = False
+
+    running = stats['status']['running']
+    if running and db_ok and redis_ok:
+        overall = "healthy"
+    elif running or db_ok or redis_ok:
+        overall = "degraded"
+    else:
+        overall = "unhealthy"
+
     return HealthResponse(
-        status="healthy" if stats['status']['running'] else "unhealthy",
+        status=overall,
         timestamp=datetime.now(),
         uptime_seconds=uptime,
         total_proxies=stats['pool_summary']['total_proxies'],
