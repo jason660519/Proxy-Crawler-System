@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import styled, { ThemeProvider, createGlobalStyle } from 'styled-components';
 import { Header, ActivityBar } from './components/layout';
-import { Dashboard } from './components/dashboard';
+import { Dashboard, OperationsDashboard } from './components/dashboard';
 import { ThemeDebugger } from './components/debug';
 import { useTheme, useHealthStatus } from './hooks';
 import { createGlobalStyles, lightTheme, darkTheme } from './styles';
@@ -159,12 +159,7 @@ const App: React.FC = () => {
         );
       
       case 'analytics':
-        return (
-          <WelcomeMessage>
-            <WelcomeTitle>數據分析</WelcomeTitle>
-            <WelcomeSubtitle>數據分析功能正在開發中...</WelcomeSubtitle>
-          </WelcomeMessage>
-        );
+        return <OperationsDashboard />;
       
       case 'settings':
         return (

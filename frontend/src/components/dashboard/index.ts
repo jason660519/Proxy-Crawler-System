@@ -4,6 +4,7 @@
  */
 
 export { Dashboard } from './Dashboard';
+export { OperationsDashboard } from './OperationsDashboard';
 export { HealthCard } from './HealthCard';
 export { TrendChart } from './TrendChart';
 export { TaskBoard } from './TaskBoard';
