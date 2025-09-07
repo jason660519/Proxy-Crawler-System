@@ -31,7 +31,7 @@ from loguru import logger
 from ..proxy_manager.models import (
     ProxyNode, ProxyProtocol, ProxyAnonymity, ProxySpeed, ProxyStatus, ProxyMetrics
 )
-from ..database_config import DatabaseConfig
+from database_config import DatabaseConfig, db_config
 
 
 class ETLStage(Enum):

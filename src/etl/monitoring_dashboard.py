@@ -31,10 +31,10 @@ import jinja2
 import aiofiles
 
 # 導入相關模組
-from .proxy_etl_pipeline import ProxyETLPipeline, ETLStatus, ETLMetrics
+from .proxy_etl_pipeline import ProxyETLPipeline, ETLStage, ETLMetrics
 from .data_validator import ProxyDataValidator, ValidationConfig
 from ..proxy_manager.models import ProxyNode, ProxyStatus
-from database_config import get_db_config
+from database_config import db_config
 
 
 @dataclass

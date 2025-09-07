@@ -42,3 +42,43 @@
 2025-09-07 06:10:43 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
 2025-09-07 06:11:38 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
 2025-09-07 06:13:04 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
+2025-09-07 20:44:51 | INFO     | __main__:start_all_servers:245 - 🌟 啟動代理管理系統所有服務...
+2025-09-07 20:44:51 | INFO     | __main__:start_all_servers:246 - 📡 主機地址: 0.0.0.0
+2025-09-07 20:44:51 | INFO     | __main__:start_all_servers:247 - 🔧 主 API 端口: 8000
+2025-09-07 20:44:51 | INFO     | __main__:start_all_servers:248 - 📊 ETL API 端口: 8001
+2025-09-07 20:44:51 | INFO     | __main__:start_all_servers:249 - 📈 監控端口: 8002
+2025-09-07 20:44:51 | INFO     | __main__:start_all_servers:265 - ✅ 主 API 服務器進程已啟動 (PID: 4768)
+2025-09-07 20:44:53 | ERROR    | __main__:start_all_servers:306 - ❌ 啟動服務器失敗: cannot pickle 'weakref.ReferenceType' object
+2025-09-07 20:44:53 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
+2025-09-07 20:44:53 | INFO     | __main__:stop_all_servers:356 - 🔄 停止進程 MainAPI (PID: 4768)
+2025-09-07 20:44:53 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
+2025-09-07 20:44:53 | ERROR    | __main__:main:469 - ❌ 啟動失敗: cannot pickle 'weakref.ReferenceType' object
+2025-09-07 20:44:53 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
+2025-09-07 20:44:53 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
+2025-09-07 20:59:14 | INFO     | __main__:start_all_servers:245 - 🌟 啟動代理管理系統所有服務...
+2025-09-07 20:59:14 | INFO     | __main__:start_all_servers:246 - 📡 主機地址: 0.0.0.0
+2025-09-07 20:59:14 | INFO     | __main__:start_all_servers:247 - 🔧 主 API 端口: 8000
+2025-09-07 20:59:14 | INFO     | __main__:start_all_servers:248 - 📊 ETL API 端口: 8001
+2025-09-07 20:59:14 | INFO     | __main__:start_all_servers:249 - 📈 監控端口: 8002
+2025-09-07 20:59:14 | INFO     | __main__:start_all_servers:265 - ✅ 主 API 服務器進程已啟動 (PID: 15100)
+2025-09-07 20:59:16 | ERROR    | __main__:start_all_servers:306 - ❌ 啟動服務器失敗: cannot pickle 'weakref.ReferenceType' object
+2025-09-07 20:59:16 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
+2025-09-07 20:59:16 | INFO     | __main__:stop_all_servers:356 - 🔄 停止進程 MainAPI (PID: 15100)
+2025-09-07 20:59:16 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
+2025-09-07 20:59:16 | ERROR    | __main__:main:469 - ❌ 啟動失敗: cannot pickle 'weakref.ReferenceType' object
+2025-09-07 20:59:16 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
+2025-09-07 20:59:16 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
+2025-09-07 21:17:53 | INFO     | __main__:start_all_servers:245 - 🌟 啟動代理管理系統所有服務...
+2025-09-07 21:17:53 | INFO     | __main__:start_all_servers:246 - 📡 主機地址: 0.0.0.0
+2025-09-07 21:17:53 | INFO     | __main__:start_all_servers:247 - 🔧 主 API 端口: 8000
+2025-09-07 21:17:53 | INFO     | __main__:start_all_servers:248 - 📊 ETL API 端口: 8001
+2025-09-07 21:17:53 | INFO     | __main__:start_all_servers:249 - 📈 監控端口: 8002
+2025-09-07 21:17:53 | INFO     | __main__:start_all_servers:265 - ✅ 主 API 服務器進程已啟動 (PID: 26664)
+2025-09-07 21:17:55 | ERROR    | __main__:start_all_servers:306 - ❌ 啟動服務器失敗: cannot pickle 'weakref.ReferenceType' object
+2025-09-07 21:17:55 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
+2025-09-07 21:17:55 | INFO     | __main__:stop_all_servers:356 - 🔄 停止進程 MainAPI (PID: 26664)
+2025-09-07 21:17:56 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
+2025-09-07 21:17:56 | ERROR    | __main__:main:469 - ❌ 啟動失敗: cannot pickle 'weakref.ReferenceType' object
+2025-09-07 21:17:56 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
+2025-09-07 21:17:56 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
+2025-09-07 21:18:19 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000

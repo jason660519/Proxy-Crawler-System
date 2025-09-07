@@ -21,7 +21,7 @@ from pathlib import Path
 import asyncpg
 from loguru import logger
 
-from ..database_config import DatabaseConfig
+from database_config import DatabaseConfig, db_config
 
 
 class DatabaseSchemaManager:
