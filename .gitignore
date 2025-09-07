@@ -207,6 +207,9 @@ yarn-error.log*
 frontend/dist/
 frontend/build/
 
+# Vendored binaries (do not commit large executables)
+tools/node-v22.12.0-win-x64/
+
 # Docker
 .dockerignore
 
