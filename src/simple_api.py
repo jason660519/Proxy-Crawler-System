@@ -163,3 +163,4 @@ async def health_check() -> Dict[str, Any]:
         "service": "simple-proxy-api",
         "timestamp": datetime.now().isoformat()
     }
+
