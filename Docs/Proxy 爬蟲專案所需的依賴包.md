@@ -134,7 +134,7 @@ uv add typer   # 現代 CLI 框架
 
 ### Required tools
 
-1. ChromeDriver \- 用於 Selenium  
+1. ChromeDriver \- 用於 Selenium
 2. Node.js \- 用於某些 JavaScript 執行環境
 
 ### **Python 包**
@@ -261,7 +261,7 @@ idna==3.4                # 國際化域名
 
 ### **或者手動下載**
 
-1. 下載對應版本的 ChromeDriver  
+1. 下載對應版本的 ChromeDriver
 2. 添加到系統 PATH 或指定路徑
 
 ## Suggested imports (examples)
@@ -337,27 +337,32 @@ playwright install chromium
 ## **注意事項**
 
 ### **環境需求：**
+
 1. **Python 版本：** 建議使用 Python 3.11+ 以確保最佳性能和兼容性
 2. **包管理器：** 優先使用 `uv` 進行依賴管理，提供更快的安裝速度
 3. **虛擬環境：** 強烈建議使用虛擬環境隔離專案依賴
 
 ### **瀏覽器與驅動：**
+
 1. **Playwright：** 推薦使用，支援 Chromium、Firefox、WebKit
 2. **Chrome 瀏覽器：** 使用 Selenium 或 undetected-chromedriver 時需要
 3. **自動驅動管理：** webdriver-manager 會自動下載所需的瀏覽器驅動
 
 ### **系統依賴：**
+
 1. **lxml：** 可能需要系統級的 libxml2 和 libxslt 庫
 2. **Node.js：** 某些 JavaScript 渲染功能可能需要（可選）
 3. **SSL 憑證：** 確保系統 SSL 憑證是最新的
 
 ### **效能與安全：**
+
 1. **異步優先：** 優先使用 aiohttp、httpx 等異步庫提升效能
 2. **代理驗證：** proxybroker 需要網路連線進行代理發現和驗證
 3. **反檢測技術：** curl-cffi 和 tls-client 提供進階反檢測能力
 4. **監控指標：** prometheus-client 用於生產環境監控
 
 ### **開發建議：**
+
 1. **程式碼品質：** 使用 ruff 進行程式碼格式化和檢查
 2. **類型提示：** 所有程式碼應包含完整的類型提示
 3. **日誌記錄：** 使用 loguru 進行結構化日誌記錄
@@ -368,6 +373,7 @@ playwright install chromium
 這個完整的技術棧配置能夠滿足代理爬蟲與管理系統的所有需求：
 
 ### **核心能力：**
+
 - **多源代理爬取：** 支援靜態頁面、JavaScript 動態內容、GitHub 專案等多種來源
 - **HTML to Markdown 轉換：** 提供多種轉換引擎，適應不同內容格式
 - **高效能異步處理：** 基於 asyncio 的現代異步架構
@@ -375,6 +381,7 @@ playwright install chromium
 - **完整監控體系：** 從日誌記錄到指標監控的全方位可觀測性
 
 ### **架構優勢：**
+
 - **模組化設計：** 各功能模組獨立，易於維護和擴展
 - **技術棧現代化：** 採用最新穩定版本，確保效能和安全性
 - **開發友好：** 完整的開發工具鏈，支援程式碼品質保證
