@@ -89,3 +89,8 @@ Grafana UI: `http://localhost:3001` → Add Prometheus data source → Build das
 export GRAFANA_URL=http://localhost:3001 GRAFANA_USER=admin GRAFANA_PASS=admin
 sh ./tools/import_grafana_dashboard.sh
 ```
+
+### 5) Validation Dashboard
+
+- Dashboard JSON: `docker/grafana/dashboards/proxy_validation_overview.json`
+- Import is the same as above; replace the `-DashboardPath` (Windows) or set DASHBOARD_JSON in the sh script.
