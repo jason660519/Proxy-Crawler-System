@@ -72,4 +72,20 @@ curl http://localhost:8000/metrics | head -50
 
 Prometheus UI: `http://localhost:9090`
 
-Grafana UI: `http://localhost:3000` → Add Prometheus data source → Build dashboard.
+Grafana UI: `http://localhost:3001` → Add Prometheus data source → Build dashboard.
+
+### 4) Default Grafana Dashboard
+
+- Dashboard JSON: `docker/grafana/dashboards/proxy_system_overview.json`
+- Import script (Windows):
+
+```powershell
+./tools/import_grafana_dashboard.ps1 -GrafanaUrl http://localhost:3001 -User admin -Pass admin -DashboardPath docker/grafana/dashboards/proxy_system_overview.json
+```
+
+- Import script (Linux/macOS):
+
+```bash
+export GRAFANA_URL=http://localhost:3001 GRAFANA_USER=admin GRAFANA_PASS=admin
+sh ./tools/import_grafana_dashboard.sh
+```
