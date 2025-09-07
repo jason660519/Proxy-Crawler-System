@@ -1,426 +1,238 @@
 /**
- * 按鈕組件 - VS Code 風格的互動按鈕
- * 提供多種樣式變體和狀態
+ * Button 組件
+ * 提供多種樣式和尺寸的按鈕元件
  */
 
 import React from 'react';
-import styled from 'styled-components';
-import { getThemeColors, spacing, borderRadius, transitions } from '../../styles/GlobalStyles';
+import styled, { css } from 'styled-components';
+import { spacing, borderRadius, typography, animations } from '../../styles';
 
-// 按鈕基礎樣式
-const BaseButton = styled.button<{
-  theme: 'light' | 'dark';
-  variant: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
-  size: 'small' | 'medium' | 'large';
-  fullWidth?: boolean;
+// ============= 類型定義 =============
+
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  /** 按鈕變體 */
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+  /** 按鈕尺寸 */
+  size?: 'sm' | 'md' | 'lg';
+  /** 是否為載入狀態 */
   loading?: boolean;
-}>`
+  /** 是否為全寬度 */
+  fullWidth?: boolean;
+  /** 左側圖標 */
+  leftIcon?: React.ReactNode;
+  /** 右側圖標 */
+  rightIcon?: React.ReactNode;
+  /** 子元素 */
+  children?: React.ReactNode;
+}
+
+// ============= 樣式定義 =============
+
+const getVariantStyles = (variant: ButtonProps['variant']) => {
+  switch (variant) {
+    case 'primary':
+      return css`
+        background-color: var(--color-interactive-primary);
+        color: var(--color-text-inverse);
+        border: 1px solid var(--color-interactive-primary);
+        
+        &:hover:not(:disabled) {
+          background-color: var(--color-interactive-primaryHover);
+          border-color: var(--color-interactive-primaryHover);
+        }
+        
+        &:active:not(:disabled) {
+          background-color: var(--color-interactive-primaryActive);
+          border-color: var(--color-interactive-primaryActive);
+        }
+      `;
+    
+    case 'secondary':
+      return css`
+        background-color: var(--color-interactive-secondary);
+        color: var(--color-text-primary);
+        border: 1px solid var(--color-border-primary);
+        
+        &:hover:not(:disabled) {
+          background-color: var(--color-interactive-secondaryHover);
+          border-color: var(--color-border-primary);
+        }
+        
+        &:active:not(:disabled) {
+          background-color: var(--color-interactive-secondaryActive);
+        }
+      `;
+    
+    case 'outline':
+      return css`
+        background-color: transparent;
+        color: var(--color-interactive-primary);
+        border: 1px solid var(--color-interactive-primary);
+        
+        &:hover:not(:disabled) {
+          background-color: var(--color-interactive-primary);
+          color: var(--color-text-inverse);
+        }
+        
+        &:active:not(:disabled) {
+          background-color: var(--color-interactive-primaryActive);
+          border-color: var(--color-interactive-primaryActive);
+        }
+      `;
+    
+    case 'ghost':
+      return css`
+        background-color: transparent;
+        color: var(--color-text-primary);
+        border: 1px solid transparent;
+        
+        &:hover:not(:disabled) {
+          background-color: var(--color-interactive-secondary);
+        }
+        
+        &:active:not(:disabled) {
+          background-color: var(--color-interactive-secondaryHover);
+        }
+      `;
+    
+    case 'danger':
+      return css`
+        background-color: var(--color-status-error);
+        color: var(--color-text-inverse);
+        border: 1px solid var(--color-status-error);
+        
+        &:hover:not(:disabled) {
+          background-color: #dc2626;
+          border-color: #dc2626;
+        }
+        
+        &:active:not(:disabled) {
+          background-color: #b91c1c;
+          border-color: #b91c1c;
+        }
+      `;
+    
+    default:
+      return css``;
+  }
+};
+
+const getSizeStyles = (size: ButtonProps['size']) => {
+  switch (size) {
+    case 'sm':
+      return css`
+        padding: ${spacing[2]} ${spacing[3]};
+        font-size: ${typography.fontSize.sm};
+        min-height: 32px;
+      `;
+    
+    case 'lg':
+      return css`
+        padding: ${spacing[3]} ${spacing[6]};
+        font-size: ${typography.fontSize.lg};
+        min-height: 48px;
+      `;
+    
+    case 'md':
+    default:
+      return css`
+        padding: ${spacing[2]} ${spacing[4]};
+        font-size: ${typography.fontSize.base};
+        min-height: 40px;
+      `;
+  }
+};
+
+const StyledButton = styled.button<ButtonProps>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: ${spacing.xs};
-  border: none;
-  border-radius: ${borderRadius.sm};
-  font-weight: 500;
-  text-decoration: none;
+  gap: ${spacing[2]};
+  font-family: ${typography.fontFamily.sans.join(', ')};
+  font-weight: ${typography.fontWeight.medium};
+  line-height: ${typography.lineHeight.none};
+  border-radius: ${borderRadius.md};
   cursor: pointer;
-  transition: all ${transitions.fast} ease;
-  position: relative;
-  overflow: hidden;
+  transition: all ${animations.duration.fast} ${animations.easing.easeInOut};
   white-space: nowrap;
+  user-select: none;
   
-  ${props => props.fullWidth && 'width: 100%;'}
+  ${props => getVariantStyles(props.variant)}
+  ${props => getSizeStyles(props.size)}
   
-  /* 尺寸樣式 */
-  ${props => {
-    switch (props.size) {
-      case 'small':
-        return `
-          padding: ${spacing.xs} ${spacing.sm};
-          font-size: 11px;
-          min-height: 24px;
-        `;
-      case 'large':
-        return `
-          padding: ${spacing.md} ${spacing.lg};
-          font-size: 14px;
-          min-height: 40px;
-        `;
-      default:
-        return `
-          padding: ${spacing.sm} ${spacing.md};
-          font-size: 12px;
-          min-height: 32px;
-        `;
-    }
-  }}
+  ${props => props.fullWidth && css`
+    width: 100%;
+  `}
   
-  /* 變體樣式 */
-  ${props => {
-    const colors = getThemeColors(props.theme);
-    
-    switch (props.variant) {
-      case 'primary':
-        return `
-          background-color: ${colors.interactive.primary};
-          color: ${colors.interactive.primaryForeground};
-          
-          &:hover:not(:disabled) {
-            background-color: ${colors.interactive.primaryHover};
-          }
-          
-          &:active:not(:disabled) {
-            background-color: ${colors.interactive.primaryActive};
-          }
-        `;
-        
-      case 'secondary':
-        return `
-          background-color: ${colors.background.tertiary};
-          color: ${colors.text.primary};
-          border: 1px solid ${colors.border.primary};
-          
-          &:hover:not(:disabled) {
-            background-color: ${colors.interactive.hover};
-          }
-          
-          &:active:not(:disabled) {
-            background-color: ${colors.interactive.selected};
-          }
-        `;
-        
-      case 'outline':
-        return `
-          background-color: transparent;
-          color: ${colors.interactive.primary};
-          border: 1px solid ${colors.interactive.primary};
-          
-          &:hover:not(:disabled) {
-            background-color: ${colors.interactive.primary};
-            color: ${colors.interactive.primaryForeground};
-          }
-          
-          &:active:not(:disabled) {
-            background-color: ${colors.interactive.primaryActive};
-          }
-        `;
-        
-      case 'ghost':
-        return `
-          background-color: transparent;
-          color: ${colors.text.secondary};
-          
-          &:hover:not(:disabled) {
-            background-color: ${colors.interactive.hover};
-            color: ${colors.text.primary};
-          }
-          
-          &:active:not(:disabled) {
-            background-color: ${colors.interactive.selected};
-          }
-        `;
-        
-      case 'danger':
-        return `
-          background-color: ${colors.status.error};
-          color: ${colors.interactive.primaryForeground};
-          
-          &:hover:not(:disabled) {
-            background-color: ${colors.status.errorHover || colors.status.error};
-            filter: brightness(0.9);
-          }
-          
-          &:active:not(:disabled) {
-            filter: brightness(0.8);
-          }
-        `;
-        
-      default:
-        return '';
-    }
-  }}
-  
-  /* 焦點樣式 */
-  &:focus-visible {
-    outline: 2px solid ${props => getThemeColors(props.theme).border.focus};
-    outline-offset: 2px;
-  }
-  
-  /* 禁用狀態 */
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    
-    &:hover {
-      transform: none;
-    }
   }
   
-  /* 載入狀態 */
-  ${props => props.loading && `
-    pointer-events: none;
-    
-    &::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 16px;
-      height: 16px;
-      margin: -8px 0 0 -8px;
-      border: 2px solid transparent;
-      border-top: 2px solid currentColor;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  `}
+  &:focus {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
 `;
 
-// 按鈕圖標
-const ButtonIcon = styled.span<{ position: 'left' | 'right' }>`
+const LoadingSpinner = styled.div`
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+`;
+
+const IconWrapper = styled.span`
   display: inline-flex;
   align-items: center;
-  
-  svg, i {
-    width: 14px;
-    height: 14px;
+  justify-content: center;
+  flex-shrink: 0;
+`;
+
+// ============= 組件實作 =============
+
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  (
+    {
+      variant = 'primary',
+      size = 'md',
+      loading = false,
+      fullWidth = false,
+      leftIcon,
+      rightIcon,
+      children,
+      disabled,
+      ...props
+    },
+    ref
+  ) => {
+    const isDisabled = disabled || loading;
+
+    return (
+      <StyledButton
+        ref={ref}
+        variant={variant}
+        size={size}
+        fullWidth={fullWidth}
+        disabled={isDisabled}
+        {...props}
+      >
+        {loading && <LoadingSpinner />}
+        {!loading && leftIcon && <IconWrapper>{leftIcon}</IconWrapper>}
+        {children}
+        {!loading && rightIcon && <IconWrapper>{rightIcon}</IconWrapper>}
+      </StyledButton>
+    );
   }
-  
-  ${props => props.position === 'right' && 'order: 1;'}
-`;
+);
 
-// 按鈕文字（載入時隱藏）
-const ButtonText = styled.span<{ loading?: boolean }>`
-  ${props => props.loading && 'opacity: 0;'}
-`;
+Button.displayName = 'Button';
 
-// 按鈕群組
-const ButtonGroup = styled.div<{ theme: 'light' | 'dark' }>`
-  display: inline-flex;
-  
-  button {
-    border-radius: 0;
-    
-    &:first-child {
-      border-top-left-radius: ${borderRadius.sm};
-      border-bottom-left-radius: ${borderRadius.sm};
-    }
-    
-    &:last-child {
-      border-top-right-radius: ${borderRadius.sm};
-      border-bottom-right-radius: ${borderRadius.sm};
-    }
-    
-    &:not(:first-child) {
-      border-left: 1px solid ${props => getThemeColors(props.theme).border.secondary};
-    }
-  }
-`;
-
-// 圖標按鈕（正方形）
-const IconButton = styled(BaseButton)<{
-  theme: 'light' | 'dark';
-  variant: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
-  size: 'small' | 'medium' | 'large';
-}>`
-  ${props => {
-    switch (props.size) {
-      case 'small':
-        return `
-          width: 24px;
-          height: 24px;
-          padding: 0;
-        `;
-      case 'large':
-        return `
-          width: 40px;
-          height: 40px;
-          padding: 0;
-        `;
-      default:
-        return `
-          width: 32px;
-          height: 32px;
-          padding: 0;
-        `;
-    }
-  }}
-  
-  svg, i {
-    width: ${props => {
-      switch (props.size) {
-        case 'small': return '12px';
-        case 'large': return '20px';
-        default: return '16px';
-      }
-    }};
-    height: ${props => {
-      switch (props.size) {
-        case 'small': return '12px';
-        case 'large': return '20px';
-        default: return '16px';
-      }
-    }};
-  }
-`;
-
-// 按鈕組件介面
-export interface ButtonProps {
-  theme: 'light' | 'dark';
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
-  size?: 'small' | 'medium' | 'large';
-  fullWidth?: boolean;
-  loading?: boolean;
-  disabled?: boolean;
-  icon?: React.ReactNode;
-  iconPosition?: 'left' | 'right';
-  className?: string;
-  children?: React.ReactNode;
-  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  onMouseEnter?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  onMouseLeave?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  type?: 'button' | 'submit' | 'reset';
-  title?: string;
-}
-
-/**
- * 按鈕組件
- * 提供統一的互動按鈕樣式
- */
-export const Button: React.FC<ButtonProps> = ({
-  theme,
-  variant = 'secondary',
-  size = 'medium',
-  fullWidth = false,
-  loading = false,
-  disabled = false,
-  icon,
-  iconPosition = 'left',
-  className,
-  children,
-  onClick,
-  onMouseEnter,
-  onMouseLeave,
-  type = 'button',
-  title
-}) => {
-  return (
-    <BaseButton
-      theme={theme}
-      variant={variant}
-      size={size}
-      fullWidth={fullWidth}
-      loading={loading}
-      disabled={disabled || loading}
-      className={className}
-      onClick={onClick}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      type={type}
-      title={title}
-    >
-      {icon && iconPosition === 'left' && (
-        <ButtonIcon position="left">
-          {icon}
-        </ButtonIcon>
-      )}
-      
-      {children && (
-        <ButtonText loading={loading}>
-          {children}
-        </ButtonText>
-      )}
-      
-      {icon && iconPosition === 'right' && (
-        <ButtonIcon position="right">
-          {icon}
-        </ButtonIcon>
-      )}
-    </BaseButton>
-  );
-};
-
-// 圖標按鈕組件介面
-export interface IconButtonProps {
-  theme: 'light' | 'dark';
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
-  size?: 'small' | 'medium' | 'large';
-  loading?: boolean;
-  disabled?: boolean;
-  icon: React.ReactNode;
-  className?: string;
-  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  onMouseEnter?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  onMouseLeave?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  type?: 'button' | 'submit' | 'reset';
-  title?: string;
-}
-
-/**
- * 圖標按鈕組件
- * 專門用於只顯示圖標的按鈕
- */
-export const IconButtonComponent: React.FC<IconButtonProps> = ({
-  theme,
-  variant = 'ghost',
-  size = 'medium',
-  loading = false,
-  disabled = false,
-  icon,
-  className,
-  onClick,
-  onMouseEnter,
-  onMouseLeave,
-  type = 'button',
-  title
-}) => {
-  return (
-    <IconButton
-      theme={theme}
-      variant={variant}
-      size={size}
-      loading={loading}
-      disabled={disabled || loading}
-      className={className}
-      onClick={onClick}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      type={type}
-      title={title}
-    >
-      {!loading && icon}
-    </IconButton>
-  );
-};
-
-// 按鈕群組組件介面
-export interface ButtonGroupProps {
-  theme: 'light' | 'dark';
-  className?: string;
-  children: React.ReactNode;
-}
-
-/**
- * 按鈕群組組件
- * 將多個按鈕組合在一起
- */
-export const ButtonGroupComponent: React.FC<ButtonGroupProps> = ({
-  theme,
-  className,
-  children
-}) => {
-  return (
-    <ButtonGroup theme={theme} className={className}>
-      {children}
-    </ButtonGroup>
-  );
-};
-
-// 導出組件
-export { IconButtonComponent as IconButton, ButtonGroupComponent as ButtonGroup };
 export default Button;

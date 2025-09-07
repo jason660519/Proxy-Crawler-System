@@ -1,339 +1,277 @@
 /**
- * 卡片組件 - VS Code 風格的資訊展示卡片
- * 用於顯示代理節點、ETL任務、系統監控等資訊
+ * Card 組件
+ * 提供卡片容器樣式，用於包裝內容區塊
  */
 
 import React from 'react';
-import styled from 'styled-components';
-import { getThemeColors, spacing, borderRadius, shadows, transitions } from '../../styles/GlobalStyles';
+import styled, { css } from 'styled-components';
+import { spacing, borderRadius, shadows } from '../../styles';
 
-// 卡片容器
-const CardContainer = styled.div<{ 
-  theme: 'light' | 'dark';
-  variant?: 'default' | 'elevated' | 'outlined';
+// ============= 類型定義 =============
+
+export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** 卡片變體 */
+  variant?: 'default' | 'outlined' | 'elevated';
+  /** 卡片尺寸 */
+  size?: 'sm' | 'md' | 'lg';
+  /** 是否可點擊 */
   clickable?: boolean;
-  status?: 'success' | 'warning' | 'error' | 'info';
-}>`
-  background-color: ${props => getThemeColors(props.theme).background.secondary};
-  border-radius: ${borderRadius.md};
-  padding: ${spacing.lg};
-  transition: all ${transitions.normal} ease;
-  position: relative;
-  overflow: hidden;
-  
-  ${props => {
-    const colors = getThemeColors(props.theme);
+  /** 是否顯示邊框 */
+  bordered?: boolean;
+  /** 自定義陰影 */
+  shadow?: 'none' | 'sm' | 'md' | 'lg';
+  /** 子元素 */
+  children?: React.ReactNode;
+}
+
+export interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** 標題 */
+  title?: string;
+  /** 副標題 */
+  subtitle?: string;
+  /** 右側動作區域 */
+  actions?: React.ReactNode;
+  /** 子元素 */
+  children?: React.ReactNode;
+}
+
+export interface CardContentProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** 子元素 */
+  children?: React.ReactNode;
+}
+
+export interface CardFooterProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** 子元素 */
+  children?: React.ReactNode;
+}
+
+// ============= 樣式定義 =============
+
+const getVariantStyles = (variant: CardProps['variant']) => {
+  switch (variant) {
+    case 'outlined':
+      return css`
+        background-color: var(--color-background-primary);
+        border: 1px solid var(--color-border-primary);
+        box-shadow: none;
+      `;
     
-    switch (props.variant) {
-      case 'elevated':
-        return `
-          box-shadow: ${shadows.medium};
-          border: 1px solid ${colors.border.secondary};
-        `;
-      case 'outlined':
-        return `
-          border: 1px solid ${colors.border.primary};
-          box-shadow: none;
-        `;
-      default:
-        return `
-          border: 1px solid ${colors.border.secondary};
-          box-shadow: ${shadows.small};
-        `;
-    }
-  }}
+    case 'elevated':
+      return css`
+        background-color: var(--color-background-primary);
+        border: none;
+        box-shadow: ${shadows.lg};
+      `;
+    
+    case 'default':
+    default:
+      return css`
+        background-color: var(--color-background-primary);
+        border: 1px solid var(--color-border-primary);
+        box-shadow: ${shadows.sm};
+      `;
+  }
+};
+
+const getSizeStyles = (size: CardProps['size']) => {
+  switch (size) {
+    case 'sm':
+      return css`
+        padding: ${spacing[3]};
+      `;
+    
+    case 'lg':
+      return css`
+        padding: ${spacing[6]};
+      `;
+    
+    case 'md':
+    default:
+      return css`
+        padding: ${spacing[4]};
+      `;
+  }
+};
+
+const getShadowStyles = (shadow: CardProps['shadow']) => {
+  switch (shadow) {
+    case 'none':
+      return css`box-shadow: none;`;
+    case 'sm':
+      return css`box-shadow: ${shadows.sm};`;
+    case 'md':
+      return css`box-shadow: ${shadows.md};`;
+    case 'lg':
+      return css`box-shadow: ${shadows.lg};`;
+    default:
+      return css``;
+  }
+};
+
+const StyledCard = styled.div<CardProps>`
+  border-radius: ${borderRadius.lg};
+  transition: all 0.2s ease-in-out;
   
-  ${props => props.clickable && `
+  ${props => getVariantStyles(props.variant)}
+  ${props => getSizeStyles(props.size)}
+  ${props => props.shadow && getShadowStyles(props.shadow)}
+  
+  ${props => props.bordered && css`
+    border: 1px solid var(--color-border-primary);
+  `}
+  
+  ${props => props.clickable && css`
     cursor: pointer;
     
     &:hover {
-      background-color: ${getThemeColors(props.theme).interactive.hover};
-      box-shadow: ${shadows.large};
-      transform: translateY(-1px);
+      transform: translateY(-2px);
+      box-shadow: ${shadows.lg};
     }
     
     &:active {
       transform: translateY(0);
-      box-shadow: ${shadows.small};
     }
   `}
-  
-  ${props => props.status && `
-    border-left: 4px solid ${getThemeColors(props.theme).status[props.status]};
-  `}
 `;
 
-// 卡片標題
-const CardHeader = styled.div<{ theme: 'light' | 'dark' }>`
+const CardHeaderContainer = styled.div`
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: ${spacing.md};
+  margin-bottom: ${spacing[4]};
   
-  h3 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-    color: ${props => getThemeColors(props.theme).text.primary};
-    line-height: 1.4;
+  &:last-child {
+    margin-bottom: 0;
   }
 `;
 
-// 卡片內容
-const CardContent = styled.div<{ theme: 'light' | 'dark' }>`
-  color: ${props => getThemeColors(props.theme).text.secondary};
-  line-height: 1.6;
-  
-  p {
-    margin: 0 0 ${spacing.sm} 0;
-    
-    &:last-child {
-      margin-bottom: 0;
-    }
-  }
+const CardHeaderContent = styled.div`
+  flex: 1;
+  min-width: 0;
 `;
 
-// 卡片底部操作區
-const CardFooter = styled.div<{ theme: 'light' | 'dark' }>`
+const CardTitle = styled.h3`
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+`;
+
+const CardSubtitle = styled.p`
+  margin: ${spacing[1]} 0 0 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+`;
+
+const CardActions = styled.div`
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-top: ${spacing.lg};
-  padding-top: ${spacing.md};
-  border-top: 1px solid ${props => getThemeColors(props.theme).border.secondary};
+  gap: ${spacing[2]};
+  margin-left: ${spacing[4]};
+  flex-shrink: 0;
 `;
 
-// 狀態指示器
-const StatusIndicator = styled.div<{ 
-  theme: 'light' | 'dark';
-  status: 'success' | 'warning' | 'error' | 'info' | 'inactive';
-  size?: 'small' | 'medium' | 'large';
-}>`
-  display: inline-flex;
-  align-items: center;
-  gap: ${spacing.xs};
-  font-size: ${props => {
-    switch (props.size) {
-      case 'small': return '11px';
-      case 'large': return '14px';
-      default: return '12px';
-    }
-  }};
-  font-weight: 500;
-  
-  &::before {
-    content: '';
-    width: ${props => {
-      switch (props.size) {
-        case 'small': return '6px';
-        case 'large': return '10px';
-        default: return '8px';
-      }
-    }};
-    height: ${props => {
-      switch (props.size) {
-        case 'small': return '6px';
-        case 'large': return '10px';
-        default: return '8px';
-      }
-    }};
-    border-radius: 50%;
-    background-color: ${props => {
-      const colors = getThemeColors(props.theme);
-      switch (props.status) {
-        case 'success': return colors.status.success;
-        case 'warning': return colors.status.warning;
-        case 'error': return colors.status.error;
-        case 'info': return colors.status.info;
-        default: return colors.text.disabled;
-      }
-    }};
+const CardContentContainer = styled.div`
+  &:not(:first-child) {
+    margin-top: ${spacing[4]};
   }
   
-  color: ${props => {
-    const colors = getThemeColors(props.theme);
-    switch (props.status) {
-      case 'success': return colors.status.success;
-      case 'warning': return colors.status.warning;
-      case 'error': return colors.status.error;
-      case 'info': return colors.status.info;
-      default: return colors.text.disabled;
-    }
-  }};
-`;
-
-// 卡片動作按鈕
-const CardAction = styled.button<{ theme: 'light' | 'dark'; variant?: 'primary' | 'secondary' }>`
-  padding: ${spacing.xs} ${spacing.sm};
-  border-radius: ${borderRadius.sm};
-  font-size: 12px;
-  font-weight: 500;
-  transition: all ${transitions.fast} ease;
-  
-  ${props => {
-    const colors = getThemeColors(props.theme);
-    
-    if (props.variant === 'primary') {
-      return `
-        background-color: ${colors.interactive.primary};
-        color: ${colors.interactive.primaryForeground};
-        
-        &:hover {
-          background-color: ${colors.interactive.primaryHover};
-        }
-      `;
-    }
-    
-    return `
-      background-color: transparent;
-      color: ${colors.text.secondary};
-      border: 1px solid ${colors.border.primary};
-      
-      &:hover {
-        background-color: ${colors.interactive.hover};
-        color: ${colors.text.primary};
-      }
-    `;
-  }}
-  
-  &:focus {
-    outline: 1px solid ${props => getThemeColors(props.theme).border.focus};
-    outline-offset: 1px;
-  }
-  
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    
-    &:hover {
-      background-color: transparent;
-    }
+  &:not(:last-child) {
+    margin-bottom: ${spacing[4]};
   }
 `;
 
-// 卡片圖標
-const CardIcon = styled.div<{ theme: 'light' | 'dark'; size?: 'small' | 'medium' | 'large' }>`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: ${props => getThemeColors(props.theme).text.secondary};
+const CardFooterContainer = styled.div`
+  margin-top: ${spacing[4]};
+  padding-top: ${spacing[4]};
+  border-top: 1px solid var(--color-border-primary);
   
-  svg, i {
-    width: ${props => {
-      switch (props.size) {
-        case 'small': return '16px';
-        case 'large': return '32px';
-        default: return '24px';
-      }
-    }};
-    height: ${props => {
-      switch (props.size) {
-        case 'small': return '16px';
-        case 'large': return '32px';
-        default: return '24px';
-      }
-    }};
+  &:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
   }
 `;
 
-// 卡片統計數據
-const CardStats = styled.div<{ theme: 'light' | 'dark' }>`
-  display: flex;
-  gap: ${spacing.lg};
-  margin-top: ${spacing.md};
-`;
+// ============= 組件實作 =============
 
-const StatItem = styled.div<{ theme: 'light' | 'dark' }>`
-  text-align: center;
-  
-  .stat-value {
-    display: block;
-    font-size: 20px;
-    font-weight: 700;
-    color: ${props => getThemeColors(props.theme).text.primary};
-    line-height: 1.2;
-  }
-  
-  .stat-label {
-    display: block;
-    font-size: 11px;
-    color: ${props => getThemeColors(props.theme).text.secondary};
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-top: ${spacing.xs};
-  }
-`;
-
-// 卡片組件介面
-export interface CardProps {
-  theme: 'light' | 'dark';
-  title?: string;
-  variant?: 'default' | 'elevated' | 'outlined';
-  status?: 'success' | 'warning' | 'error' | 'info';
-  clickable?: boolean;
-  icon?: React.ReactNode;
-  headerActions?: React.ReactNode;
-  footer?: React.ReactNode;
-  className?: string;
-  children: React.ReactNode;
-  onClick?: () => void;
-}
-
-/**
- * 卡片組件
- * 提供統一的資訊展示容器
- */
-export const Card: React.FC<CardProps> = ({
-  theme,
-  title,
-  variant = 'default',
-  status,
-  clickable = false,
-  icon,
-  headerActions,
-  footer,
-  className,
-  children,
-  onClick
-}) => {
-  return (
-    <CardContainer
-      theme={theme}
-      variant={variant}
-      status={status}
-      clickable={clickable}
-      className={className}
-      onClick={clickable ? onClick : undefined}
-    >
-      {(title || icon || headerActions) && (
-        <CardHeader theme={theme}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-            {icon && (
-              <CardIcon theme={theme} size="medium">
-                {icon}
-              </CardIcon>
-            )}
-            {title && <h3>{title}</h3>}
-          </div>
-          {headerActions && (
-            <div>{headerActions}</div>
-          )}
-        </CardHeader>
-      )}
-      
-      <CardContent theme={theme}>
+export const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  (
+    {
+      variant = 'default',
+      size = 'md',
+      clickable = false,
+      bordered = false,
+      shadow,
+      children,
+      ...props
+    },
+    ref
+  ) => {
+    return (
+      <StyledCard
+        ref={ref}
+        variant={variant}
+        size={size}
+        clickable={clickable}
+        bordered={bordered}
+        shadow={shadow}
+        {...props}
+      >
         {children}
-      </CardContent>
-      
-      {footer && (
-        <CardFooter theme={theme}>
-          {footer}
-        </CardFooter>
-      )}
-    </CardContainer>
-  );
-};
+      </StyledCard>
+    );
+  }
+);
 
-// 導出相關組件
-export { StatusIndicator, CardAction, CardIcon, CardStats, StatItem };
+export const CardHeader = React.forwardRef<HTMLDivElement, CardHeaderProps>(
+  ({ title, subtitle, actions, children, ...props }, ref) => {
+    if (children) {
+      return (
+        <CardHeaderContainer ref={ref} {...props}>
+          {children}
+        </CardHeaderContainer>
+      );
+    }
+
+    return (
+      <CardHeaderContainer ref={ref} {...props}>
+        <CardHeaderContent>
+          {title && <CardTitle>{title}</CardTitle>}
+          {subtitle && <CardSubtitle>{subtitle}</CardSubtitle>}
+        </CardHeaderContent>
+        {actions && <CardActions>{actions}</CardActions>}
+      </CardHeaderContainer>
+    );
+  }
+);
+
+export const CardContent = React.forwardRef<HTMLDivElement, CardContentProps>(
+  ({ children, ...props }, ref) => {
+    return (
+      <CardContentContainer ref={ref} {...props}>
+        {children}
+      </CardContentContainer>
+    );
+  }
+);
+
+export const CardFooter = React.forwardRef<HTMLDivElement, CardFooterProps>(
+  ({ children, ...props }, ref) => {
+    return (
+      <CardFooterContainer ref={ref} {...props}>
+        {children}
+      </CardFooterContainer>
+    );
+  }
+);
+
+// 設定 displayName
+Card.displayName = 'Card';
+CardHeader.displayName = 'CardHeader';
+CardContent.displayName = 'CardContent';
+CardFooter.displayName = 'CardFooter';
+
 export default Card;

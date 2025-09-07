@@ -1,319 +1,235 @@
 /**
- * 輸入框組件 - VS Code 風格的表單輸入元素
- * 提供多種類型和狀態的輸入框
+ * Input 組件
+ * 提供多種樣式和功能的輸入欄位元件
  */
 
-import React, { forwardRef } from 'react';
-import styled from 'styled-components';
-import { getThemeColors, spacing, borderRadius, transitions } from '../../styles/GlobalStyles';
+import React from 'react';
+import styled, { css } from 'styled-components';
+import { spacing, borderRadius, typography, animations } from '../../styles';
 
-// 輸入框容器
+// ============= 類型定義 =============
+
+export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
+  /** 輸入欄位尺寸 */
+  size?: 'sm' | 'md' | 'lg';
+  /** 是否有錯誤狀態 */
+  error?: boolean;
+  /** 錯誤訊息 */
+  errorMessage?: string;
+  /** 標籤文字 */
+  label?: string;
+  /** 提示文字 */
+  helperText?: string;
+  /** 左側圖標 */
+  leftIcon?: React.ReactNode;
+  /** 右側圖標 */
+  rightIcon?: React.ReactNode;
+  /** 是否為全寬度 */
+  fullWidth?: boolean;
+  /** 容器的額外樣式類名 */
+  containerClassName?: string;
+}
+
+// ============= 樣式定義 =============
+
+const getSizeStyles = (size: InputProps['size']) => {
+  switch (size) {
+    case 'sm':
+      return css`
+        padding: ${spacing[2]} ${spacing[3]};
+        font-size: ${typography.fontSize.sm};
+        min-height: 32px;
+      `;
+    
+    case 'lg':
+      return css`
+        padding: ${spacing[3]} ${spacing[4]};
+        font-size: ${typography.fontSize.lg};
+        min-height: 48px;
+      `;
+    
+    case 'md':
+    default:
+      return css`
+        padding: ${spacing[2]} ${spacing[3]};
+        font-size: ${typography.fontSize.base};
+        min-height: 40px;
+      `;
+  }
+};
+
 const InputContainer = styled.div<{ fullWidth?: boolean }>`
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
-  gap: ${spacing.xs};
-  ${props => props.fullWidth && 'width: 100%;'}
-`;
-
-// 輸入框標籤
-const InputLabel = styled.label<{ theme: 'light' | 'dark'; required?: boolean }>`
-  font-size: 11px;
-  font-weight: 500;
-  color: ${props => getThemeColors(props.theme).text.secondary};
+  gap: ${spacing[1]};
   
-  ${props => props.required && `
-    &::after {
-      content: ' *';
-      color: ${getThemeColors(props.theme).status.error};
-    }
+  ${props => props.fullWidth && css`
+    width: 100%;
   `}
 `;
 
-// 輸入框包裝器
-const InputWrapper = styled.div<{ 
-  theme: 'light' | 'dark';
-  hasError?: boolean;
-  disabled?: boolean;
-  focused?: boolean;
-}>`
+const Label = styled.label`
+  font-size: ${typography.fontSize.sm};
+  font-weight: ${typography.fontWeight.medium};
+  color: var(--color-text-primary);
+  line-height: ${typography.lineHeight.tight};
+`;
+
+const InputWrapper = styled.div<{ hasLeftIcon?: boolean; hasRightIcon?: boolean; error?: boolean }>`
   position: relative;
   display: flex;
   align-items: center;
-  background-color: ${props => getThemeColors(props.theme).input.background};
-  border: 1px solid ${props => {
-    const colors = getThemeColors(props.theme);
-    if (props.hasError) return colors.status.error;
-    if (props.focused) return colors.border.focus;
-    return colors.input.border;
-  }};
-  border-radius: ${borderRadius.sm};
-  transition: all ${transitions.fast} ease;
   
-  &:hover:not(:focus-within) {
-    border-color: ${props => getThemeColors(props.theme).input.borderHover};
-  }
+  ${props => props.hasLeftIcon && css`
+    padding-left: ${spacing[10]};
+  `}
   
-  &:focus-within {
-    border-color: ${props => getThemeColors(props.theme).border.focus};
-    box-shadow: 0 0 0 1px ${props => getThemeColors(props.theme).border.focus};
-  }
-  
-  ${props => props.disabled && `
-    opacity: 0.5;
-    cursor: not-allowed;
-    
-    &:hover {
-      border-color: ${getThemeColors(props.theme).input.border};
-    }
+  ${props => props.hasRightIcon && css`
+    padding-right: ${spacing[10]};
   `}
 `;
 
-// 基礎輸入框
-const BaseInput = styled.input<{
-  theme: 'light' | 'dark';
-  size: 'small' | 'medium' | 'large';
-  hasPrefix?: boolean;
-  hasSuffix?: boolean;
-}>`
-  flex: 1;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: ${props => getThemeColors(props.theme).input.foreground};
-  font-size: 12px;
-  font-family: inherit;
+const StyledInput = styled.input<InputProps>`
+  width: 100%;
+  font-family: ${typography.fontFamily.sans.join(', ')};
+  font-weight: ${typography.fontWeight.normal};
+  line-height: ${typography.lineHeight.normal};
+  color: var(--color-text-primary);
+  background-color: var(--color-background-primary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: ${borderRadius.md};
+  transition: all ${animations.duration.fast} ${animations.easing.easeInOut};
   
-  ${props => {
-    switch (props.size) {
-      case 'small':
-        return `
-          padding: ${spacing.xs} ${spacing.sm};
-          height: 24px;
-        `;
-      case 'large':
-        return `
-          padding: ${spacing.md} ${spacing.lg};
-          height: 40px;
-          font-size: 14px;
-        `;
-      default:
-        return `
-          padding: ${spacing.sm} ${spacing.md};
-          height: 32px;
-        `;
-    }
-  }}
-  
-  ${props => props.hasPrefix && `padding-left: ${spacing.xs};`}
-  ${props => props.hasSuffix && `padding-right: ${spacing.xs};`}
+  ${props => getSizeStyles(props.size)}
   
   &::placeholder {
-    color: ${props => getThemeColors(props.theme).input.placeholder};
+    color: var(--color-text-tertiary);
+  }
+  
+  &:hover:not(:disabled) {
+    border-color: var(--color-border-secondary);
+  }
+  
+  &:focus {
+    outline: none;
+    border-color: var(--color-border-focus);
+    box-shadow: 0 0 0 3px var(--color-border-focus-shadow);
   }
   
   &:disabled {
+    background-color: var(--color-background-disabled);
+    color: var(--color-text-disabled);
     cursor: not-allowed;
+    
+    &::placeholder {
+      color: var(--color-text-disabled);
+    }
   }
   
-  /* 移除自動填充的背景色 */
-  &:-webkit-autofill,
-  &:-webkit-autofill:hover,
-  &:-webkit-autofill:focus {
-    -webkit-box-shadow: 0 0 0 1000px ${props => getThemeColors(props.theme).input.background} inset;
-    -webkit-text-fill-color: ${props => getThemeColors(props.theme).input.foreground};
-    transition: background-color 5000s ease-in-out 0s;
-  }
+  ${props => props.error && css`
+    border-color: var(--color-status-error);
+    
+    &:focus {
+      border-color: var(--color-status-error);
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    }
+  `}
 `;
 
-// 前綴/後綴容器
-const InputAffix = styled.div<{ theme: 'light' | 'dark'; position: 'prefix' | 'suffix' }>`
+const IconWrapper = styled.div<{ position: 'left' | 'right' }>`
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
-  color: ${props => getThemeColors(props.theme).text.secondary};
-  font-size: 12px;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  pointer-events: none;
+  z-index: 1;
   
-  ${props => props.position === 'prefix' && `
-    padding-left: ${spacing.sm};
-    padding-right: ${spacing.xs};
+  ${props => props.position === 'left' && css`
+    left: ${spacing[3]};
   `}
   
-  ${props => props.position === 'suffix' && `
-    padding-left: ${spacing.xs};
-    padding-right: ${spacing.sm};
+  ${props => props.position === 'right' && css`
+    right: ${spacing[3]};
   `}
+`;
+
+const HelperText = styled.div<{ error?: boolean }>`
+  font-size: ${typography.fontSize.sm};
+  line-height: ${typography.lineHeight.tight};
+  color: var(--color-text-secondary);
   
-  svg {
-    width: 14px;
-    height: 14px;
+  ${props => props.error && css`
+    color: var(--color-status-error);
+  `}
+`;
+
+// ============= 組件實作 =============
+
+export const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  (
+    {
+      size = 'md',
+      error = false,
+      errorMessage,
+      label,
+      helperText,
+      leftIcon,
+      rightIcon,
+      fullWidth = false,
+      containerClassName,
+      ...props
+    },
+    ref
+  ) => {
+    const hasLeftIcon = Boolean(leftIcon);
+    const hasRightIcon = Boolean(rightIcon);
+    const displayHelperText = error ? errorMessage : helperText;
+
+    return (
+      <InputContainer fullWidth={fullWidth} className={containerClassName}>
+        {label && <Label>{label}</Label>}
+        
+        <InputWrapper
+          hasLeftIcon={hasLeftIcon}
+          hasRightIcon={hasRightIcon}
+          error={error}
+        >
+          {leftIcon && (
+            <IconWrapper position="left">
+              {leftIcon}
+            </IconWrapper>
+          )}
+          
+          <StyledInput
+            ref={ref}
+            size={size}
+            error={error}
+            style={{
+              paddingLeft: hasLeftIcon ? spacing[10] : undefined,
+              paddingRight: hasRightIcon ? spacing[10] : undefined,
+            }}
+            {...props}
+          />
+          
+          {rightIcon && (
+            <IconWrapper position="right">
+              {rightIcon}
+            </IconWrapper>
+          )}
+        </InputWrapper>
+        
+        {displayHelperText && (
+          <HelperText error={error}>
+            {displayHelperText}
+          </HelperText>
+        )}
+      </InputContainer>
+    );
   }
-`;
-
-// 錯誤訊息
-const ErrorMessage = styled.div<{ theme: 'light' | 'dark' }>`
-  font-size: 11px;
-  color: ${props => getThemeColors(props.theme).status.error};
-  margin-top: ${spacing.xs};
-`;
-
-// 幫助文字
-const HelpText = styled.div<{ theme: 'light' | 'dark' }>`
-  font-size: 11px;
-  color: ${props => getThemeColors(props.theme).text.secondary};
-  margin-top: ${spacing.xs};
-`;
-
-// 輸入框組件介面
-export interface InputProps {
-  theme: 'light' | 'dark';
-  type?: 'text' | 'password' | 'email' | 'number' | 'search' | 'url' | 'tel';
-  size?: 'small' | 'medium' | 'large';
-  label?: string;
-  placeholder?: string;
-  value?: string;
-  defaultValue?: string;
-  disabled?: boolean;
-  required?: boolean;
-  readOnly?: boolean;
-  fullWidth?: boolean;
-  error?: string;
-  helpText?: string;
-  prefix?: React.ReactNode;
-  suffix?: React.ReactNode;
-  className?: string;
-  id?: string;
-  name?: string;
-  autoComplete?: string;
-  autoFocus?: boolean;
-  maxLength?: number;
-  minLength?: number;
-  pattern?: string;
-  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
-  onFocus?: (event: React.FocusEvent<HTMLInputElement>) => void;
-  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
-  onKeyUp?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
-  onKeyPress?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
-}
-
-/**
- * 輸入框組件
- * 提供統一的表單輸入樣式
- */
-export const Input = forwardRef<HTMLInputElement, InputProps>((
-  {
-    theme,
-    type = 'text',
-    size = 'medium',
-    label,
-    placeholder,
-    value,
-    defaultValue,
-    disabled = false,
-    required = false,
-    readOnly = false,
-    fullWidth = false,
-    error,
-    helpText,
-    prefix,
-    suffix,
-    className,
-    id,
-    name,
-    autoComplete,
-    autoFocus = false,
-    maxLength,
-    minLength,
-    pattern,
-    onChange,
-    onBlur,
-    onFocus,
-    onKeyDown,
-    onKeyUp,
-    onKeyPress
-  },
-  ref
-) => {
-  const [focused, setFocused] = React.useState(false);
-  
-  const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
-    setFocused(true);
-    onFocus?.(event);
-  };
-  
-  const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
-    setFocused(false);
-    onBlur?.(event);
-  };
-  
-  return (
-    <InputContainer fullWidth={fullWidth} className={className}>
-      {label && (
-        <InputLabel theme={theme} required={required} htmlFor={id}>
-          {label}
-        </InputLabel>
-      )}
-      
-      <InputWrapper
-        theme={theme}
-        hasError={!!error}
-        disabled={disabled}
-        focused={focused}
-      >
-        {prefix && (
-          <InputAffix theme={theme} position="prefix">
-            {prefix}
-          </InputAffix>
-        )}
-        
-        <BaseInput
-          ref={ref}
-          theme={theme}
-          type={type}
-          size={size}
-          hasPrefix={!!prefix}
-          hasSuffix={!!suffix}
-          placeholder={placeholder}
-          value={value}
-          defaultValue={defaultValue}
-          disabled={disabled}
-          required={required}
-          readOnly={readOnly}
-          id={id}
-          name={name}
-          autoComplete={autoComplete}
-          autoFocus={autoFocus}
-          maxLength={maxLength}
-          minLength={minLength}
-          pattern={pattern}
-          onChange={onChange}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onKeyDown={onKeyDown}
-          onKeyUp={onKeyUp}
-          onKeyPress={onKeyPress}
-        />
-        
-        {suffix && (
-          <InputAffix theme={theme} position="suffix">
-            {suffix}
-          </InputAffix>
-        )}
-      </InputWrapper>
-      
-      {error && (
-        <ErrorMessage theme={theme}>
-          {error}
-        </ErrorMessage>
-      )}
-      
-      {helpText && !error && (
-        <HelpText theme={theme}>
-          {helpText}
-        </HelpText>
-      )}
-    </InputContainer>
-  );
-});
+);
 
 Input.displayName = 'Input';
 
