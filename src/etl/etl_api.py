@@ -29,7 +29,7 @@ from loguru import logger
 # 導入 ETL 相關模組
 from .proxy_etl_pipeline import (
     ProxyETLPipeline, ETLConfig, ETLMetrics, ETLResult,
-    ProcessingStage, DataSource
+    ETLStage, DataSource
 )
 from .data_validator import (
     ProxyDataValidator, ValidationLevel, ValidationResult,
@@ -40,7 +40,11 @@ from .monitoring_dashboard import (
 )
 from .database_schema import DatabaseSchemaManager
 from ..proxy_manager.models import ProxyNode, ProxyFilter
-from ..database_config import get_db_config
+from database_config import db_config
+
+def get_db_config():
+    """獲取數據庫配置"""
+    return db_config
 
 
 # ===== Pydantic 模型定義 =====
@@ -641,7 +645,7 @@ if __name__ == "__main__":
     
     # 啟動 ETL API 服務器
     uvicorn.run(
-        "etl_api:etl_app",
+        "src.etl.etl_api:etl_app",
         host="0.0.0.0",
         port=8001,
         reload=True,
