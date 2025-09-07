@@ -10,7 +10,7 @@
 import asyncio
 import logging
 from typing import List, Optional, Dict, Any, Union
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Depends, Query, BackgroundTasks, Request, Header
@@ -24,6 +24,7 @@ from src.config.settings import settings
 import uvicorn
 from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from time import perf_counter
+from collections import defaultdict, deque
 
 # 導入 ETL API
 try:
@@ -160,6 +161,13 @@ REQUEST_LATENCY = Histogram(
 )
 
 
+# In-process lightweight rollup for API trends/summary
+ROLLUP_LOCK = asyncio.Lock()
+REQUEST_ROLLUP: Dict[str, Dict[str, Any]] = defaultdict(lambda: {"count": 0, "error": 0, "duration_sum": 0.0})
+PER_MINUTE: Dict[datetime, Dict[str, float]] = {}
+MINUTE_KEYS: deque = deque()
+MAX_MINUTES: int = 24 * 60  # keep last 24h
+
 
 # 簡單的 API Key 驗證依賴
 async def require_api_key(x_api_key: Optional[str] = Header(default=None)):
@@ -208,6 +216,35 @@ async def metrics_middleware(request, call_next):
             method = request.method
             REQUEST_COUNT.labels(endpoint=endpoint, method=method, status=status_code).inc()
             REQUEST_LATENCY.labels(endpoint=endpoint, method=method, status=status_code).observe(perf_counter() - start)
+            # In-process aggregations
+            duration = max(0.0, perf_counter() - start)
+            is_error = 1 if int(status_code) >= 400 else 0
+            key = f"{endpoint}|{method}"
+            minute_key = datetime.now().replace(second=0, microsecond=0)
+            # Update rollups
+            if not ROLLUP_LOCK.locked():
+                # Best-effort without awaiting lock to avoid latency; fallback on simple updates
+                pass
+            async def _update():
+                REQUEST_ROLLUP[key]["count"] += 1
+                REQUEST_ROLLUP[key]["error"] += is_error
+                REQUEST_ROLLUP[key]["duration_sum"] += duration
+                bucket = PER_MINUTE.get(minute_key)
+                if not bucket:
+                    PER_MINUTE[minute_key] = {"count": 0, "error": 0, "duration_sum": 0.0}
+                    MINUTE_KEYS.append(minute_key)
+                PER_MINUTE[minute_key]["count"] += 1
+                PER_MINUTE[minute_key]["error"] += is_error
+                PER_MINUTE[minute_key]["duration_sum"] += duration
+                # Trim old minutes
+                while len(MINUTE_KEYS) > MAX_MINUTES:
+                    old = MINUTE_KEYS.popleft()
+                    PER_MINUTE.pop(old, None)
+            try:
+                # Fire-and-forget; slight race is acceptable for metrics
+                asyncio.create_task(_update())
+            except Exception:
+                pass
         except Exception:
             pass
 
@@ -544,6 +581,83 @@ async def get_stats(manager: ProxyManager = Depends(get_proxy_manager)):
         logger.error(f"❌ 獲取統計信息失敗: {e}")
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
 
+
+class MetricsSummaryResponse(BaseModel):
+    total_requests: int
+    error_rate: float
+    avg_latency_ms: float
+    per_endpoint: Dict[str, Dict[str, float]]
+    pool: Dict[str, int]
+
+
+@app.get("/api/metrics/summary", response_model=MetricsSummaryResponse, summary="聚合指標摘要")
+async def metrics_summary(manager: ProxyManager = Depends(get_proxy_manager)):
+    try:
+        # Rollup snapshot
+        total_count = 0
+        total_error = 0
+        total_duration = 0.0
+        per_endpoint: Dict[str, Dict[str, float]] = {}
+        for key, v in REQUEST_ROLLUP.items():
+            c = int(v.get("count", 0))
+            e = int(v.get("error", 0))
+            d = float(v.get("duration_sum", 0.0))
+            total_count += c
+            total_error += e
+            total_duration += d
+            per_endpoint[key] = {
+                "count": c,
+                "error_rate": (e / c * 100.0) if c else 0.0,
+                "avg_latency_ms": (d / c * 1000.0) if c else 0.0,
+            }
+        stats = manager.get_stats()
+        pool = {
+            "total": stats['pool_summary']['total_proxies'],
+            "active": stats['pool_summary']['total_active_proxies']
+        }
+        return MetricsSummaryResponse(
+            total_requests=total_count,
+            error_rate=(total_error / total_count * 100.0) if total_count else 0.0,
+            avg_latency_ms=(total_duration / total_count * 1000.0) if total_count else 0.0,
+            per_endpoint=per_endpoint,
+            pool=pool
+        )
+    except Exception as e:
+        logger.error(f"❌ 獲取指標摘要失敗: {e}")
+        raise HTTPException(status_code=500, detail="內部服務器錯誤")
+
+
+class MetricsTrendsPoint(BaseModel):
+    timestamp: datetime
+    count: int
+    error: int
+    avg_latency_ms: float
+
+
+@app.get("/api/metrics/trends", response_model=List[MetricsTrendsPoint], summary="指標趨勢（每分鐘）")
+async def metrics_trends(
+    minutes: int = Query(60, ge=1, le=24*60, description="回溯分鐘數")
+):
+    try:
+        cutoff = datetime.now().replace(second=0, microsecond=0) - timedelta(minutes=minutes-1)
+        points: List[MetricsTrendsPoint] = []
+        # Ensure chronological order
+        keys = sorted([k for k in PER_MINUTE.keys() if k >= cutoff])
+        for ts in keys:
+            bucket = PER_MINUTE.get(ts, {"count": 0, "error": 0, "duration_sum": 0.0})
+            c = int(bucket.get("count", 0))
+            e = int(bucket.get("error", 0))
+            d = float(bucket.get("duration_sum", 0.0))
+            points.append(MetricsTrendsPoint(
+                timestamp=ts,
+                count=c,
+                error=e,
+                avg_latency_ms=(d / c * 1000.0) if c else 0.0
+            ))
+        return points
+    except Exception as e:
+        logger.error(f"❌ 獲取指標趨勢失敗: {e}")
+        raise HTTPException(status_code=500, detail="內部服務器錯誤")
 
 @app.post("/api/fetch", summary="手動獲取代理")
 async def fetch_proxies(
