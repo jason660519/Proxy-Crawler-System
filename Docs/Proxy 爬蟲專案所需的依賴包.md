@@ -1,8 +1,8 @@
-# **Proxy 爬蟲專案所需的依賴包**
+# Dependencies (Proxy Crawler Project)
 
-## **Python 主要依賴包 (基於最新架構設計)**
+## Python (current backend stack)
 
-### **核心技術棧 (必需)**
+### Core
 
 ```bash
 # 異步框架與 HTTP 客戶端 (現代首選)
@@ -22,7 +22,7 @@ uv add requests  # 備用方案
 uv add urllib3   # 底層 HTTP 庫
 ```
 
-### **HTML/XML 解析與資料提取**
+### HTML/XML parsing & extraction
 
 ```bash
 # HTML 解析引擎
@@ -38,7 +38,7 @@ uv add newspaper3k      # 新聞文章提取與轉換
 uv add trafilatura      # 網頁內容提取專家
 ```
 
-### **瀏覽器自動化 (反檢測技術)**
+### Browser automation (anti-bot)
 
 ```bash
 # 現代瀏覽器自動化 (推薦)
@@ -54,7 +54,7 @@ uv add scrapy            # 異步，高併發，業界標準框架
 uv add scrapy-playwright # Scrapy + Playwright 集成
 ```
 
-### **資料庫與快取系統**
+### Database & cache
 
 ```bash
 # 關聯式資料庫
@@ -67,7 +67,7 @@ uv add redis         # Redis 客戶端
 uv add redis-py      # 另一個 Redis 客戶端選項
 ```
 
-### **代理管理與輪換**
+### Proxy helpers (optional)
 
 ```bash
 # 代理發現與驗證
@@ -80,7 +80,7 @@ uv add PySocks              # SOCKS 協議支援
 # 基於 aiohttp + asyncio 實現
 ```
 
-### **反檢測與隱匿技術**
+### Anti-detection (optional)
 
 ```bash
 # User-Agent 與指紋模擬
@@ -90,7 +90,7 @@ uv add tls-client              # 模擬 TLS 指紋
 uv add curl_cffi               # 通過 cURL impersonate 模擬瀏覽器指紋
 ```
 
-### **並發處理與工具**
+### Concurrency & utilities
 
 ```bash
 # 異步文件操作
@@ -109,7 +109,7 @@ uv add tqdm              # 進度條
 uv add python-dateutil   # 日期時間處理
 ```
 
-### **監控與指標**
+### Monitoring & metrics
 
 ```bash
 # 監控指標導出
@@ -119,7 +119,7 @@ uv add prometheus-client  # Prometheus 指標收集
 # loguru - 現代化日誌系統
 ```
 
-### **配置管理與環境**
+### Config & CLI
 
 ```bash
 # 環境變數管理
@@ -130,9 +130,9 @@ uv add click   # 創建 CLI 工具
 uv add typer   # 現代 CLI 框架
 ```
 
-## **JavaScript 渲染相關**
+## JavaScript runtime (when needed)
 
-### **需要安裝的軟體**
+### Required tools
 
 1. ChromeDriver \- 用於 Selenium  
 2. Node.js \- 用於某些 JavaScript 執行環境
@@ -145,7 +145,7 @@ uv add typer   # 現代 CLI 框架
 
 `pip install undetected-chromedriver`
 
-## **完整的 requirements.txt (基於最新架構)**
+## requirements.txt (aligned to repo)
 
 ```txt
 # ===== 核心技術棧 (必需) =====
@@ -224,9 +224,8 @@ retrying==1.3.4          # 傳統重試庫
 tqdm==4.66.1             # 進度條
 python-dateutil==2.8.2   # 日期時間處理
 
-# ===== 監控與指標 =====
-# 監控指標導出
-prometheus-client==0.19.0  # Prometheus 指標收集
+# ===== Monitoring =====
+prometheus-client==0.19.0
 
 # ===== 配置管理與環境 =====
 # 環境變數管理
@@ -249,7 +248,7 @@ idna==3.4                # 國際化域名
 
 `idna==3.4`
 
-## **瀏覽器驅動設置**
+## WebDriver setup
 
 ### **自動安裝 ChromeDriver**
 
@@ -265,7 +264,7 @@ idna==3.4                # 國際化域名
 1. 下載對應版本的 ChromeDriver  
 2. 添加到系統 PATH 或指定路徑
 
-## **項目結構建議的依賴**
+## Suggested imports (examples)
 
 ### **通用工具類 ([utils.py](https://utils.py/))**
 

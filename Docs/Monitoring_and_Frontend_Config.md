@@ -20,18 +20,20 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: 'proxy_manager_api'
+  - job_name: "proxy_manager_api"
     metrics_path: /metrics
     static_configs:
-      - targets: ['proxy_crawler:8000']
+      - targets: ["proxy_crawler:8000"]
 ```
 
 Notes:
+
 - The main API exposes metrics at `/metrics` (Prometheus format).
 - If you add metrics to other services (e.g., html-to-markdown), add another `scrape_configs` entry with the container name and port.
 - In Grafana, add a Prometheus data source using URL `http://prometheus:9090`.
 
 Key metrics exposed:
+
 - `proxy_pool_total` — total proxies in pool
 - `proxy_pool_active` — active proxies in pool
 - `proxy_api_requests_total{endpoint,method,status}` — request counters by route
@@ -50,6 +52,7 @@ VITE_API_KEY=
 ```
 
 Behavior:
+
 - `VITE_API_KEY` will be sent as `X-API-Key` header automatically by the frontend HTTP client.
 - Default timeouts and base URLs can be adjusted per environment.
 
@@ -70,5 +73,3 @@ curl http://localhost:8000/metrics | head -50
 Prometheus UI: `http://localhost:9090`
 
 Grafana UI: `http://localhost:3000` → Add Prometheus data source → Build dashboard.
-
-
