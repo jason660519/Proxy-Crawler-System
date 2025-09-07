@@ -159,7 +159,16 @@ const App: React.FC = () => {
         );
       
       case 'analytics':
-        return <OperationsDashboard />;
+        return (
+          <>
+            <OperationsDashboard />
+            {/* Native metrics overview under Grafana embed */}
+            {/* @ts-ignore: dynamically added component */}
+            {require('./components/dashboard').MetricsOverview && (
+              (React.createElement(require('./components/dashboard').MetricsOverview))
+            )}
+          </>
+        );
       
       case 'settings':
         return (

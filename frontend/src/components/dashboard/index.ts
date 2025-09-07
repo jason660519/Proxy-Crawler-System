@@ -5,6 +5,7 @@
 
 export { Dashboard } from './Dashboard';
 export { OperationsDashboard } from './OperationsDashboard';
+export { MetricsOverview } from './MetricsOverview';
 export { HealthCard } from './HealthCard';
 export { TrendChart } from './TrendChart';
 export { TaskBoard } from './TaskBoard';
