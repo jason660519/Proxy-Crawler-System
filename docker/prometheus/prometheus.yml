@@ -12,3 +12,6 @@ scrape_configs:
     static_configs:
       - targets: ['html_to_markdown:8001']
 
+rule_files:
+  - alerting_rules.yml
+
