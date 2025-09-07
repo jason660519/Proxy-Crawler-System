@@ -338,6 +338,3 @@ export interface UseLocalStorageOptions<T> {
     write: (value: T) => string;
   };
 }
-
-// Dashboard 佈局類型
-export type DashboardLayout = 'grid' | 'list' | 'compact' | 'wide' | 'detailed';

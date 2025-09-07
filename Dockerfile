@@ -31,9 +31,9 @@ RUN mkdir -p /app/logs /app/data /app/output
 ENV PYTHONPATH=/app
 ENV ENVIRONMENT=docker
 
-# 健康檢查
+# 健康檢查（對齊代理管理 API）
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:8000/api/health || exit 1
 
 # 暴露端口
 EXPOSE 8000
@@ -45,5 +45,5 @@ RUN useradd -m -u 1000 crawler && \
 # 切換到非 root 用戶
 USER crawler
 
-# 啟動命令
-CMD ["python", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 啟動命令：代理管理 API
+CMD ["python", "-m", "uvicorn", "src.proxy_manager.api:app", "--host", "0.0.0.0", "--port", "8000"]

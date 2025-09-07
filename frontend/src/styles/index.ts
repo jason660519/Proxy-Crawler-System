@@ -481,9 +481,92 @@ export const animations = {
   },
 };
 
+
+
 // ============= 全域樣式 =============
 
-export const globalStyles = css`
+export const createGlobalStyles = (theme: typeof lightTheme) => css`
+  :root {
+    /* 背景色變數 */
+    --color-background-primary: ${theme.colors.background.primary};
+    --color-background-primary-80: ${theme.name === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(15, 23, 42, 0.8)'};
+    --color-background-secondary: ${theme.colors.background.secondary};
+    --color-background-tertiary: ${theme.colors.background.tertiary};
+    --color-background-elevated: ${theme.colors.background.elevated};
+    --color-background-card: ${theme.colors.background.elevated};
+    --color-background-hover: ${theme.colors.background.secondary};
+    --color-background-disabled: ${theme.colors.background.secondary};
+    --color-background-tooltip: ${theme.colors.background.tertiary};
+    
+    /* 文字顏色變數 */
+    --color-text-primary: ${theme.colors.text.primary};
+    --color-text-secondary: ${theme.colors.text.secondary};
+    --color-text-tertiary: ${theme.colors.text.tertiary};
+    --color-text-inverse: ${theme.colors.text.inverse};
+    --color-text-disabled: ${theme.colors.text.disabled};
+    
+    /* 邊框顏色變數 */
+    --color-border-primary: ${theme.colors.border.primary};
+    --color-border-secondary: ${theme.colors.border.secondary};
+    --color-border-focus: ${theme.colors.border.focus};
+    --color-border-error: ${theme.colors.border.error};
+    --color-border-default: ${theme.colors.border.primary};
+    --color-border-light: ${theme.colors.border.secondary};
+    --color-border-hover: ${theme.colors.border.focus};
+    
+    /* 狀態顏色變數 */
+    --color-status-success: ${theme.colors.status.success};
+    --color-status-success-bg: ${theme.name === 'light' ? '#dcfce7' : '#14532d'};
+    --color-status-success-light: ${theme.name === 'light' ? '#f0fdf4' : '#166534'};
+    --color-status-warning: ${theme.colors.status.warning};
+    --color-status-warning-bg: ${theme.name === 'light' ? '#fef3c7' : '#92400e'};
+    --color-status-warning-light: ${theme.name === 'light' ? '#fffbeb' : '#a16207'};
+    --color-status-error: ${theme.colors.status.error};
+    --color-status-error-bg: ${theme.name === 'light' ? '#fef2f2' : '#7f1d1d'};
+    --color-status-error-light: ${theme.name === 'light' ? '#fef7f7' : '#991b1b'};
+    --color-status-info: ${theme.colors.status.info};
+    --color-status-info-bg: ${theme.name === 'light' ? '#eff6ff' : '#1e3a8a'};
+    --color-status-info-light: ${theme.name === 'light' ? '#f0f9ff' : '#1e40af'};
+    
+    /* 互動顏色變數 */
+    --color-interactive-primary: ${theme.colors.interactive.primary};
+    --color-interactive-primaryHover: ${theme.colors.interactive.primaryHover};
+    --color-interactive-primaryActive: ${theme.colors.interactive.primaryActive};
+    --color-interactive-secondary: ${theme.colors.interactive.secondary};
+    --color-interactive-secondaryHover: ${theme.colors.interactive.secondaryHover};
+    --color-interactive-secondaryActive: ${theme.colors.interactive.secondaryActive};
+    
+    /* Primary 色系變數 */
+    --color-primary-50: ${colors.primary[50]};
+    --color-primary-100: ${colors.primary[100]};
+    --color-primary-200: ${colors.primary[200]};
+    --color-primary-300: ${colors.primary[300]};
+    --color-primary-400: ${colors.primary[400]};
+    --color-primary-500: ${colors.primary[500]};
+    --color-primary-600: ${colors.primary[600]};
+    --color-primary-700: ${colors.primary[700]};
+    --color-primary-800: ${colors.primary[800]};
+    --color-primary-900: ${colors.primary[900]};
+    --color-primary-500-alpha-20: ${theme.name === 'light' ? 'rgba(96, 165, 250, 0.2)' : 'rgba(96, 165, 250, 0.2)'};
+    
+    /* Neutral/Gray 色系變數 */
+    --color-neutral-50: ${colors.gray[50]};
+    --color-neutral-100: ${colors.gray[100]};
+    --color-neutral-200: ${colors.gray[200]};
+    --color-neutral-300: ${colors.gray[300]};
+    --color-neutral-400: ${colors.gray[400]};
+    --color-neutral-500: ${colors.gray[500]};
+    --color-neutral-600: ${colors.gray[600]};
+    --color-neutral-700: ${colors.gray[700]};
+    --color-neutral-800: ${colors.gray[800]};
+    --color-neutral-900: ${colors.gray[900]};
+    --color-neutral-800-50: ${theme.name === 'light' ? 'rgba(64, 64, 64, 0.05)' : 'rgba(64, 64, 64, 0.5)'};
+    
+    /* 其他顏色變數 */
+    --color-white: #ffffff;
+    --color-black: #000000;
+  }
+  
   * {
     box-sizing: border-box;
     margin: 0;
@@ -498,12 +581,12 @@ export const globalStyles = css`
   }
   
   body {
-    font-family: ${typography.fontFamily.sans.join(', ')};
-    font-weight: ${typography.fontWeight.normal};
+    font-family: ${theme.typography.fontFamily.primary};
+    font-weight: ${theme.typography.fontWeight.normal};
     background-color: var(--color-background-primary);
     color: var(--color-text-primary);
-    transition: background-color ${animations.duration.normal} ${animations.easing.easeInOut},
-                color ${animations.duration.normal} ${animations.easing.easeInOut};
+    transition: background-color 0.3s ease,
+                color 0.3s ease;
   }
   
   #root {
@@ -524,7 +607,7 @@ export const globalStyles = css`
   
   ::-webkit-scrollbar-thumb {
     background: var(--color-border-primary);
-    border-radius: ${borderRadius.full};
+    border-radius: ${theme.borderRadius.full};
   }
   
   ::-webkit-scrollbar-thumb:hover {
@@ -551,7 +634,7 @@ export const globalStyles = css`
   a {
     color: var(--color-interactive-primary);
     text-decoration: none;
-    transition: color ${animations.duration.fast} ${animations.easing.easeInOut};
+    transition: color 0.15s ease;
   }
   
   a:hover {
@@ -618,7 +701,9 @@ export function generateCSSVariables(theme: typeof lightTheme): string {
   
   addVariables(theme.colors);
   
-  return `:root {\n  ${variables.join('\n  ')}\n}`;
+  return `:root {
+  ${variables.join('\n  ')}
+}`;
 }
 
 // ============= 主題類型定義 =============
@@ -652,7 +737,7 @@ export const designSystem = {
   breakpoints,
   media,
   animations,
-  globalStyles,
+  createGlobalStyles,
   generateCSSVariables,
 };
 

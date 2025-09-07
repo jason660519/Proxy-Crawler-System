@@ -7,86 +7,15 @@ import React, { useState, useEffect } from 'react';
 import styled, { ThemeProvider, createGlobalStyle } from 'styled-components';
 import { Header, ActivityBar } from './components/layout';
 import { Dashboard } from './components/dashboard';
+import { ThemeDebugger } from './components/debug';
 import { useTheme, useHealthStatus } from './hooks';
-import { lightTheme, darkTheme, globalStyles } from './styles';
+import { createGlobalStyles, lightTheme, darkTheme } from './styles';
 
 
 // ============= 全域樣式 =============
 
-const GlobalStyle = createGlobalStyle`
-  ${globalStyles}
-  
-  :root {
-    /* 背景色變數 */
-    --color-background-primary: ${props => props.theme.colors.background.primary};
-    --color-background-secondary: ${props => props.theme.colors.background.secondary};
-    --color-background-tertiary: ${props => props.theme.colors.background.tertiary};
-    --color-background-elevated: ${props => props.theme.colors.background.elevated};
-    --color-background-card: ${props => props.theme.colors.background.elevated};
-    --color-background-hover: ${props => props.theme.colors.background.secondary};
-    --color-background-disabled: ${props => props.theme.colors.background.secondary};
-    --color-background-tooltip: ${props => props.theme.colors.background.tertiary};
-    --color-background-primary-80: ${props => props.theme.colors.background.primary};
-    
-    /* 文字顏色變數 */
-    --color-text-primary: ${props => props.theme.colors.text.primary};
-    --color-text-secondary: ${props => props.theme.colors.text.secondary};
-    --color-text-tertiary: ${props => props.theme.colors.text.tertiary};
-    --color-text-inverse: ${props => props.theme.colors.text.inverse};
-    --color-text-disabled: ${props => props.theme.colors.text.disabled};
-    
-    /* 邊框顏色變數 */
-    --color-border-primary: ${props => props.theme.colors.border.primary};
-    --color-border-secondary: ${props => props.theme.colors.border.secondary};
-    --color-border-focus: ${props => props.theme.colors.border.focus};
-    --color-border-default: ${props => props.theme.colors.border.primary};
-    --color-border-light: ${props => props.theme.colors.border.secondary};
-    --color-border-hover: ${props => props.theme.colors.border.focus};
-    --color-border-focus-shadow: ${props => props.theme.colors.border.focus}33;
-    
-    /* 狀態顏色變數 */
-    --color-status-success: ${props => props.theme.colors.status.success};
-    --color-status-warning: ${props => props.theme.colors.status.warning};
-    --color-status-error: ${props => props.theme.colors.status.error};
-    --color-status-info: ${props => props.theme.colors.status.info};
-    --color-status-success-bg: ${props => props.theme.colors.status.success}20;
-    --color-status-warning-bg: ${props => props.theme.colors.status.warning}20;
-    --color-status-error-bg: ${props => props.theme.colors.status.error}20;
-    --color-status-success-light: ${props => props.theme.colors.status.success}20;
-    --color-status-error-light: ${props => props.theme.colors.status.error}20;
-    --color-status-warning-light: ${props => props.theme.colors.status.warning}20;
-    
-    /* 互動顏色變數 */
-    --color-interactive-primary: ${props => props.theme.colors.interactive.primary};
-    --color-interactive-primaryHover: ${props => props.theme.colors.interactive.primaryHover};
-    --color-interactive-primaryActive: ${props => props.theme.colors.interactive.primaryActive};
-    --color-interactive-secondary: ${props => props.theme.colors.interactive.secondary};
-    --color-interactive-secondaryHover: ${props => props.theme.colors.interactive.secondaryHover};
-    --color-interactive-secondaryActive: ${props => props.theme.colors.interactive.secondaryActive};
-    
-    /* Primary 色系變數 */
-    --color-primary-400: ${props => props.theme.name === 'light' ? '#60a5fa' : '#60a5fa'};
-    --color-primary-500: ${props => props.theme.colors.interactive.primary};
-    --color-primary-600: ${props => props.theme.colors.interactive.primaryHover};
-    --color-primary-700: ${props => props.theme.colors.interactive.primaryActive};
-    --color-primary-100: ${props => props.theme.name === 'light' ? '#dbeafe' : '#1e3a8a'};
-    --color-primary-500-alpha-20: ${props => props.theme.colors.interactive.primary}33;
-    
-    /* Neutral/Gray 色系變數 */
-    --color-neutral-100: ${props => props.theme.name === 'light' ? '#f5f5f5' : '#262626'};
-    --color-neutral-200: ${props => props.theme.name === 'light' ? '#e5e5e5' : '#404040'};
-    --color-neutral-300: ${props => props.theme.name === 'light' ? '#d4d4d4' : '#525252'};
-    --color-neutral-400: ${props => props.theme.colors.text.tertiary};
-    --color-neutral-500: ${props => props.theme.name === 'light' ? '#737373' : '#737373'};
-    --color-neutral-600: ${props => props.theme.name === 'light' ? '#525252' : '#a3a3a3'};
-    --color-neutral-700: ${props => props.theme.name === 'light' ? '#404040' : '#d4d4d4'};
-    --color-neutral-800: ${props => props.theme.colors.background.secondary};
-    --color-neutral-900: ${props => props.theme.colors.background.primary};
-    --color-neutral-800-50: ${props => props.theme.colors.background.secondary}80;
-    
-    /* 其他顏色變數 */
-    --color-white: ${props => props.theme.name === 'light' ? '#ffffff' : '#000000'};
-  }
+const GlobalStyle = createGlobalStyle<{ theme: typeof lightTheme }>`
+  ${props => createGlobalStyles(props.theme)}
 `;
 
 // ============= 樣式定義 =============
@@ -173,7 +102,7 @@ const WelcomeSubtitle = styled.p`
 // ============= 組件實作 =============
 
 const App: React.FC = () => {
-  const { isDark } = useTheme();
+  const { isDark, theme } = useTheme();
   useHealthStatus();
   const [activeView, setActiveView] = useState('dashboard');
   const [isInitializing, setIsInitializing] = useState(true);
@@ -295,6 +224,15 @@ const App: React.FC = () => {
             </PageContent>
           </ContentArea>
         </MainContainer>
+        
+        {/* 主題調試器 - 只在開發環境顯示 */}
+        {import.meta.env.DEV && (
+          <ThemeDebugger 
+            theme={theme} 
+            isDark={isDark} 
+            isVisible={true}
+          />
+        )}
       </AppContainer>
     </ThemeProvider>
   );

@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { lightTheme, darkTheme, colors } from '../styles';
 import type {
   HealthStatus,
   SystemMetrics,
@@ -501,21 +502,137 @@ export function useGlobalSearch() {
  */
 export function useTheme() {
   const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('theme', 'light');
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  const applyCssVariables = useCallback((themeName: 'light' | 'dark') => {
+    const themeObj = themeName === 'dark' ? darkTheme : lightTheme;
+    const root = document.documentElement.style;
+    // 背景
+    root.setProperty('--color-background-primary', themeObj.colors.background.primary);
+    root.setProperty('--color-background-secondary', themeObj.colors.background.secondary);
+    root.setProperty('--color-background-tertiary', themeObj.colors.background.tertiary);
+    root.setProperty('--color-background-elevated', themeObj.colors.background.elevated);
+    root.setProperty('--color-background-card', themeObj.colors.background.elevated);
+    root.setProperty('--color-background-hover', themeObj.colors.background.secondary);
+    root.setProperty('--color-background-disabled', themeObj.colors.background.secondary);
+    root.setProperty('--color-background-tooltip', themeObj.colors.background.tertiary);
+    // 文字
+    root.setProperty('--color-text-primary', themeObj.colors.text.primary);
+    root.setProperty('--color-text-secondary', themeObj.colors.text.secondary);
+    root.setProperty('--color-text-tertiary', themeObj.colors.text.tertiary);
+    root.setProperty('--color-text-inverse', themeObj.colors.text.inverse);
+    root.setProperty('--color-text-disabled', themeObj.colors.text.disabled);
+    // 邊框
+    root.setProperty('--color-border-primary', themeObj.colors.border.primary);
+    root.setProperty('--color-border-secondary', themeObj.colors.border.secondary);
+    root.setProperty('--color-border-focus', themeObj.colors.border.focus);
+    // 狀態
+    root.setProperty('--color-status-success', themeObj.colors.status.success);
+    root.setProperty('--color-status-warning', themeObj.colors.status.warning);
+    root.setProperty('--color-status-error', themeObj.colors.status.error);
+    root.setProperty('--color-status-info', themeObj.colors.status.info);
+    // 互動
+    root.setProperty('--color-interactive-primary', themeObj.colors.interactive.primary);
+    root.setProperty('--color-interactive-primaryHover', themeObj.colors.interactive.primaryHover);
+    root.setProperty('--color-interactive-primaryActive', themeObj.colors.interactive.primaryActive);
+    root.setProperty('--color-interactive-secondary', themeObj.colors.interactive.secondary);
+    root.setProperty('--color-interactive-secondaryHover', themeObj.colors.interactive.secondaryHover);
+    root.setProperty('--color-interactive-secondaryActive', themeObj.colors.interactive.secondaryActive);
+    // Primary scale（固定來自 colors）
+    root.setProperty('--color-primary-50', colors.primary[50]);
+    root.setProperty('--color-primary-100', colors.primary[100]);
+    root.setProperty('--color-primary-200', colors.primary[200]);
+    root.setProperty('--color-primary-300', colors.primary[300]);
+    root.setProperty('--color-primary-400', colors.primary[400]);
+    root.setProperty('--color-primary-500', colors.primary[500]);
+    root.setProperty('--color-primary-600', colors.primary[600]);
+    root.setProperty('--color-primary-700', colors.primary[700]);
+    root.setProperty('--color-primary-800', colors.primary[800]);
+    root.setProperty('--color-primary-900', colors.primary[900]);
+    // Neutral scale
+    root.setProperty('--color-neutral-50', colors.gray[50]);
+    root.setProperty('--color-neutral-100', colors.gray[100]);
+    root.setProperty('--color-neutral-200', colors.gray[200]);
+    root.setProperty('--color-neutral-300', colors.gray[300]);
+    root.setProperty('--color-neutral-400', colors.gray[400]);
+    root.setProperty('--color-neutral-500', colors.gray[500]);
+    root.setProperty('--color-neutral-600', colors.gray[600]);
+    root.setProperty('--color-neutral-700', colors.gray[700]);
+    root.setProperty('--color-neutral-800', colors.gray[800]);
+    root.setProperty('--color-neutral-900', colors.gray[900]);
+  }, []);
 
   const toggleTheme = useCallback(() => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
-  }, [setTheme]);
+    setTheme(prev => {
+      const newTheme = prev === 'light' ? 'dark' : 'light';
+      console.log(`主題切換: ${prev} -> ${newTheme}`);
+      // 同步通知其他 hook 實例
+      try {
+        window.dispatchEvent(new CustomEvent('js-theme-changed', { detail: newTheme }));
+      } catch (err) {
+        console.warn('js-theme-changed dispatch 失敗:', err);
+      }
+      // 立即套用 CSS 變數（即使 ThemeProvider 尚未重渲染）
+      try {
+        applyCssVariables(newTheme);
+      } catch {}
+      return newTheme;
+    });
+  }, [setTheme, applyCssVariables]);
 
   useEffect(() => {
     // 設置主題屬性
     document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+    // 套用 CSS 變數，確保視覺立即更新
+    try { applyCssVariables(theme); } catch {}
+    
+    // 設置系統偏好檢測
+    if (!isInitialized) {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      console.log(`系統偏好深色模式: ${prefersDark}, 當前主題: ${theme}`);
+      setIsInitialized(true);
+    }
+    
+    // 強制重新渲染以確保樣式更新
+    setTimeout(() => {
+      document.documentElement.style.setProperty('--theme-transition', 'all 0.3s ease');
+    }, 0);
+  }, [theme, isInitialized, applyCssVariables]);
+
+  // 跨組件同步：監聽主題變更事件
+  useEffect(() => {
+    const handleThemeChanged = (e: Event) => {
+      const newTheme = (e as CustomEvent<'light' | 'dark'>).detail;
+      if (newTheme && newTheme !== theme) {
+        setTheme(newTheme);
+      }
+    };
+
+    window.addEventListener('js-theme-changed', handleThemeChanged as EventListener);
+    return () => {
+      window.removeEventListener('js-theme-changed', handleThemeChanged as EventListener);
+    };
+  }, [theme, setTheme]);
+
+  // 保險同步：監聽 data-theme 屬性變化（MutationObserver）
+  useEffect(() => {
+    const target = document.documentElement;
+    const observer = new MutationObserver(() => {
+      const attr = target.getAttribute('data-theme') as 'light' | 'dark' | null;
+      if (attr && attr !== theme) {
+        setTheme(attr);
+      }
+    });
+    observer.observe(target, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, [theme, setTheme]);
 
   return {
     theme,
     setTheme,
     toggleTheme,
-    isDark: theme === 'dark'
+    isDark: theme === 'dark',
+    isInitialized
   };
 }
 
