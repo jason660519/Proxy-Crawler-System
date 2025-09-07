@@ -188,6 +188,29 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+# 全域中介層：請求計數與延遲
+@app.middleware("http")
+async def metrics_middleware(request, call_next):
+    if request.url.path == "/metrics":
+        return await call_next(request)
+    start = perf_counter()
+    status_code = "200"
+    try:
+        response = await call_next(request)
+        status_code = str(getattr(response, "status_code", 200))
+        return response
+    except Exception:
+        status_code = "500"
+        raise
+    finally:
+        try:
+            endpoint = request.url.path
+            method = request.method
+            REQUEST_COUNT.labels(endpoint=endpoint, method=method, status=status_code).inc()
+            REQUEST_LATENCY.labels(endpoint=endpoint, method=method, status=status_code).observe(perf_counter() - start)
+        except Exception:
+            pass
+
 
 # 設置模板和靜態文件
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
