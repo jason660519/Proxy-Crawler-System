@@ -22,7 +22,8 @@ from pydantic import BaseModel, Field
 import redis.asyncio as aioredis
 from src.config.settings import settings
 import uvicorn
-from prometheus_client import Counter, Gauge, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from time import perf_counter
 
 # 導入 ETL API
 try:
@@ -151,6 +152,12 @@ class ExportRequest(BaseModel):
 REQUEST_COUNT = Counter("proxy_api_requests_total", "Total API requests", ["endpoint", "method", "status"])
 POOL_ACTIVE = Gauge("proxy_pool_active", "Active proxies in pool")
 POOL_TOTAL = Gauge("proxy_pool_total", "Total proxies in pool")
+REQUEST_LATENCY = Histogram(
+    "proxy_api_request_duration_seconds",
+    "Request duration in seconds",
+    ["endpoint", "method", "status"],
+    buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10)
+)
 
 
 
@@ -343,6 +350,8 @@ async def get_proxy(
     manager: ProxyManager = Depends(get_proxy_manager)
 ):
     """獲取單個代理"""
+    start = perf_counter()
+    status_code = "200"
     try:
         # 構建篩選條件
         filter_criteria = None
@@ -383,10 +392,19 @@ async def get_proxy(
         return ProxyResponse.from_proxy_node(proxy)
         
     except ValueError as e:
+        status_code = "400"
         raise HTTPException(status_code=400, detail=f"參數錯誤: {e}")
     except Exception as e:
+        status_code = "500"
         logger.error(f"❌ 獲取代理失敗: {e}")
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
+    finally:
+        try:
+            endpoint = "/api/proxy"
+            REQUEST_COUNT.labels(endpoint=endpoint, method="GET", status=status_code).inc()
+            REQUEST_LATENCY.labels(endpoint=endpoint, method="GET", status=status_code).observe(perf_counter() - start)
+        except Exception:
+            pass
 
 
 @app.get("/api/proxies", response_model=List[ProxyResponse], summary="批量獲取代理")
@@ -921,7 +939,11 @@ async def batch_validate_proxies(
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
     try:
-        REQUEST_COUNT.labels(endpoint=str(request.url.path), method=request.method, status=str(exc.status_code)).inc()
+        endpoint = str(request.url.path)
+        method = request.method
+        status = str(exc.status_code)
+        REQUEST_COUNT.labels(endpoint=endpoint, method=method, status=status).inc()
+        REQUEST_LATENCY.labels(endpoint=endpoint, method=method, status=status).observe(0)
     except Exception:
         pass
     return JSONResponse(
@@ -938,7 +960,11 @@ async def http_exception_handler(request, exc):
 async def general_exception_handler(request, exc):
     logger.error(f"❌ 未處理的異常: {exc}")
     try:
-        REQUEST_COUNT.labels(endpoint=str(request.url.path), method=request.method, status="500").inc()
+        endpoint = str(request.url.path)
+        method = request.method
+        status = "500"
+        REQUEST_COUNT.labels(endpoint=endpoint, method=method, status=status).inc()
+        REQUEST_LATENCY.labels(endpoint=endpoint, method=method, status=status).observe(0)
     except Exception:
         pass
     return JSONResponse(
