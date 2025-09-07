@@ -1,0 +1,5 @@
+[33m1116af74[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdevelop[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/develop[m[33m, [m[1;32mmaster[m[33m)[m feat: 完成第一階段所有功能
+[33m149b1c6b[m feat: 完成前端開發環境建置和後端API整合
+[33mf9fd4774[m feat: 完成第一階段代理爬蟲系統開發
+[33m7f2d2fff[m fix(proxy-manager): resolve startup issues and configuration problems
+[33m01f95eb1[m feat: initial commit with enhanced proxy crawler system

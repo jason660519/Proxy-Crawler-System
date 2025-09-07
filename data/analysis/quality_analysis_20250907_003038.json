@@ -1,0 +1,31 @@
+{
+  "report": {
+    "total_proxies": 10,
+    "analyzed_proxies": 10,
+    "average_score": 53.01,
+    "score_distribution": {
+      "優秀 (90-100)": 0,
+      "良好 (80-89)": 0,
+      "一般 (70-79)": 0,
+      "較差 (60-69)": 0,
+      "很差 (0-59)": 10
+    },
+    "top_proxies": [
+      {
+        "proxy_id": "192.168.1.2:8082",
+        "overall_score": 58.91,
+        "performance_score": 72.62,
+        "reliability_score": 79.44,
+        "security_score": 79.5,
+        "location_score": 50.0,
+        "metrics": {
+          "response_time": 1948.1,
+          "success_rate": 0.9,
+          "uptime": 1.0,
+          "anonymity_level": "anonymous",
+          "location_score": 0.5,
+          "protocol_score": 0.9,
+          "stability": 0.6573123714159661,
+          "security": 0.75
+        },
+        "timestamp": 

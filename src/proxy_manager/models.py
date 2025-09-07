@@ -8,6 +8,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional, Dict, Any, List
 import json
+import time
 
 
 class ProxyProtocol(Enum):
@@ -40,6 +41,23 @@ class ProxyStatus(Enum):
     INACTIVE = "inactive"    # 不可用
     TESTING = "testing"      # 測試中
     BLACKLISTED = "blacklisted"  # 黑名單
+
+
+class ScanProtocol(Enum):
+    """掃描協議枚舉"""
+    HTTP = "http"
+    SOCKS4 = "socks4"
+    SOCKS5 = "socks5"
+    HTTPS = "https"
+
+
+class ScanStatus(Enum):
+    """掃描狀態枚舉"""
+    SUCCESS = "success"
+    FAILED = "failed"
+    TIMEOUT = "timeout"
+    CONNECTION_REFUSED = "connection_refused"
+    UNKNOWN_ERROR = "unknown_error"
 
 
 @dataclass
@@ -272,3 +290,55 @@ class ProxyFilter:
             return False
         
         return True
+
+
+@dataclass
+class ScanTarget:
+    """掃描目標"""
+    host: str
+    port: int
+    protocols: List[ScanProtocol] = field(default_factory=lambda: [ScanProtocol.HTTP])
+    priority: int = 1  # 1-10, 10為最高優先級
+
+
+@dataclass
+class ScanResult:
+    """掃描結果"""
+    target: ScanTarget
+    protocol: ScanProtocol
+    result: ScanStatus
+    response_time: float = 0.0
+    error_message: str = ""
+    proxy_node: Optional[ProxyNode] = None
+    timestamp: float = field(default_factory=time.time)
+
+
+@dataclass
+class ScanConfig:
+    """掃描配置"""
+    # 並發控制
+    max_concurrent_scans: int = 100
+    max_concurrent_connections: int = 50
+    
+    # 超時設置
+    connection_timeout: float = 5.0
+    read_timeout: float = 10.0
+    
+    # 重試設置
+    max_retries: int = 2
+    retry_delay: float = 1.0
+    
+    # 掃描設置
+    default_ports: List[int] = field(default_factory=lambda: [80, 8080, 3128, 1080])
+    test_urls: List[str] = field(default_factory=lambda: [
+        "http://httpbin.org/ip",
+        "https://httpbin.org/ip"
+    ])
+    
+    # 結果設置
+    save_results: bool = True
+    results_file: str = "scan_results.json"
+    
+    def get(self, key: str, default: Any = None) -> Any:
+        """獲取配置值"""
+        return getattr(self, key, default)

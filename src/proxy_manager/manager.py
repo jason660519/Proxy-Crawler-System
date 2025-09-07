@@ -16,10 +16,11 @@ from pathlib import Path
 from dataclasses import dataclass
 import aiofiles
 
-from .models import ProxyNode, ProxyStatus, ProxyAnonymity, ProxyProtocol, ProxyFilter
+from .models import ProxyNode, ProxyStatus, ProxyAnonymity, ProxyProtocol, ProxyFilter, ScanTarget, ScanResult, ScanConfig
 from .fetchers import ProxyFetcherManager, JsonFileFetcher
 from .advanced_fetchers import AdvancedProxyFetcherManager
 from .scanner import ProxyScanner
+from .enhanced_scanner import EnhancedProxyScanner
 from .validators import ProxyValidator, BatchValidator
 from .pools import ProxyPoolManager, PoolConfig, PoolType
 from .config import ProxyManagerConfig as ConfigClass
@@ -47,6 +48,7 @@ class ProxyManager:
         }
         self.advanced_fetcher_manager = AdvancedProxyFetcherManager(advanced_config)
         self.scanner = ProxyScanner(self.config.scanner)
+        self.enhanced_scanner = EnhancedProxyScanner()
         self.pool_manager = ProxyPoolManager()
         self.validator: Optional[ProxyValidator] = None
         self.batch_validator: Optional[BatchValidator] = None
@@ -512,5 +514,92 @@ if __name__ == "__main__":
             
         finally:
             await manager.stop()
+
+
+# 增強掃描功能
+class EnhancedProxyManager(ProxyManager):
+    """增強代理管理器，包含掃描功能"""
     
+    async def scan_ip_range(self, ip_range: str, ports: Optional[List[int]] = None) -> List[ScanResult]:
+        """掃描 IP 範圍尋找代理
+        
+        Args:
+            ip_range: CIDR 格式的 IP 範圍，如 "192.168.1.0/24"
+            ports: 要掃描的端口列表，默認使用配置中的端口
+            
+        Returns:
+            List[ScanResult]: 掃描結果列表
+        """
+        try:
+            logger.info(f"開始掃描 IP 範圍: {ip_range}")
+            
+            # 使用增強掃描器
+            results = await self.enhanced_scanner.scan_ip_range(ip_range, ports)
+            
+            # 將成功的掃描結果轉換為代理節點
+            for result in results:
+                if result.result.value == "success" and result.proxy_node:
+                    # 添加到代理池
+                    await self.pool_manager.add_proxy(result.proxy_node)
+            
+            logger.info(f"IP 範圍掃描完成，發現 {len([r for r in results if r.result.value == 'success'])} 個代理")
+            return results
+            
+        except Exception as e:
+            logger.error(f"IP 範圍掃描失敗: {e}")
+            return []
+    
+    async def scan_single_target(self, host: str, port: int, protocols: Optional[List[str]] = None) -> List[ScanResult]:
+        """掃描單個目標
+        
+        Args:
+            host: 目標主機
+            port: 目標端口
+            protocols: 要測試的協議列表
+            
+        Returns:
+            List[ScanResult]: 掃描結果列表
+        """
+        try:
+            logger.info(f"開始掃描目標: {host}:{port}")
+            
+            # 創建掃描目標
+            target = ScanTarget(host=host, port=port)
+            if protocols:
+                from .models import ScanProtocol
+                target.protocols = [ScanProtocol(p) for p in protocols]
+            
+            # 使用增強掃描器掃描單個目標
+            results = []
+            for protocol in target.protocols:
+                result = await self.enhanced_scanner._scan_single_target(target)
+                results.append(result)
+            
+            # 將成功的掃描結果轉換為代理節點
+            for result in results:
+                if result.result.value == "success" and result.proxy_node:
+                    # 添加到代理池
+                    await self.pool_manager.add_proxy(result.proxy_node)
+            
+            logger.info(f"目標掃描完成，發現 {len([r for r in results if r.result.value == 'success'])} 個代理")
+            return results
+            
+        except Exception as e:
+            logger.error(f"目標掃描失敗: {e}")
+            return []
+    
+    async def get_scan_statistics(self) -> Dict[str, Any]:
+        """獲取掃描統計信息
+        
+        Returns:
+            Dict[str, Any]: 掃描統計信息
+        """
+        try:
+            return await self.enhanced_scanner.get_statistics()
+        except Exception as e:
+            logger.error(f"獲取掃描統計失敗: {e}")
+            return {}
+
+
+if __name__ == "__main__":
     asyncio.run(main())
