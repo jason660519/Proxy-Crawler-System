@@ -1,173 +1,430 @@
-import React, { createContext, useContext, useState } from 'react';
-import { cn } from '../../utils/cn';
-import { ChevronDown } from 'lucide-react';
+/**
+ * 下拉選擇組件 - VS Code 風格的選擇器
+ * 提供單選和多選功能
+ */
 
-interface SelectContextType {
-  value: string;
-  onValueChange: (value: string) => void;
-  open: boolean;
-  setOpen: (open: boolean) => void;
-}
+import React, { useState, useRef, useEffect } from 'react';
+import styled from 'styled-components';
+import { getThemeColors, spacing, borderRadius, transitions } from '../../styles/GlobalStyles';
 
-const SelectContext = createContext<SelectContextType | undefined>(undefined);
+// 選擇器容器
+const SelectContainer = styled.div<{ fullWidth?: boolean }>`
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  gap: ${spacing.xs};
+  ${props => props.fullWidth && 'width: 100%;'}
+`;
 
-const useSelectContext = () => {
-  const context = useContext(SelectContext);
-  if (!context) {
-    throw new Error('Select components must be used within a Select provider');
+// 選擇器標籤
+const SelectLabel = styled.label<{ theme: 'light' | 'dark'; required?: boolean }>`
+  font-size: 11px;
+  font-weight: 500;
+  color: ${props => getThemeColors(props.theme).text.secondary};
+  
+  ${props => props.required && `
+    &::after {
+      content: ' *';
+      color: ${getThemeColors(props.theme).status.error};
+    }
+  `}
+`;
+
+// 選擇器觸發器
+const SelectTrigger = styled.button<{
+  theme: 'light' | 'dark';
+  size: 'small' | 'medium' | 'large';
+  hasError?: boolean;
+  disabled?: boolean;
+  open?: boolean;
+}>`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background-color: ${props => getThemeColors(props.theme).input.background};
+  border: 1px solid ${props => {
+    const colors = getThemeColors(props.theme);
+    if (props.hasError) return colors.status.error;
+    if (props.open) return colors.border.focus;
+    return colors.input.border;
+  }};
+  border-radius: ${borderRadius.sm};
+  color: ${props => getThemeColors(props.theme).input.foreground};
+  font-size: 12px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: all ${transitions.fast} ease;
+  
+  ${props => {
+    switch (props.size) {
+      case 'small':
+        return `
+          padding: ${spacing.xs} ${spacing.sm};
+          height: 24px;
+        `;
+      case 'large':
+        return `
+          padding: ${spacing.md} ${spacing.lg};
+          height: 40px;
+          font-size: 14px;
+        `;
+      default:
+        return `
+          padding: ${spacing.sm} ${spacing.md};
+          height: 32px;
+        `;
+    }
+  }}
+  
+  &:hover:not(:disabled) {
+    border-color: ${props => getThemeColors(props.theme).input.borderHover};
   }
-  return context;
-};
+  
+  &:focus {
+    outline: none;
+    border-color: ${props => getThemeColors(props.theme).border.focus};
+    box-shadow: 0 0 0 1px ${props => getThemeColors(props.theme).border.focus};
+  }
+  
+  ${props => props.disabled && `
+    opacity: 0.5;
+    cursor: not-allowed;
+    
+    &:hover {
+      border-color: ${getThemeColors(props.theme).input.border};
+    }
+  `}
+`;
 
-interface SelectProps {
-  value?: string;
-  defaultValue?: string;
-  onValueChange?: (value: string) => void;
-  children: React.ReactNode;
+// 選擇器值顯示
+const SelectValue = styled.span<{ theme: 'light' | 'dark'; placeholder?: boolean }>`
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  
+  ${props => props.placeholder && `
+    color: ${getThemeColors(props.theme).input.placeholder};
+  `}
+`;
+
+// 下拉箭頭
+const SelectArrow = styled.div<{ theme: 'light' | 'dark'; open?: boolean }>`
+  display: flex;
+  align-items: center;
+  margin-left: ${spacing.sm};
+  color: ${props => getThemeColors(props.theme).text.secondary};
+  transition: transform ${transitions.fast} ease;
+  
+  ${props => props.open && 'transform: rotate(180deg);'}
+  
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+`;
+
+// 下拉選項容器
+const SelectDropdown = styled.div<{
+  theme: 'light' | 'dark';
+  open?: boolean;
+  maxHeight?: number;
+}>`
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background-color: ${props => getThemeColors(props.theme).dropdown.background};
+  border: 1px solid ${props => getThemeColors(props.theme).dropdown.border};
+  border-radius: ${borderRadius.sm};
+  box-shadow: 0 4px 12px ${props => getThemeColors(props.theme).shadow.dropdown};
+  max-height: ${props => props.maxHeight || 200}px;
+  overflow-y: auto;
+  margin-top: 2px;
+  
+  opacity: ${props => props.open ? 1 : 0};
+  visibility: ${props => props.open ? 'visible' : 'hidden'};
+  transform: ${props => props.open ? 'translateY(0)' : 'translateY(-8px)'};
+  transition: all ${transitions.fast} ease;
+`;
+
+// 選項項目
+const SelectOption = styled.div<{
+  theme: 'light' | 'dark';
+  selected?: boolean;
+  disabled?: boolean;
+}>`
+  display: flex;
+  align-items: center;
+  padding: ${spacing.sm} ${spacing.md};
+  font-size: 12px;
+  cursor: pointer;
+  transition: all ${transitions.fast} ease;
+  
+  ${props => {
+    const colors = getThemeColors(props.theme);
+    
+    if (props.disabled) {
+      return `
+        color: ${colors.text.disabled};
+        cursor: not-allowed;
+        opacity: 0.5;
+      `;
+    }
+    
+    if (props.selected) {
+      return `
+        background-color: ${colors.interactive.selected};
+        color: ${colors.text.primary};
+      `;
+    }
+    
+    return `
+      color: ${colors.text.primary};
+      
+      &:hover {
+        background-color: ${colors.interactive.hover};
+      }
+    `;
+  }}
+`;
+
+// 選項組標題
+const SelectGroup = styled.div<{ theme: 'light' | 'dark' }>`
+  padding: ${spacing.sm} ${spacing.md};
+  font-size: 11px;
+  font-weight: 600;
+  color: ${props => getThemeColors(props.theme).text.secondary};
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid ${props => getThemeColors(props.theme).border.secondary};
+`;
+
+// 錯誤訊息
+const ErrorMessage = styled.div<{ theme: 'light' | 'dark' }>`
+  font-size: 11px;
+  color: ${props => getThemeColors(props.theme).status.error};
+  margin-top: ${spacing.xs};
+`;
+
+// 選項介面
+export interface SelectOption {
+  value: string | number;
+  label: string;
+  disabled?: boolean;
+  group?: string;
 }
 
-interface SelectTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  children: React.ReactNode;
-}
-
-interface SelectContentProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
-}
-
-interface SelectItemProps extends React.HTMLAttributes<HTMLDivElement> {
-  value: string;
-  children: React.ReactNode;
-}
-
-interface SelectValueProps extends React.HTMLAttributes<HTMLSpanElement> {
+// 選擇器組件介面
+export interface SelectProps {
+  theme: 'light' | 'dark';
+  size?: 'small' | 'medium' | 'large';
+  label?: string;
   placeholder?: string;
+  value?: string | number | (string | number)[];
+  defaultValue?: string | number | (string | number)[];
+  options: SelectOption[];
+  multiple?: boolean;
+  disabled?: boolean;
+  required?: boolean;
+  fullWidth?: boolean;
+  error?: string;
+  maxHeight?: number;
+  className?: string;
+  id?: string;
+  name?: string;
+  onChange?: (value: string | number | (string | number)[]) => void;
+  onBlur?: () => void;
+  onFocus?: () => void;
 }
 
 /**
- * Select 組件 - 選擇器容器
+ * 下拉選擇組件
+ * 提供統一的選擇器樣式
  */
 export const Select: React.FC<SelectProps> = ({
+  theme,
+  size = 'medium',
+  label,
+  placeholder = '請選擇...',
   value,
   defaultValue,
-  onValueChange,
-  children
+  options = [],
+  multiple = false,
+  disabled = false,
+  required = false,
+  fullWidth = false,
+  error,
+  maxHeight = 200,
+  className,
+  id,
+  name,
+  onChange,
+  onBlur,
+  onFocus
 }) => {
-  const [internalValue, setInternalValue] = useState(defaultValue || '');
-  const [open, setOpen] = useState(false);
-  const currentValue = value !== undefined ? value : internalValue;
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedValue, setSelectedValue] = useState(value || defaultValue || (multiple ? [] : ''));
+  const containerRef = useRef<HTMLDivElement>(null);
   
-  const handleValueChange = (newValue: string) => {
-    if (value === undefined) {
-      setInternalValue(newValue);
+  // 處理點擊外部關閉下拉選單
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        onBlur?.();
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onBlur]);
+  
+  // 同步外部值變化
+  useEffect(() => {
+    if (value !== undefined) {
+      setSelectedValue(value);
     }
-    onValueChange?.(newValue);
-    setOpen(false);
+  }, [value]);
+  
+  // 處理選項選擇
+  const handleOptionSelect = (optionValue: string | number) => {
+    if (disabled) return;
+    
+    let newValue;
+    
+    if (multiple) {
+      const currentValues = Array.isArray(selectedValue) ? selectedValue : [];
+      if (currentValues.includes(optionValue)) {
+        newValue = currentValues.filter(v => v !== optionValue);
+      } else {
+        newValue = [...currentValues, optionValue];
+      }
+    } else {
+      newValue = optionValue;
+      setIsOpen(false);
+    }
+    
+    setSelectedValue(newValue);
+    onChange?.(newValue);
   };
-
+  
+  // 處理觸發器點擊
+  const handleTriggerClick = () => {
+    if (disabled) return;
+    
+    if (!isOpen) {
+      onFocus?.();
+    }
+    
+    setIsOpen(!isOpen);
+  };
+  
+  // 獲取顯示文字
+  const getDisplayText = () => {
+    if (multiple && Array.isArray(selectedValue)) {
+      if (selectedValue.length === 0) return placeholder;
+      if (selectedValue.length === 1) {
+        const option = options.find(opt => opt.value === selectedValue[0]);
+        return option?.label || selectedValue[0];
+      }
+      return `已選擇 ${selectedValue.length} 項`;
+    }
+    
+    if (!selectedValue && selectedValue !== 0) return placeholder;
+    
+    const option = options.find(opt => opt.value === selectedValue);
+    return option?.label || selectedValue;
+  };
+  
+  // 檢查選項是否被選中
+  const isOptionSelected = (optionValue: string | number) => {
+    if (multiple && Array.isArray(selectedValue)) {
+      return selectedValue.includes(optionValue);
+    }
+    return selectedValue === optionValue;
+  };
+  
+  // 按組分組選項
+  const groupedOptions = options.reduce((groups, option) => {
+    const group = option.group || 'default';
+    if (!groups[group]) {
+      groups[group] = [];
+    }
+    groups[group].push(option);
+    return groups;
+  }, {} as Record<string, SelectOption[]>);
+  
   return (
-    <SelectContext.Provider value={{ value: currentValue, onValueChange: handleValueChange, open, setOpen }}>
-      <div className="relative">
-        {children}
-      </div>
-    </SelectContext.Provider>
+    <SelectContainer ref={containerRef} fullWidth={fullWidth} className={className}>
+      {label && (
+        <SelectLabel theme={theme} required={required} htmlFor={id}>
+          {label}
+        </SelectLabel>
+      )}
+      
+      <SelectTrigger
+        theme={theme}
+        size={size}
+        hasError={!!error}
+        disabled={disabled}
+        open={isOpen}
+        onClick={handleTriggerClick}
+        id={id}
+        name={name}
+      >
+        <SelectValue 
+          theme={theme} 
+          placeholder={!selectedValue && selectedValue !== 0}
+        >
+          {getDisplayText()}
+        </SelectValue>
+        
+        <SelectArrow theme={theme} open={isOpen}>
+          <svg viewBox="0 0 16 16" fill="currentColor">
+            <path d="M4 6l4 4 4-4H4z" />
+          </svg>
+        </SelectArrow>
+      </SelectTrigger>
+      
+      <SelectDropdown
+        theme={theme}
+        open={isOpen}
+        maxHeight={maxHeight}
+      >
+        {Object.entries(groupedOptions).map(([groupName, groupOptions]) => (
+          <React.Fragment key={groupName}>
+            {groupName !== 'default' && (
+              <SelectGroup theme={theme}>
+                {groupName}
+              </SelectGroup>
+            )}
+            
+            {groupOptions.map((option) => (
+              <SelectOption
+                key={option.value}
+                theme={theme}
+                selected={isOptionSelected(option.value)}
+                disabled={option.disabled}
+                onClick={() => !option.disabled && handleOptionSelect(option.value)}
+              >
+                {option.label}
+              </SelectOption>
+            ))}
+          </React.Fragment>
+        ))}
+      </SelectDropdown>
+      
+      {error && (
+        <ErrorMessage theme={theme}>
+          {error}
+        </ErrorMessage>
+      )}
+    </SelectContainer>
   );
 };
 
-/**
- * SelectTrigger 組件 - 選擇器觸發器
- */
-export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
-  ({ className, children, ...props }, ref) => {
-    const { open, setOpen } = useSelectContext();
-
-    return (
-      <button
-        ref={ref}
-        type="button"
-        className={cn(
-          'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-          className
-        )}
-        onClick={() => setOpen(!open)}
-        {...props}
-      >
-        {children}
-        <ChevronDown className="h-4 w-4 opacity-50" />
-      </button>
-    );
-  }
-);
-SelectTrigger.displayName = 'SelectTrigger';
-
-/**
- * SelectValue 組件 - 選擇器值顯示
- */
-export const SelectValue = React.forwardRef<HTMLSpanElement, SelectValueProps>(
-  ({ className, placeholder, ...props }, ref) => {
-    const { value } = useSelectContext();
-
-    return (
-      <span
-        ref={ref}
-        className={cn('block truncate', className)}
-        {...props}
-      >
-        {value || placeholder}
-      </span>
-    );
-  }
-);
-SelectValue.displayName = 'SelectValue';
-
-/**
- * SelectContent 組件 - 選擇器內容
- */
-export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
-  ({ className, children, ...props }, ref) => {
-    const { open } = useSelectContext();
-
-    if (!open) {
-      return null;
-    }
-
-    return (
-      <div
-        ref={ref}
-        className={cn(
-          'absolute top-full z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95',
-          className
-        )}
-        {...props}
-      >
-        {children}
-      </div>
-    );
-  }
-);
-SelectContent.displayName = 'SelectContent';
-
-/**
- * SelectItem 組件 - 選擇器選項
- */
-export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
-  ({ className, value, children, ...props }, ref) => {
-    const { value: currentValue, onValueChange } = useSelectContext();
-    const isSelected = currentValue === value;
-
-    return (
-      <div
-        ref={ref}
-        className={cn(
-          'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-          isSelected && 'bg-accent text-accent-foreground',
-          className
-        )}
-        onClick={() => onValueChange(value)}
-        {...props}
-      >
-        {children}
-      </div>
-    );
-  }
-);
-SelectItem.displayName = 'SelectItem';
+export default Select;

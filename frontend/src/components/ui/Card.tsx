@@ -1,112 +1,339 @@
+/**
+ * 卡片組件 - VS Code 風格的資訊展示卡片
+ * 用於顯示代理節點、ETL任務、系統監控等資訊
+ */
+
 import React from 'react';
-import { cn } from '../../utils/cn';
+import styled from 'styled-components';
+import { getThemeColors, spacing, borderRadius, shadows, transitions } from '../../styles/GlobalStyles';
 
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
-}
+// 卡片容器
+const CardContainer = styled.div<{ 
+  theme: 'light' | 'dark';
+  variant?: 'default' | 'elevated' | 'outlined';
+  clickable?: boolean;
+  status?: 'success' | 'warning' | 'error' | 'info';
+}>`
+  background-color: ${props => getThemeColors(props.theme).background.secondary};
+  border-radius: ${borderRadius.md};
+  padding: ${spacing.lg};
+  transition: all ${transitions.normal} ease;
+  position: relative;
+  overflow: hidden;
+  
+  ${props => {
+    const colors = getThemeColors(props.theme);
+    
+    switch (props.variant) {
+      case 'elevated':
+        return `
+          box-shadow: ${shadows.medium};
+          border: 1px solid ${colors.border.secondary};
+        `;
+      case 'outlined':
+        return `
+          border: 1px solid ${colors.border.primary};
+          box-shadow: none;
+        `;
+      default:
+        return `
+          border: 1px solid ${colors.border.secondary};
+          box-shadow: ${shadows.small};
+        `;
+    }
+  }}
+  
+  ${props => props.clickable && `
+    cursor: pointer;
+    
+    &:hover {
+      background-color: ${getThemeColors(props.theme).interactive.hover};
+      box-shadow: ${shadows.large};
+      transform: translateY(-1px);
+    }
+    
+    &:active {
+      transform: translateY(0);
+      box-shadow: ${shadows.small};
+    }
+  `}
+  
+  ${props => props.status && `
+    border-left: 4px solid ${getThemeColors(props.theme).status[props.status]};
+  `}
+`;
 
-interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
-}
+// 卡片標題
+const CardHeader = styled.div<{ theme: 'light' | 'dark' }>`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: ${spacing.md};
+  
+  h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: ${props => getThemeColors(props.theme).text.primary};
+    line-height: 1.4;
+  }
+`;
 
-interface CardTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {
-  children: React.ReactNode;
-}
+// 卡片內容
+const CardContent = styled.div<{ theme: 'light' | 'dark' }>`
+  color: ${props => getThemeColors(props.theme).text.secondary};
+  line-height: 1.6;
+  
+  p {
+    margin: 0 0 ${spacing.sm} 0;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+`;
 
-interface CardDescriptionProps extends React.HTMLAttributes<HTMLParagraphElement> {
-  children: React.ReactNode;
-}
+// 卡片底部操作區
+const CardFooter = styled.div<{ theme: 'light' | 'dark' }>`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: ${spacing.lg};
+  padding-top: ${spacing.md};
+  border-top: 1px solid ${props => getThemeColors(props.theme).border.secondary};
+`;
 
-interface CardContentProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
-}
+// 狀態指示器
+const StatusIndicator = styled.div<{ 
+  theme: 'light' | 'dark';
+  status: 'success' | 'warning' | 'error' | 'info' | 'inactive';
+  size?: 'small' | 'medium' | 'large';
+}>`
+  display: inline-flex;
+  align-items: center;
+  gap: ${spacing.xs};
+  font-size: ${props => {
+    switch (props.size) {
+      case 'small': return '11px';
+      case 'large': return '14px';
+      default: return '12px';
+    }
+  }};
+  font-weight: 500;
+  
+  &::before {
+    content: '';
+    width: ${props => {
+      switch (props.size) {
+        case 'small': return '6px';
+        case 'large': return '10px';
+        default: return '8px';
+      }
+    }};
+    height: ${props => {
+      switch (props.size) {
+        case 'small': return '6px';
+        case 'large': return '10px';
+        default: return '8px';
+      }
+    }};
+    border-radius: 50%;
+    background-color: ${props => {
+      const colors = getThemeColors(props.theme);
+      switch (props.status) {
+        case 'success': return colors.status.success;
+        case 'warning': return colors.status.warning;
+        case 'error': return colors.status.error;
+        case 'info': return colors.status.info;
+        default: return colors.text.disabled;
+      }
+    }};
+  }
+  
+  color: ${props => {
+    const colors = getThemeColors(props.theme);
+    switch (props.status) {
+      case 'success': return colors.status.success;
+      case 'warning': return colors.status.warning;
+      case 'error': return colors.status.error;
+      case 'info': return colors.status.info;
+      default: return colors.text.disabled;
+    }
+  }};
+`;
 
-interface CardFooterProps extends React.HTMLAttributes<HTMLDivElement> {
+// 卡片動作按鈕
+const CardAction = styled.button<{ theme: 'light' | 'dark'; variant?: 'primary' | 'secondary' }>`
+  padding: ${spacing.xs} ${spacing.sm};
+  border-radius: ${borderRadius.sm};
+  font-size: 12px;
+  font-weight: 500;
+  transition: all ${transitions.fast} ease;
+  
+  ${props => {
+    const colors = getThemeColors(props.theme);
+    
+    if (props.variant === 'primary') {
+      return `
+        background-color: ${colors.interactive.primary};
+        color: ${colors.interactive.primaryForeground};
+        
+        &:hover {
+          background-color: ${colors.interactive.primaryHover};
+        }
+      `;
+    }
+    
+    return `
+      background-color: transparent;
+      color: ${colors.text.secondary};
+      border: 1px solid ${colors.border.primary};
+      
+      &:hover {
+        background-color: ${colors.interactive.hover};
+        color: ${colors.text.primary};
+      }
+    `;
+  }}
+  
+  &:focus {
+    outline: 1px solid ${props => getThemeColors(props.theme).border.focus};
+    outline-offset: 1px;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    
+    &:hover {
+      background-color: transparent;
+    }
+  }
+`;
+
+// 卡片圖標
+const CardIcon = styled.div<{ theme: 'light' | 'dark'; size?: 'small' | 'medium' | 'large' }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${props => getThemeColors(props.theme).text.secondary};
+  
+  svg, i {
+    width: ${props => {
+      switch (props.size) {
+        case 'small': return '16px';
+        case 'large': return '32px';
+        default: return '24px';
+      }
+    }};
+    height: ${props => {
+      switch (props.size) {
+        case 'small': return '16px';
+        case 'large': return '32px';
+        default: return '24px';
+      }
+    }};
+  }
+`;
+
+// 卡片統計數據
+const CardStats = styled.div<{ theme: 'light' | 'dark' }>`
+  display: flex;
+  gap: ${spacing.lg};
+  margin-top: ${spacing.md};
+`;
+
+const StatItem = styled.div<{ theme: 'light' | 'dark' }>`
+  text-align: center;
+  
+  .stat-value {
+    display: block;
+    font-size: 20px;
+    font-weight: 700;
+    color: ${props => getThemeColors(props.theme).text.primary};
+    line-height: 1.2;
+  }
+  
+  .stat-label {
+    display: block;
+    font-size: 11px;
+    color: ${props => getThemeColors(props.theme).text.secondary};
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: ${spacing.xs};
+  }
+`;
+
+// 卡片組件介面
+export interface CardProps {
+  theme: 'light' | 'dark';
+  title?: string;
+  variant?: 'default' | 'elevated' | 'outlined';
+  status?: 'success' | 'warning' | 'error' | 'info';
+  clickable?: boolean;
+  icon?: React.ReactNode;
+  headerActions?: React.ReactNode;
+  footer?: React.ReactNode;
+  className?: string;
   children: React.ReactNode;
+  onClick?: () => void;
 }
 
 /**
- * Card 組件 - 基礎卡片容器
+ * 卡片組件
+ * 提供統一的資訊展示容器
  */
-export const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn(
-        "rounded-lg border bg-card text-card-foreground shadow-sm",
-        className
+export const Card: React.FC<CardProps> = ({
+  theme,
+  title,
+  variant = 'default',
+  status,
+  clickable = false,
+  icon,
+  headerActions,
+  footer,
+  className,
+  children,
+  onClick
+}) => {
+  return (
+    <CardContainer
+      theme={theme}
+      variant={variant}
+      status={status}
+      clickable={clickable}
+      className={className}
+      onClick={clickable ? onClick : undefined}
+    >
+      {(title || icon || headerActions) && (
+        <CardHeader theme={theme}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+            {icon && (
+              <CardIcon theme={theme} size="medium">
+                {icon}
+              </CardIcon>
+            )}
+            {title && <h3>{title}</h3>}
+          </div>
+          {headerActions && (
+            <div>{headerActions}</div>
+          )}
+        </CardHeader>
       )}
-      {...props}
-    />
-  )
-);
-Card.displayName = "Card";
-
-/**
- * CardHeader 組件 - 卡片頭部
- */
-export const CardHeader = React.forwardRef<HTMLDivElement, CardHeaderProps>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn("flex flex-col space-y-1.5 p-6", className)}
-      {...props}
-    />
-  )
-);
-CardHeader.displayName = "CardHeader";
-
-/**
- * CardTitle 組件 - 卡片標題
- */
-export const CardTitle = React.forwardRef<HTMLParagraphElement, CardTitleProps>(
-  ({ className, ...props }, ref) => (
-    <h3
-      ref={ref}
-      className={cn(
-        "text-2xl font-semibold leading-none tracking-tight",
-        className
+      
+      <CardContent theme={theme}>
+        {children}
+      </CardContent>
+      
+      {footer && (
+        <CardFooter theme={theme}>
+          {footer}
+        </CardFooter>
       )}
-      {...props}
-    />
-  )
-);
-CardTitle.displayName = "CardTitle";
+    </CardContainer>
+  );
+};
 
-/**
- * CardDescription 組件 - 卡片描述
- */
-export const CardDescription = React.forwardRef<HTMLParagraphElement, CardDescriptionProps>(
-  ({ className, ...props }, ref) => (
-    <p
-      ref={ref}
-      className={cn("text-sm text-muted-foreground", className)}
-      {...props}
-    />
-  )
-);
-CardDescription.displayName = "CardDescription";
-
-/**
- * CardContent 組件 - 卡片內容
- */
-export const CardContent = React.forwardRef<HTMLDivElement, CardContentProps>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
-  )
-);
-CardContent.displayName = "CardContent";
-
-/**
- * CardFooter 組件 - 卡片底部
- */
-export const CardFooter = React.forwardRef<HTMLDivElement, CardFooterProps>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn("flex items-center p-6 pt-0", className)}
-      {...props}
-    />
-  )
-);
-CardFooter.displayName = "CardFooter";
+// 導出相關組件
+export { StatusIndicator, CardAction, CardIcon, CardStats, StatItem };
+export default Card;

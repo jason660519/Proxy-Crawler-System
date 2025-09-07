@@ -315,3 +315,15 @@ def load_config_from_file(config_file: str) -> ProxyManagerConfig:
     config = ProxyManagerConfig(config_file)
     set_config(config)
     return config
+
+
+def get_config() -> ProxyManagerConfig:
+    """獲取全局配置實例
+    
+    Returns:
+        ProxyManagerConfig: 全局配置實例
+    """
+    global _global_config
+    if _global_config is None:
+        _global_config = ProxyManagerConfig()
+    return _global_config

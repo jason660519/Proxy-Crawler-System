@@ -1,0 +1,8 @@
+2025-09-06 23:23:22 | INFO | __main__:main:325 - 正在啟動 HTML to Markdown API 服務器於 0.0.0.0:8001
+2025-09-06 23:23:22 | INFO | src.html_to_markdown.api_server:startup_event:91 - 正在啟動 HTML to Markdown API 服務...
+2025-09-06 23:23:22 | INFO | src.html_to_markdown.data_pipeline:__init__:90 - 資料流程管理器已初始化，來源：html-to-markdown
+2025-09-06 23:23:22 | INFO | src.html_to_markdown.api_server:startup_event:101 - API 服務已啟動，資料目錄：/app
+2025-09-06 23:48:19 | ERROR | src.html_to_markdown.api_server:convert_html:191 - 轉換過程中發生錯誤：'HTMLToMarkdownPipeline' object has no attribute 'run_complete_pipeline'
+2025-09-06 23:49:03 | ERROR | src.html_to_markdown.api_server:convert_html:191 - 轉換過程中發生錯誤：'HTMLToMarkdownPipeline' object has no attribute 'run_complete_pipeline'
+2025-09-06 23:49:29 | ERROR | src.html_to_markdown.api_server:convert_html:191 - 轉換過程中發生錯誤：'HTMLToMarkdownPipeline' object has no attribute 'run_complete_pipeline'
+2025-09-07 00:04:03 | INFO | src.html_to_markdown.api_server:shutdown_event:107 - HTML to Markdown API 服務正在關閉...
