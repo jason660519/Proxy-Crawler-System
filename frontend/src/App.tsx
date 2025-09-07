@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import styled, { ThemeProvider, createGlobalStyle } from 'styled-components';
 import { Header, ActivityBar } from './components/layout';
-import { Dashboard, OperationsDashboard } from './components/dashboard';
+import { Dashboard, OperationsDashboard, MetricsOverview } from './components/dashboard';
 import { ThemeDebugger } from './components/debug';
 import { useTheme, useHealthStatus } from './hooks';
 import { createGlobalStyles, lightTheme, darkTheme } from './styles';
@@ -162,11 +162,9 @@ const App: React.FC = () => {
         return (
           <>
             <OperationsDashboard />
-            {/* Native metrics overview under Grafana embed */}
-            {/* @ts-ignore: dynamically added component */}
-            {require('./components/dashboard').MetricsOverview && (
-              (React.createElement(require('./components/dashboard').MetricsOverview))
-            )}
+            <div style={{ marginTop: 24 }}>
+              <MetricsOverview />
+            </div>
           </>
         );
       

@@ -1,0 +1,33 @@
+groups:
+  - name: proxy_system_alerts
+    rules:
+      - alert: HtmlToMarkdownScrapeDown
+        expr: up{job="html_to_markdown"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: html-to-markdown metrics endpoint is down
+          description: Prometheus cannot scrape html_to_markdown:8001/metrics for over 2 minutes.
+
+      - alert: ProxyApiHighErrorRate
+        expr: |
+          sum(rate(proxy_api_requests_total{status=~"5.."}[5m]))
+            /
+          sum(rate(proxy_api_requests_total[5m])) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: High 5xx error rate on proxy API
+          description: Error ratio over 20% for the last 5 minutes.
+
+      - alert: ProxyApiHighLatency
+        expr: histogram_quantile(0.95, sum by (le) (rate(proxy_api_request_duration_seconds_bucket[5m]))) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: High API latency (p95)
+          description: 95th percentile latency above 1s for last 5 minutes.
+
