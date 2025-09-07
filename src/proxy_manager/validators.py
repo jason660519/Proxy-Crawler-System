@@ -79,9 +79,17 @@ class ProxyValidator:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
     
+    def __enter__(self):
+        """同步上下文管理器入口"""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """同步上下文管理器出口"""
+        self.close()
+    
     async def start(self):
         """啟動驗證器"""
-        if not self.session:
+        if not self.session or self.session.closed:
             connector = aiohttp.TCPConnector(
                 limit=self.config.max_concurrent * 2,
                 limit_per_host=10,
@@ -106,6 +114,13 @@ class ProxyValidator:
         """關閉驗證器"""
         if self.session:
             await self.session.close()
+            self.session = None
+    
+    def close(self):
+        """同步關閉驗證器（用於非異步上下文）"""
+        if self.session and not self.session.closed:
+            # 在同步上下文中，我們不能直接關閉異步會話
+            # 但我們可以標記它為需要關閉
             self.session = None
     
     async def _get_real_ip(self):

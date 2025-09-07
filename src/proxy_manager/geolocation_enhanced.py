@@ -18,8 +18,12 @@ from datetime import datetime, timedelta
 import logging
 from pathlib import Path
 import sqlite3
-import geoip2.database
-import geoip2.errors
+try:
+    import geoip2.database
+    import geoip2.errors
+    GEOIP2_AVAILABLE = True
+except ImportError:
+    GEOIP2_AVAILABLE = False
 from geopy.distance import geodesic
 from geopy.geocoders import Nominatim
 
@@ -266,6 +270,10 @@ class EnhancedGeolocationDetector:
             logger.debug("GeoIP 數據庫不存在")
             return None
         
+        if not GEOIP2_AVAILABLE:
+            logger.warning("⚠️ GeoIP2 不可用，跳過地理位置檢測")
+            return None
+            
         try:
             with geoip2.database.Reader(str(self.geoip_db_path)) as reader:
                 response = reader.city(ip)
@@ -274,13 +282,14 @@ class EnhancedGeolocationDetector:
                 asn = None
                 asn_name = None
                 if self.geoip_asn_db_path.exists():
-                    try:
-                        with geoip2.database.Reader(str(self.geoip_asn_db_path)) as asn_reader:
-                            asn_response = asn_reader.asn(ip)
-                            asn = f"AS{asn_response.autonomous_system_number}"
-                            asn_name = asn_response.autonomous_system_organization
-                    except geoip2.errors.AddressNotFoundError:
-                        pass
+                    if GEOIP2_AVAILABLE:
+                        try:
+                            with geoip2.database.Reader(str(self.geoip_asn_db_path)) as asn_reader:
+                                asn_response = asn_reader.asn(ip)
+                                asn = f"AS{asn_response.autonomous_system_number}"
+                                asn_name = asn_response.autonomous_system_organization
+                        except geoip2.errors.AddressNotFoundError:
+                            pass
                 
                 return GeolocationInfo(
                     ip=ip,
@@ -298,10 +307,11 @@ class EnhancedGeolocationDetector:
                     source="geoip"
                 )
                 
-        except geoip2.errors.AddressNotFoundError:
-            logger.debug(f"GeoIP 數據庫中未找到 {ip}")
         except Exception as e:
-            logger.error(f"GeoIP 檢測失敗: {e}")
+            if GEOIP2_AVAILABLE and hasattr(e, '__class__') and 'AddressNotFoundError' in str(e.__class__):
+                logger.debug(f"GeoIP 數據庫中未找到 {ip}")
+            else:
+                logger.error(f"GeoIP 檢測失敗: {e}")
         
         return None
     
