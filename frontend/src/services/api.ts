@@ -102,7 +102,19 @@ export async function getAllHealthStatus(): Promise<{
  */
 export async function getSystemMetrics(): Promise<SystemMetrics> {
   try {
-    return await apiClient.get<SystemMetrics>('/metrics/summary');
+    // backend: GET /api/metrics/summary
+    const summary: any = await apiClient.get<any>('/api/metrics/summary');
+    return {
+      totalProxies: summary?.pool?.total ?? 0,
+      activeProxies: summary?.pool?.active ?? 0,
+      successRate: typeof summary?.error_rate === 'number' ? 100 - summary.error_rate : 0,
+      averageResponseTime: summary?.avg_latency_ms ?? 0,
+      tasksInQueue: 0,
+      runningTasks: 0,
+      completedTasks: 0,
+      failedTasks: 0,
+      timestamp: new Date().toISOString()
+    };
   } catch (error) {
     console.error('獲取系統指標失敗:', error);
     // 返回預設值
@@ -125,7 +137,19 @@ export async function getSystemMetrics(): Promise<SystemMetrics> {
  */
 export async function getTrendData(timeRange: '1h' | '6h' | '24h' | '7d' = '24h'): Promise<TrendData> {
   try {
-    return await apiClient.get<TrendData>(`/metrics/trends?range=${timeRange}`);
+    // Map range to minutes
+    const rangeToMinutes: Record<string, number> = { '1h': 60, '6h': 360, '24h': 1440, '7d': 10080 };
+    const minutes = rangeToMinutes[timeRange] || 1440;
+    const points: any[] = await apiClient.get<any[]>(`/api/metrics/trends?minutes=${minutes}`);
+    const toSeries = (selector: (p: any) => number): { timestamp: string; value: number }[] =>
+      points.map(p => ({ timestamp: p.timestamp, value: selector(p) }));
+    return {
+      successRate: toSeries((p) => {
+        const c = p.count || 0; const e = p.error || 0; return c ? ((c - e) / c) * 100 : 100;
+      }),
+      validationCount: toSeries((p) => p.count || 0),
+      averageLatency: toSeries((p) => p.avg_latency_ms || 0)
+    };
   } catch (error) {
     console.error('獲取趨勢資料失敗:', error);
     // 返回空資料
