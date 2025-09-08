@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'proxy_manager_api'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['proxy_crawler:8000']
+  - job_name: 'html_to_markdown'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['html_to_markdown:8001']
+
+rule_files:
+  - alerting_rules.yml
+

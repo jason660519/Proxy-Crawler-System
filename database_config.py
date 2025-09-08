@@ -6,8 +6,8 @@
 """
 
 import os
-from typing import Literal, Optional
-from pathlib import Path
+from typing import Literal
+from src.config.settings import settings
 
 
 class DatabaseConfig:
@@ -29,11 +29,11 @@ class DatabaseConfig:
         
         從環境變數讀取配置，如果未設定則使用預設值。
         """
-        self.environment = os.getenv('ENVIRONMENT', self._detect_environment())
-        self.db_user = os.getenv('DB_USER', 'proxyadmin')
-        self.db_password = os.getenv('DB_PASSWORD', 'secretpassword')
-        self.db_name = os.getenv('DB_NAME', 'proxypool')
-        self.redis_password = os.getenv('REDIS_PASSWORD', '')
+        self.environment = settings.environment or self._detect_environment()
+        self.db_user = settings.db_user
+        self.db_password = settings.db_password
+        self.db_name = settings.db_name
+        self.redis_password = settings.redis_password
         
         # 驗證必要的配置
         if not self.db_password:
@@ -70,7 +70,7 @@ class DatabaseConfig:
         """
         # 根據環境決定主機名
         host = self._get_database_host()
-        port = os.getenv('DB_PORT', '5432')
+        port = str(settings.db_port)
         
         # 根據驅動類型決定協議
         if driver == 'async':
@@ -92,8 +92,8 @@ class DatabaseConfig:
             'redis://redis_cache:6379/0'
         """
         host = self._get_redis_host()
-        port = os.getenv('REDIS_PORT', '6379')
-        db_index = os.getenv('REDIS_DB', '0')
+        port = str(settings.redis_port)
+        db_index = str(settings.redis_db)
         
         if self.redis_password:
             return f"redis://:{self.redis_password}@{host}:{port}/{db_index}"
@@ -109,7 +109,7 @@ class DatabaseConfig:
         if self.environment == 'docker':
             return os.getenv('DB_SERVICE', 'postgres_db')
         else:
-            return os.getenv('DB_HOST', 'localhost')
+            return settings.db_host
     
     def _get_redis_host(self) -> str:
         """取得 Redis 主機名
@@ -120,7 +120,7 @@ class DatabaseConfig:
         if self.environment == 'docker':
             return os.getenv('REDIS_SERVICE', 'redis_cache')
         else:
-            return os.getenv('REDIS_HOST', 'localhost')
+            return settings.redis_host
     
     def get_connection_info(self) -> dict:
         """取得連接資訊摘要

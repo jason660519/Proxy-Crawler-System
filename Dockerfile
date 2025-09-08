@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     curl \
+    netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # 安裝 uv 包管理器
@@ -23,6 +24,10 @@ RUN pip install -r requirements.txt
 # 複製源碼
 COPY src/ ./src/
 COPY *.py ./
+COPY alembic.ini ./
+COPY migrations/ ./migrations/
+COPY tools/prestart.sh ./tools/prestart.sh
+RUN chmod +x ./tools/prestart.sh
 
 # 創建必要的目錄
 RUN mkdir -p /app/logs /app/data /app/output
@@ -31,9 +36,9 @@ RUN mkdir -p /app/logs /app/data /app/output
 ENV PYTHONPATH=/app
 ENV ENVIRONMENT=docker
 
-# 健康檢查
+# 健康檢查（對齊代理管理 API）
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:8000/api/health || exit 1
 
 # 暴露端口
 EXPOSE 8000
@@ -45,5 +50,5 @@ RUN useradd -m -u 1000 crawler && \
 # 切換到非 root 用戶
 USER crawler
 
-# 啟動命令
-CMD ["python", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 啟動命令：代理管理 API
+CMD ["./tools/prestart.sh", "python", "-m", "uvicorn", "src.proxy_manager.api:app", "--host", "0.0.0.0", "--port", "8000"]

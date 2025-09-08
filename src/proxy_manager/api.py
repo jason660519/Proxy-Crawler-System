@@ -10,16 +10,21 @@
 import asyncio
 import logging
 from typing import List, Optional, Dict, Any, Union
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Depends, Query, BackgroundTasks, Request
+from fastapi import FastAPI, HTTPException, Depends, Query, BackgroundTasks, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
+import redis.asyncio as aioredis
+from src.config.settings import settings
 import uvicorn
+from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from time import perf_counter
+from collections import defaultdict, deque
 
 # 導入 ETL API
 try:
@@ -144,6 +149,32 @@ class ExportRequest(BaseModel):
     format_type: str = Field(default="json", pattern="^(json|txt|csv)$")
     pool_types: Optional[List[str]] = None
     filename: Optional[str] = None
+# Prometheus metrics
+REQUEST_COUNT = Counter("proxy_api_requests_total", "Total API requests", ["endpoint", "method", "status"])
+POOL_ACTIVE = Gauge("proxy_pool_active", "Active proxies in pool")
+POOL_TOTAL = Gauge("proxy_pool_total", "Total proxies in pool")
+REQUEST_LATENCY = Histogram(
+    "proxy_api_request_duration_seconds",
+    "Request duration in seconds",
+    ["endpoint", "method", "status"],
+    buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10)
+)
+
+
+# In-process lightweight rollup for API trends/summary
+ROLLUP_LOCK = asyncio.Lock()
+REQUEST_ROLLUP: Dict[str, Dict[str, Any]] = defaultdict(lambda: {"count": 0, "error": 0, "duration_sum": 0.0})
+PER_MINUTE: Dict[datetime, Dict[str, float]] = {}
+MINUTE_KEYS: deque = deque()
+MAX_MINUTES: int = 24 * 60  # keep last 24h
+
+
+# 簡單的 API Key 驗證依賴
+async def require_api_key(x_api_key: Optional[str] = Header(default=None)):
+    if not settings.api_key_enabled:
+        return
+    if not x_api_key or x_api_key not in settings.api_keys:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 
 # 全局代理管理器實例
@@ -165,6 +196,58 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+# 全域中介層：請求計數與延遲
+@app.middleware("http")
+async def metrics_middleware(request, call_next):
+    if request.url.path == "/metrics":
+        return await call_next(request)
+    start = perf_counter()
+    status_code = "200"
+    try:
+        response = await call_next(request)
+        status_code = str(getattr(response, "status_code", 200))
+        return response
+    except Exception:
+        status_code = "500"
+        raise
+    finally:
+        try:
+            endpoint = request.url.path
+            method = request.method
+            REQUEST_COUNT.labels(endpoint=endpoint, method=method, status=status_code).inc()
+            REQUEST_LATENCY.labels(endpoint=endpoint, method=method, status=status_code).observe(perf_counter() - start)
+            # In-process aggregations
+            duration = max(0.0, perf_counter() - start)
+            is_error = 1 if int(status_code) >= 400 else 0
+            key = f"{endpoint}|{method}"
+            minute_key = datetime.now().replace(second=0, microsecond=0)
+            # Update rollups
+            if not ROLLUP_LOCK.locked():
+                # Best-effort without awaiting lock to avoid latency; fallback on simple updates
+                pass
+            async def _update():
+                REQUEST_ROLLUP[key]["count"] += 1
+                REQUEST_ROLLUP[key]["error"] += is_error
+                REQUEST_ROLLUP[key]["duration_sum"] += duration
+                bucket = PER_MINUTE.get(minute_key)
+                if not bucket:
+                    PER_MINUTE[minute_key] = {"count": 0, "error": 0, "duration_sum": 0.0}
+                    MINUTE_KEYS.append(minute_key)
+                PER_MINUTE[minute_key]["count"] += 1
+                PER_MINUTE[minute_key]["error"] += is_error
+                PER_MINUTE[minute_key]["duration_sum"] += duration
+                # Trim old minutes
+                while len(MINUTE_KEYS) > MAX_MINUTES:
+                    old = MINUTE_KEYS.popleft()
+                    PER_MINUTE.pop(old, None)
+            try:
+                # Fire-and-forget; slight race is acceptable for metrics
+                asyncio.create_task(_update())
+            except Exception:
+                pass
+        except Exception:
+            pass
+
 
 # 設置模板和靜態文件
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -175,7 +258,7 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 # 添加 CORS 中間件
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 生產環境中應該限制具體域名
+    allow_origins=settings.cors_allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -263,16 +346,52 @@ async def api_root():
 
 @app.get("/api/health", response_model=HealthResponse, summary="健康檢查")
 async def health_check(manager: ProxyManager = Depends(get_proxy_manager)):
-    """健康檢查接口"""
+    """健康檢查接口（包含 DB 與 Redis 連線檢查）"""
     stats = manager.get_stats()
-    
+
     uptime = None
     if stats['manager_stats']['start_time']:
         start_time = stats['manager_stats']['start_time']
         uptime = (datetime.now() - start_time).total_seconds()
-    
+
+    # 驗證資料庫
+    db_ok = False
+    try:
+        db_service = await get_database_service()
+        db_ok = await db_service.ping()
+    except Exception as e:
+        logger.error(f"DB health check failed: {e}")
+        db_ok = False
+
+    # 驗證 Redis
+    redis_ok = False
+    try:
+        redis_url = DatabaseConfig().get_redis_url()
+        redis_client = aioredis.from_url(redis_url, decode_responses=True)
+        redis_ok = await redis_client.ping()
+        await redis_client.close()
+    except Exception as e:
+        logger.error(f"Redis health check failed: {e}")
+        redis_ok = False
+
+    running = stats['status']['running']
+    if running and db_ok and redis_ok:
+        overall = "healthy"
+    elif running or db_ok or redis_ok:
+        overall = "degraded"
+    else:
+        overall = "unhealthy"
+
+    # 更新 metrics
+    try:
+        stats_summary = stats['pool_summary']
+        POOL_TOTAL.set(stats_summary['total_proxies'])
+        POOL_ACTIVE.set(stats_summary['total_active_proxies'])
+    except Exception:
+        pass
+
     return HealthResponse(
-        status="healthy" if stats['status']['running'] else "unhealthy",
+        status=overall,
         timestamp=datetime.now(),
         uptime_seconds=uptime,
         total_proxies=stats['pool_summary']['total_proxies'],
@@ -291,6 +410,8 @@ async def get_proxy(
     manager: ProxyManager = Depends(get_proxy_manager)
 ):
     """獲取單個代理"""
+    start = perf_counter()
+    status_code = "200"
     try:
         # 構建篩選條件
         filter_criteria = None
@@ -331,10 +452,19 @@ async def get_proxy(
         return ProxyResponse.from_proxy_node(proxy)
         
     except ValueError as e:
+        status_code = "400"
         raise HTTPException(status_code=400, detail=f"參數錯誤: {e}")
     except Exception as e:
+        status_code = "500"
         logger.error(f"❌ 獲取代理失敗: {e}")
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
+    finally:
+        try:
+            endpoint = "/api/proxy"
+            REQUEST_COUNT.labels(endpoint=endpoint, method="GET", status=status_code).inc()
+            REQUEST_LATENCY.labels(endpoint=endpoint, method="GET", status=status_code).observe(perf_counter() - start)
+        except Exception:
+            pass
 
 
 @app.get("/api/proxies", response_model=List[ProxyResponse], summary="批量獲取代理")
@@ -452,6 +582,83 @@ async def get_stats(manager: ProxyManager = Depends(get_proxy_manager)):
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
 
 
+class MetricsSummaryResponse(BaseModel):
+    total_requests: int
+    error_rate: float
+    avg_latency_ms: float
+    per_endpoint: Dict[str, Dict[str, float]]
+    pool: Dict[str, int]
+
+
+@app.get("/api/metrics/summary", response_model=MetricsSummaryResponse, summary="聚合指標摘要")
+async def metrics_summary(manager: ProxyManager = Depends(get_proxy_manager)):
+    try:
+        # Rollup snapshot
+        total_count = 0
+        total_error = 0
+        total_duration = 0.0
+        per_endpoint: Dict[str, Dict[str, float]] = {}
+        for key, v in REQUEST_ROLLUP.items():
+            c = int(v.get("count", 0))
+            e = int(v.get("error", 0))
+            d = float(v.get("duration_sum", 0.0))
+            total_count += c
+            total_error += e
+            total_duration += d
+            per_endpoint[key] = {
+                "count": c,
+                "error_rate": (e / c * 100.0) if c else 0.0,
+                "avg_latency_ms": (d / c * 1000.0) if c else 0.0,
+            }
+        stats = manager.get_stats()
+        pool = {
+            "total": stats['pool_summary']['total_proxies'],
+            "active": stats['pool_summary']['total_active_proxies']
+        }
+        return MetricsSummaryResponse(
+            total_requests=total_count,
+            error_rate=(total_error / total_count * 100.0) if total_count else 0.0,
+            avg_latency_ms=(total_duration / total_count * 1000.0) if total_count else 0.0,
+            per_endpoint=per_endpoint,
+            pool=pool
+        )
+    except Exception as e:
+        logger.error(f"❌ 獲取指標摘要失敗: {e}")
+        raise HTTPException(status_code=500, detail="內部服務器錯誤")
+
+
+class MetricsTrendsPoint(BaseModel):
+    timestamp: datetime
+    count: int
+    error: int
+    avg_latency_ms: float
+
+
+@app.get("/api/metrics/trends", response_model=List[MetricsTrendsPoint], summary="指標趨勢（每分鐘）")
+async def metrics_trends(
+    minutes: int = Query(60, ge=1, le=24*60, description="回溯分鐘數")
+):
+    try:
+        cutoff = datetime.now().replace(second=0, microsecond=0) - timedelta(minutes=minutes-1)
+        points: List[MetricsTrendsPoint] = []
+        # Ensure chronological order
+        keys = sorted([k for k in PER_MINUTE.keys() if k >= cutoff])
+        for ts in keys:
+            bucket = PER_MINUTE.get(ts, {"count": 0, "error": 0, "duration_sum": 0.0})
+            c = int(bucket.get("count", 0))
+            e = int(bucket.get("error", 0))
+            d = float(bucket.get("duration_sum", 0.0))
+            points.append(MetricsTrendsPoint(
+                timestamp=ts,
+                count=c,
+                error=e,
+                avg_latency_ms=(d / c * 1000.0) if c else 0.0
+            ))
+        return points
+    except Exception as e:
+        logger.error(f"❌ 獲取指標趨勢失敗: {e}")
+        raise HTTPException(status_code=500, detail="內部服務器錯誤")
+
 @app.post("/api/fetch", summary="手動獲取代理")
 async def fetch_proxies(
     fetch_request: FetchRequest,
@@ -478,7 +685,7 @@ async def fetch_proxies(
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
 
 
-@app.post("/api/validate", summary="手動驗證代理池")
+@app.post("/api/validate", summary="手動驗證代理池", dependencies=[Depends(require_api_key)])
 async def validate_pools(
     background_tasks: BackgroundTasks,
     manager: ProxyManager = Depends(get_proxy_manager)
@@ -498,7 +705,7 @@ async def validate_pools(
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
 
 
-@app.post("/api/cleanup", summary="手動清理代理池")
+@app.post("/api/cleanup", summary="手動清理代理池", dependencies=[Depends(require_api_key)])
 async def cleanup_pools(
     background_tasks: BackgroundTasks,
     manager: ProxyManager = Depends(get_proxy_manager)
@@ -518,7 +725,7 @@ async def cleanup_pools(
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
 
 
-@app.post("/api/export", summary="導出代理")
+@app.post("/api/export", summary="導出代理", dependencies=[Depends(require_api_key)])
 async def export_proxies(
     export_request: ExportRequest,
     manager: ProxyManager = Depends(get_proxy_manager)
@@ -765,7 +972,7 @@ async def get_pools_info(manager: ProxyManager = Depends(get_proxy_manager)):
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
 
 
-@app.post("/api/etl/sync", summary="同步代理數據到 ETL 系統")
+@app.post("/api/etl/sync", summary="同步代理數據到 ETL 系統", dependencies=[Depends(require_api_key)])
 async def sync_to_etl(
     background_tasks: BackgroundTasks,
     pool_types: Optional[str] = Query("hot,warm,cold", description="要同步的池類型"),
@@ -830,7 +1037,7 @@ async def get_etl_status():
         raise HTTPException(status_code=500, detail=f"獲取 ETL 狀態失敗: {e}")
 
 
-@app.post("/api/batch/validate", summary="批量驗證代理")
+@app.post("/api/batch/validate", summary="批量驗證代理", dependencies=[Depends(require_api_key)])
 async def batch_validate_proxies(
     background_tasks: BackgroundTasks,
     pool_types: Optional[str] = Query("hot,warm,cold", description="要驗證的池類型"),
@@ -868,6 +1075,14 @@ async def batch_validate_proxies(
 # 錯誤處理
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
+    try:
+        endpoint = str(request.url.path)
+        method = request.method
+        status = str(exc.status_code)
+        REQUEST_COUNT.labels(endpoint=endpoint, method=method, status=status).inc()
+        REQUEST_LATENCY.labels(endpoint=endpoint, method=method, status=status).observe(0)
+    except Exception:
+        pass
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -881,6 +1096,14 @@ async def http_exception_handler(request, exc):
 @app.exception_handler(Exception)
 async def general_exception_handler(request, exc):
     logger.error(f"❌ 未處理的異常: {exc}")
+    try:
+        endpoint = str(request.url.path)
+        method = request.method
+        status = "500"
+        REQUEST_COUNT.labels(endpoint=endpoint, method=method, status=status).inc()
+        REQUEST_LATENCY.labels(endpoint=endpoint, method=method, status=status).observe(0)
+    except Exception:
+        pass
     return JSONResponse(
         status_code=500,
         content={
@@ -954,6 +1177,11 @@ def start_server(
         log_level=log_level,
         access_log=True
     )
+
+
+@app.get("/metrics", include_in_schema=False)
+async def metrics():
+    return HTMLResponse(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 if __name__ == "__main__":

@@ -164,6 +164,37 @@ services:
     profiles:
       - tools # 使用 docker-compose --profile tools up 來啟動
 
+  # Prometheus 監控
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - proxy_crawler
+    networks:
+      - proxy_crawler_network
+    profiles:
+      - tools
+
+  # Grafana 儀表板
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - proxy_crawler_network
+    profiles:
+      - tools
+
 volumes:
   postgres_data:
     driver: local

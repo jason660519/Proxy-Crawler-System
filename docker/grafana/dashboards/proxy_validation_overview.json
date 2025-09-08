@@ -1,0 +1,42 @@
+{
+  "title": "Proxy Validation Overview",
+  "tags": ["proxy", "validation"],
+  "timezone": "",
+  "schemaVersion": 36,
+  "version": 1,
+  "editable": true,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Active Proxies",
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
+      "targets": [{"expr": "proxy_pool_active", "refId": "A"}],
+      "options": {"reduceOptions": {"calcs": ["last"]}}
+    },
+    {
+      "type": "stat",
+      "title": "Total Proxies",
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0},
+      "targets": [{"expr": "proxy_pool_total", "refId": "A"}],
+      "options": {"reduceOptions": {"calcs": ["last"]}}
+    },
+    {
+      "type": "timeSeries",
+      "title": "Requests to Validation Endpoints",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6},
+      "targets": [
+        {"expr": "sum by (endpoint) (rate(proxy_api_requests_total{endpoint=~\"/api/(validate|batch/validate)\"}[1m]))", "refId": "A"}
+      ]
+    },
+    {
+      "type": "timeSeries",
+      "title": "p95 Validation Latency",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum by (le) (rate(proxy_api_request_duration_seconds_bucket{endpoint=~\"/api/(validate|batch/validate)\"}[5m])))", "refId": "A"}
+      ]
+    }
+  ],
+  "time": {"from": "now-6h", "to": "now"}
+}
+

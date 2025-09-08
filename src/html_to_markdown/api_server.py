@@ -13,11 +13,12 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 import uvicorn
 from loguru import logger
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
 from .data_pipeline import HTMLToMarkdownPipeline, DataPipelineConfig
 from .core import ConversionConfig, ConversionEngine, ContentScope, OutputFormat
@@ -82,6 +83,15 @@ app = FastAPI(
 # 全域變數
 pipeline: Optional[HTMLToMarkdownPipeline] = None
 
+# Prometheus metrics
+REQUEST_COUNT = Counter("html2md_requests_total", "Total API requests", ["endpoint", "method", "status"])
+REQUEST_LATENCY = Histogram(
+    "html2md_request_duration_seconds",
+    "Request duration in seconds",
+    ["endpoint", "method", "status"],
+    buckets=(0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10)
+)
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -105,6 +115,29 @@ async def startup_event():
 async def shutdown_event():
     """應用程式關閉事件"""
     logger.info("HTML to Markdown API 服務正在關閉...")
+
+
+# Metrics middleware
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    if request.url.path == "/metrics":
+        return await call_next(request)
+    start = datetime.now().timestamp()
+    status_code = "200"
+    try:
+        response = await call_next(request)
+        status_code = str(getattr(response, "status_code", 200))
+        return response
+    except Exception:
+        status_code = "500"
+        raise
+    finally:
+        try:
+            duration = max(0.0, datetime.now().timestamp() - start)
+            REQUEST_COUNT.labels(endpoint=request.url.path, method=request.method, status=status_code).inc()
+            REQUEST_LATENCY.labels(endpoint=request.url.path, method=request.method, status=status_code).observe(duration)
+        except Exception:
+            pass
 
 
 # === API 端點定義 ===
@@ -146,6 +179,11 @@ async def get_pipeline_status():
             "transformed": str(pipeline.config.transformed_dir)
         }
     )
+
+
+@app.get("/metrics")
+async def metrics():
+    return JSONResponse(content=generate_latest().decode("utf-8"), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.post("/convert", response_model=ConversionResponse)
