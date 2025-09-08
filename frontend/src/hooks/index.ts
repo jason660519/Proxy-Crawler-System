@@ -603,18 +603,6 @@ export function useTheme() {
     }, 0);
   }, [theme, isInitialized, applyCssVariables]);
 
-  // 提供全域除錯函數以便在瀏覽器 Console 直接切換
-  useEffect(() => {
-    try {
-      (window as any).__toggleTheme = () => toggleTheme();
-      (window as any).__forceTheme = (mode: 'light' | 'dark') => {
-        setTheme(mode === 'dark' ? 'dark' : 'light');
-        document.documentElement.setAttribute('data-theme', mode === 'dark' ? 'dark' : 'light');
-        try { applyCssVariables(mode === 'dark' ? 'dark' : 'light'); } catch {}
-      };
-    } catch {}
-  }, [toggleTheme, setTheme, applyCssVariables]);
-
   // 跨組件同步：監聽主題變更事件
   useEffect(() => {
     const handleThemeChanged = (e: Event) => {
