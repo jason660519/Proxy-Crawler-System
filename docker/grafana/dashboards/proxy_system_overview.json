@@ -1,0 +1,56 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Total Proxies",
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
+      "targets": [{"expr": "proxy_pool_total", "refId": "A"}],
+      "options": {"reduceOptions": {"calcs": ["last"], "fields": "", "values": false}}
+    },
+    {
+      "type": "stat",
+      "title": "Active Proxies",
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0},
+      "targets": [{"expr": "proxy_pool_active", "refId": "A"}],
+      "options": {"reduceOptions": {"calcs": ["last"], "fields": "", "values": false}}
+    },
+    {
+      "type": "timeSeries",
+      "title": "Requests by Endpoint",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6},
+      "targets": [
+        {"expr": "sum by (endpoint) (rate(proxy_api_requests_total[1m]))", "refId": "A"}
+      ]
+    },
+    {
+      "type": "heatmap",
+      "title": "Request Latency Heatmap",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum by (le, endpoint) (rate(proxy_api_request_duration_seconds_bucket[5m])))", "refId": "A"}
+      ]
+    },
+    {
+      "type": "timeSeries",
+      "title": "p95 Latency by Endpoint",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum by (le, endpoint) (rate(proxy_api_request_duration_seconds_bucket[5m])))", "refId": "A"}
+      ]
+    }
+  ],
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": ["proxy", "prometheus"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "timezone": "",
+  "title": "Proxy System Overview",
+  "version": 1
+}
+

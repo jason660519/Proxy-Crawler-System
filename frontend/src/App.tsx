@@ -1,243 +1,243 @@
 /**
- * 主應用程式組件
- * 整合布局、路由、主題管理等核心功能
+ * App 主組件
+ * 應用程式的根組件，整合所有佈局和路由
  */
 
-import React, { useState, useCallback } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
-import { GlobalStyles } from './styles/GlobalStyles';
-import { MainLayout } from './components/Layout/MainLayout';
-import { Dashboard } from './pages/Dashboard';
-import type { SidebarMenuItem } from './types/index';
+import React, { useState, useEffect } from 'react';
+import styled, { ThemeProvider, createGlobalStyle } from 'styled-components';
+import { Header, ActivityBar } from './components/layout';
+import { Dashboard, OperationsDashboard, MetricsOverview } from './components/dashboard';
+import { ThemeDebugger } from './components/debug';
+import { useTheme, useHealthStatus } from './hooks';
+import { createGlobalStyles, lightTheme, darkTheme } from './styles';
 
-// 主題切換按鈕組件
-const ThemeToggle: React.FC<{ theme: 'light' | 'dark'; onToggle: () => void }> = ({ theme, onToggle }) => {
-  return (
-    <button
-      onClick={onToggle}
-      style={{
-        background: 'transparent',
-        border: 'none',
-        color: 'inherit',
-        cursor: 'pointer',
-        padding: '4px 8px',
-        borderRadius: '4px',
-        fontSize: '12px'
-      }}
-      title={`切換到${theme === 'dark' ? '淺色' : '深色'}主題`}
-    >
-      {theme === 'dark' ? '🌙' : '☀️'}
-    </button>
-  );
-};
 
-// 狀態指示器組件
-const StatusIndicator: React.FC<{ theme: 'light' | 'dark' }> = ({ theme }) => {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px' }}>
-      <span style={{ color: '#00ff00' }}>●</span>
-      <span>系統正常</span>
-      <span style={{ marginLeft: '16px' }}>v1.0.0</span>
-    </div>
-  );
-};
+// ============= 全域樣式 =============
 
-// 連接狀態組件
-const ConnectionStatus: React.FC<{ theme: 'light' | 'dark' }> = ({ theme }) => {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '11px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-        <span style={{ color: '#00ff00' }}>●</span>
-        <span>後端已連接</span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-        <span style={{ color: '#ffaa00' }}>●</span>
-        <span>8 個任務執行中</span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-        <span>代理池: 892/1247</span>
-      </div>
-    </div>
-  );
-};
+const GlobalStyle = createGlobalStyle<{ theme: typeof lightTheme }>`
+  ${props => createGlobalStyles(props.theme)}
+`;
 
-/**
- * 主應用程式組件
- */
-function App() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+// ============= 樣式定義 =============
+
+const AppContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--color-background-primary);
+  color: var(--color-text-primary);
+`;
+
+const MainContainer = styled.div`
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+`;
+
+const ContentArea = styled.main`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--color-background-primary);
+`;
+
+const PageContent = styled.div`
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  background-color: var(--color-background-primary);
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: var(--color-background-primary);
+  color: var(--color-text-primary);
+`;
+
+const LoadingSpinner = styled.div`
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--color-border-primary);
+  border-top: 4px solid var(--color-interactive-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+`;
+
+const WelcomeMessage = styled.div`
+  text-align: center;
+  padding: 48px 24px;
+`;
+
+const WelcomeTitle = styled.h1`
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, var(--color-interactive-primary), var(--color-interactive-primaryHover));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+`;
+
+const WelcomeSubtitle = styled.p`
+  font-size: 1.125rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 32px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+`;
+
+
+
+// ============= 組件實作 =============
+
+const App: React.FC = () => {
+  const { isDark, theme } = useTheme();
+  useHealthStatus();
   const [activeView, setActiveView] = useState('dashboard');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
 
-  // 主題切換處理
-  const handleThemeToggle = useCallback(() => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  // 模擬初始化過程
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitializing(false);
+    }, 1500);
+
+    return () => clearTimeout(timer);
   }, []);
 
-  // 視圖切換處理
-  const handleViewChange = useCallback((viewId: string) => {
-    setActiveView(viewId);
-  }, []);
+  // 處理活動項目變更
+  const handleActivityChange = (itemId: string) => {
+    setActiveView(itemId);
+  };
 
-  // 側邊欄切換處理
-  const handleSidebarToggle = useCallback((collapsed: boolean) => {
-    setSidebarCollapsed(collapsed);
-  }, []);
+  // 處理通知點擊
+  const handleNotificationClick = () => {
+    console.log('Open notifications panel');
+  };
 
-  // 側邊欄選單項目
-  const menuItems: SidebarMenuItem[] = [
-    {
-      id: 'dashboard',
-      label: '儀表板',
-      icon: 'dashboard-icon',
-      path: '/dashboard'
-    },
-    {
-      id: 'proxies',
-      label: '代理池管理',
-      icon: 'proxy-icon',
-      path: '/proxies'
-    },
-    {
-      id: 'etl',
-      label: 'ETL 監控',
-      icon: 'etl-icon',
-      path: '/etl'
-    },
-    {
-      id: 'settings',
-      label: '系統設置',
-      icon: 'settings-icon',
-      path: '/settings'
+  // 渲染頁面內容
+  const renderPageContent = () => {
+    switch (activeView) {
+      case 'dashboard':
+        return (
+          <Dashboard />
+        );
+      
+      case 'proxies':
+        return (
+          <WelcomeMessage>
+            <WelcomeTitle>代理管理</WelcomeTitle>
+            <WelcomeSubtitle>代理節點管理功能正在開發中...</WelcomeSubtitle>
+          </WelcomeMessage>
+        );
+      
+      case 'tasks':
+        return (
+          <WelcomeMessage>
+            <WelcomeTitle>任務佇列</WelcomeTitle>
+            <WelcomeSubtitle>任務管理功能正在開發中...</WelcomeSubtitle>
+          </WelcomeMessage>
+        );
+      
+      case 'logs':
+        return (
+          <WelcomeMessage>
+            <WelcomeTitle>系統日誌</WelcomeTitle>
+            <WelcomeSubtitle>日誌查看功能正在開發中...</WelcomeSubtitle>
+          </WelcomeMessage>
+        );
+      
+      case 'analytics':
+        return (
+          <>
+            <OperationsDashboard />
+            <div style={{ marginTop: 24 }}>
+              <MetricsOverview />
+            </div>
+          </>
+        );
+      
+      case 'settings':
+        return (
+          <WelcomeMessage>
+            <WelcomeTitle>系統設定</WelcomeTitle>
+            <WelcomeSubtitle>系統設定功能正在開發中...</WelcomeSubtitle>
+          </WelcomeMessage>
+        );
+      
+      default:
+        return (
+          <WelcomeMessage>
+            <WelcomeTitle>頁面未找到</WelcomeTitle>
+            <WelcomeSubtitle>請選擇左側導航中的功能項目。</WelcomeSubtitle>
+          </WelcomeMessage>
+        );
     }
-  ];
+  };
 
-  // Header 操作按鈕
-  const headerActions = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <button
-        style={{
-          background: 'transparent',
-          border: 'none',
-          color: 'inherit',
-          cursor: 'pointer',
-          padding: '4px 8px',
-          borderRadius: '4px',
-          fontSize: '12px'
-        }}
-        title="通知"
-      >
-        🔔
-      </button>
-      <button
-        style={{
-          background: 'transparent',
-          border: 'none',
-          color: 'inherit',
-          cursor: 'pointer',
-          padding: '4px 8px',
-          borderRadius: '4px',
-          fontSize: '12px'
-        }}
-        title="使用者選單"
-      >
-        👤
-      </button>
-      <ThemeToggle theme={theme} onToggle={handleThemeToggle} />
-    </div>
-  );
+  // 顯示載入畫面
+  if (isInitializing) {
+    return (
+      <ThemeProvider theme={isDark ? darkTheme : lightTheme}>
+        <GlobalStyle theme={isDark ? darkTheme : lightTheme} />
+        <LoadingContainer>
+          <div style={{ textAlign: 'center' }}>
+            <LoadingSpinner />
+            <div style={{ marginTop: '16px', fontSize: '1.125rem' }}>
+              JasonSpider 正在啟動...
+            </div>
+          </div>
+        </LoadingContainer>
+      </ThemeProvider>
+    );
+  }
 
   return (
-    <ThemeProvider theme={{ mode: theme }}>
-      <GlobalStyles theme={theme} />
-      <Router>
-        <MainLayout
-          theme={theme}
-          title="Proxy Spider Manager"
-          activeView={activeView}
-          sidebarCollapsed={sidebarCollapsed}
-          menuItems={menuItems}
-          headerActions={headerActions}
-          statusLeft={<StatusIndicator theme={theme} />}
-          statusRight={<ConnectionStatus theme={theme} />}
-          onViewChange={handleViewChange}
-          onSidebarToggle={handleSidebarToggle}
-        >
-          <Routes>
-            {/* 預設路由重定向到儀表板 */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            
-            {/* 儀表板頁面 */}
-            <Route 
-              path="/dashboard" 
-              element={<Dashboard theme={theme} />} 
-            />
-            
-            {/* 代理池管理頁面 */}
-            <Route 
-              path="/proxies" 
-              element={
-                <div style={{ 
-                  padding: '24px', 
-                  textAlign: 'center',
-                  color: theme === 'dark' ? '#cccccc' : '#666666'
-                }}>
-                  <h2>代理池管理</h2>
-                  <p>此頁面正在開發中...</p>
-                </div>
-              } 
-            />
-            
-            {/* ETL 監控頁面 */}
-            <Route 
-              path="/etl" 
-              element={
-                <div style={{ 
-                  padding: '24px', 
-                  textAlign: 'center',
-                  color: theme === 'dark' ? '#cccccc' : '#666666'
-                }}>
-                  <h2>ETL 監控</h2>
-                  <p>此頁面正在開發中...</p>
-                </div>
-              } 
-            />
-            
-            {/* 系統設置頁面 */}
-            <Route 
-              path="/settings" 
-              element={
-                <div style={{ 
-                  padding: '24px', 
-                  textAlign: 'center',
-                  color: theme === 'dark' ? '#cccccc' : '#666666'
-                }}>
-                  <h2>系統設置</h2>
-                  <p>此頁面正在開發中...</p>
-                </div>
-              } 
-            />
-            
-            {/* 404 頁面 */}
-            <Route 
-              path="*" 
-              element={
-                <div style={{ 
-                  padding: '24px', 
-                  textAlign: 'center',
-                  color: theme === 'dark' ? '#cccccc' : '#666666'
-                }}>
-                  <h2>頁面未找到</h2>
-                  <p>您訪問的頁面不存在</p>
-                </div>
-              } 
-            />
-          </Routes>
-        </MainLayout>
-      </Router>
+    <ThemeProvider theme={isDark ? darkTheme : lightTheme}>
+      <GlobalStyle theme={isDark ? darkTheme : lightTheme} />
+      <AppContainer>
+        <Header
+          showSearch={true}
+          showQuickActions={true}
+          showNotifications={true}
+          onNotificationClick={handleNotificationClick}
+        />
+        
+        <MainContainer>
+          <ActivityBar
+            activeItem={activeView}
+            onItemChange={handleActivityChange}
+          />
+          
+          <ContentArea>
+            <PageContent>
+              {renderPageContent()}
+            </PageContent>
+          </ContentArea>
+        </MainContainer>
+        
+        {/* 主題調試器 - 只在開發環境顯示 */}
+        {import.meta.env.DEV && (
+          <ThemeDebugger 
+            theme={theme} 
+            isDark={isDark} 
+            isVisible={true}
+          />
+        )}
+      </AppContainer>
     </ThemeProvider>
   );
-}
+};
 
 export default App;
