@@ -263,6 +263,9 @@ class ProxyPoolManager:
         self.validator: Optional[ProxyValidator] = None
         self._balance_task: Optional[asyncio.Task] = None
         self._running = False
+    # 租借機制: proxy_id -> (leased_at, lease_seconds)
+    self._leases: Dict[str, tuple[datetime, int]] = {}
+    self._default_lease_seconds = 30
     
     async def start(self):
         """啟動池管理器"""
@@ -336,15 +339,35 @@ class ProxyPoolManager:
         if pool_preference is None:
             pool_preference = [PoolType.HOT, PoolType.WARM, PoolType.COLD]
         
+        # 清理過期租借
+        now = datetime.now()
+        expired = [pid for pid,(ts,ttl) in self._leases.items() if (now - ts).total_seconds() > ttl]
+        for pid in expired:
+            self._leases.pop(pid, None)
+
         for pool_type in pool_preference:
             if pool_type in self.pools:
-                proxy = await self.pools[pool_type].get_proxy(filter_criteria)
-                if proxy:
-                    logger.debug(f"🎯 從 {pool_type.value} 池獲取代理: {proxy.url}")
-                    return proxy
+                # 嘗試取得符合條件且未租借 / 租借過期的代理
+                for _ in range(5):  # 最多嘗試幾次避免全是租借中的代理
+                    proxy = await self.pools[pool_type].get_proxy(filter_criteria)
+                    if not proxy:
+                        break
+                    lease = self._leases.get(proxy.proxy_id)
+                    if lease is None:
+                        # 掛上租借
+                        self._leases[proxy.proxy_id] = (datetime.now(), self._default_lease_seconds)
+                        logger.debug(f"🎯 從 {pool_type.value} 池租借代理: {proxy.url}")
+                        return proxy
+                # 若該池全是租借中的代理則繼續下一個池
         
         logger.warning("⚠️ 沒有可用的代理")
         return None
+
+    async def return_proxy(self, proxy: ProxyNode):
+        """歸還租借代理，提前釋放 lease。"""
+        if proxy and proxy.proxy_id in self._leases:
+            self._leases.pop(proxy.proxy_id, None)
+            logger.debug(f"↩️ 代理歸還: {proxy.url}")
     
     async def validate_and_rebalance(self):
         """驗證代理並重新平衡池"""

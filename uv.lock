@@ -1846,11 +1846,24 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+browser = [
+    { name = "playwright" },
+    { name = "selenium" },
+    { name = "undetected-chromedriver" },
+    { name = "webdriver-manager" },
+]
 browser-automation = [
     { name = "playwright" },
     { name = "selenium" },
     { name = "undetected-chromedriver" },
     { name = "webdriver-manager" },
+]
+crawler = [
+    { name = "aiohttp" },
+    { name = "beautifulsoup4" },
+    { name = "httpx" },
+    { name = "lxml" },
+    { name = "parsel" },
 ]
 dev = [
     { name = "black" },
@@ -1859,6 +1872,35 @@ dev = [
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "ruff" },
+]
+full = [
+    { name = "aiohttp" },
+    { name = "beautifulsoup4" },
+    { name = "fake-useragent" },
+    { name = "geoip2" },
+    { name = "html2text" },
+    { name = "httpx" },
+    { name = "lxml" },
+    { name = "markdownify" },
+    { name = "parsel" },
+    { name = "playwright" },
+    { name = "prometheus-client" },
+    { name = "pysocks" },
+    { name = "readability-lxml" },
+    { name = "retrying" },
+    { name = "selenium" },
+    { name = "tenacity" },
+    { name = "trafilatura", version = "1.6.1", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'darwin'" },
+    { name = "trafilatura", version = "1.6.3", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'darwin'" },
+    { name = "undetected-chromedriver" },
+    { name = "webdriver-manager" },
+]
+html-md = [
+    { name = "html2text" },
+    { name = "markdownify" },
+    { name = "readability-lxml" },
+    { name = "trafilatura", version = "1.6.1", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'darwin'" },
+    { name = "trafilatura", version = "1.6.3", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'darwin'" },
 ]
 monitoring = [
     { name = "prometheus-client" },
@@ -1873,6 +1915,11 @@ scrapy-framework = [
     { name = "scrapy" },
     { name = "scrapy-playwright" },
 ]
+validation = [
+    { name = "fake-useragent" },
+    { name = "geoip2" },
+    { name = "pysocks" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -1885,36 +1932,48 @@ dev = [
 requires-dist = [
     { name = "aiofiles", specifier = ">=23.0.0" },
     { name = "aiohttp", specifier = ">=3.8.0" },
+    { name = "aiohttp", marker = "extra == 'crawler'", specifier = ">=3.8.0" },
     { name = "aiohttp-cors", specifier = ">=0.8.1" },
     { name = "aiosqlite", specifier = ">=0.19.0" },
     { name = "asyncpg", specifier = ">=0.30.0" },
     { name = "beautifulsoup4", specifier = ">=4.12.0" },
+    { name = "beautifulsoup4", marker = "extra == 'crawler'", specifier = ">=4.12.0" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.0.0" },
     { name = "chardet", specifier = ">=5.0.0" },
     { name = "click", specifier = ">=8.1.0" },
     { name = "dataclasses-json", specifier = ">=0.6.0" },
     { name = "fake-useragent", marker = "extra == 'proxy-management'", specifier = ">=1.4.0" },
+    { name = "fake-useragent", marker = "extra == 'validation'", specifier = ">=1.4.0" },
     { name = "fastapi", specifier = ">=0.104.0" },
     { name = "geoip2", specifier = ">=4.8.0" },
+    { name = "geoip2", marker = "extra == 'validation'", specifier = ">=4.8.0" },
     { name = "geopy", specifier = ">=2.4.0" },
     { name = "html2text", specifier = ">=2020.1.16" },
+    { name = "html2text", marker = "extra == 'html-md'", specifier = ">=2020.1.16" },
     { name = "httpx", specifier = ">=0.24.0" },
+    { name = "httpx", marker = "extra == 'crawler'", specifier = ">=0.24.0" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "loguru", specifier = ">=0.7.0" },
     { name = "lxml", specifier = ">=4.9.0" },
+    { name = "lxml", marker = "extra == 'crawler'", specifier = ">=4.9.0" },
     { name = "markdownify", specifier = ">=0.11.6" },
+    { name = "markdownify", marker = "extra == 'html-md'", specifier = ">=0.11.6" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.5.0" },
     { name = "numpy", specifier = ">=1.24.0" },
     { name = "pandas", specifier = ">=2.1.0" },
     { name = "parsel", specifier = ">=1.8.0" },
+    { name = "parsel", marker = "extra == 'crawler'", specifier = ">=1.8.0" },
     { name = "pillow", specifier = ">=10.0.0" },
+    { name = "playwright", marker = "extra == 'browser'", specifier = ">=1.40.0" },
     { name = "playwright", marker = "extra == 'browser-automation'", specifier = ">=1.40.0" },
     { name = "prometheus-client", specifier = ">=0.22.1" },
     { name = "prometheus-client", marker = "extra == 'monitoring'", specifier = ">=0.19.0" },
+    { name = "proxy-crawler-system", extras = ["crawler", "validation", "html-md", "browser", "monitoring"], marker = "extra == 'full'" },
     { name = "psycopg2-binary", specifier = ">=2.9.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pydantic-settings", specifier = ">=2.10.1" },
     { name = "pysocks", marker = "extra == 'proxy-management'", specifier = ">=1.7.1" },
+    { name = "pysocks", marker = "extra == 'validation'", specifier = ">=1.7.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.4.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.21.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.1.0" },
@@ -1923,6 +1982,7 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.6" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "readability-lxml", specifier = ">=0.8.1" },
+    { name = "readability-lxml", marker = "extra == 'html-md'", specifier = ">=0.8.1" },
     { name = "redis", specifier = ">=4.6.0" },
     { name = "requests", specifier = ">=2.31.0" },
     { name = "retrying", marker = "extra == 'monitoring'", specifier = ">=1.3.4" },
@@ -1930,6 +1990,7 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.0.280" },
     { name = "scrapy", marker = "extra == 'scrapy-framework'", specifier = ">=2.11.0" },
     { name = "scrapy-playwright", marker = "extra == 'scrapy-framework'", specifier = ">=0.0.28" },
+    { name = "selenium", marker = "extra == 'browser'", specifier = ">=4.15.0" },
     { name = "selenium", marker = "extra == 'browser-automation'", specifier = ">=4.15.0" },
     { name = "sqlalchemy", specifier = ">=2.0.0" },
     { name = "structlog", specifier = ">=23.0.0" },
@@ -1937,12 +1998,15 @@ requires-dist = [
     { name = "textstat", specifier = ">=0.7.0" },
     { name = "tqdm", specifier = ">=4.66.0" },
     { name = "trafilatura", specifier = ">=1.6.0" },
+    { name = "trafilatura", marker = "extra == 'html-md'", specifier = ">=1.6.0" },
     { name = "typer", specifier = ">=0.9.0" },
+    { name = "undetected-chromedriver", marker = "extra == 'browser'", specifier = ">=3.5.5" },
     { name = "undetected-chromedriver", marker = "extra == 'browser-automation'", specifier = ">=3.5.5" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.24.0" },
+    { name = "webdriver-manager", marker = "extra == 'browser'", specifier = ">=4.0.1" },
     { name = "webdriver-manager", marker = "extra == 'browser-automation'", specifier = ">=4.0.1" },
 ]
-provides-extras = ["dev", "browser-automation", "proxy-management", "scrapy-framework", "monitoring"]
+provides-extras = ["dev", "browser-automation", "proxy-management", "scrapy-framework", "monitoring", "crawler", "validation", "html-md", "browser", "full"]
 
 [package.metadata.requires-dev]
 dev = [

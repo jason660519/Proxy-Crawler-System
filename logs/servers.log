@@ -1,119 +1,30 @@
-2025-09-07 04:46:25 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
-2025-09-07 04:46:26 | ERROR    | __main__:start_main_api_server:120 - ❌ 主 API 服務器啟動失敗: jinja2 must be installed to use Jinja2Templates
-2025-09-07 04:46:26 | ERROR    | __main__:main:463 - ❌ 啟動失敗: jinja2 must be installed to use Jinja2Templates
-2025-09-07 04:46:26 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
-2025-09-07 04:46:26 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
-2025-09-07 04:47:11 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
-2025-09-07 04:47:44 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
-2025-09-07 04:48:17 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
-2025-09-07 04:48:44 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
-2025-09-07 04:51:33 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
-2025-09-07 04:52:30 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
-2025-09-07 04:55:16 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
-2025-09-07 04:55:16 | ERROR    | __main__:start_main_api_server:120 - ❌ 主 API 服務器啟動失敗: cannot import name 'get_config' from 'src.proxy_manager.config' (C:\Users\a0922\OneDrive\Desktop\Jason_Spyder\JasonSpider\src\proxy_manager\config.py)
-2025-09-07 04:55:16 | ERROR    | __main__:main:463 - ❌ 啟動失敗: cannot import name 'get_config' from 'src.proxy_manager.config' (C:\Users\a0922\OneDrive\Desktop\Jason_Spyder\JasonSpider\src\proxy_manager\config.py)
-2025-09-07 04:55:16 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
-2025-09-07 04:55:16 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
-2025-09-07 04:55:57 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
-2025-09-07 04:55:57 | ERROR    | __main__:start_main_api_server:120 - ❌ 主 API 服務器啟動失敗: name 'ProxyManagerConfig' is not defined
-2025-09-07 04:55:57 | ERROR    | __main__:main:463 - ❌ 啟動失敗: name 'ProxyManagerConfig' is not defined
-2025-09-07 04:55:57 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
-2025-09-07 04:55:57 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
-2025-09-07 04:56:24 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
-2025-09-07 04:57:12 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
-2025-09-07 04:57:52 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - None:None
-2025-09-07 04:57:54 | ERROR    | __main__:start_main_api_server:120 - ❌ 主 API 服務器啟動失敗: Neither host/port nor sock were specified
-2025-09-07 04:57:54 | ERROR    | __main__:main:463 - ❌ 啟動失敗: Neither host/port nor sock were specified
-2025-09-07 04:57:54 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
-2025-09-07 04:57:54 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
-2025-09-07 04:59:10 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-07 04:59:47 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-07 05:46:40 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-07 05:51:22 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-07 05:53:54 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-07 05:54:56 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-07 05:55:44 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-07 05:56:29 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-07 05:57:27 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-07 05:58:59 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-07 06:03:41 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-07 06:07:22 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-07 06:09:51 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-07 06:10:43 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-07 06:11:38 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-07 06:13:04 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-07 20:44:51 | INFO     | __main__:start_all_servers:245 - 🌟 啟動代理管理系統所有服務...
-2025-09-07 20:44:51 | INFO     | __main__:start_all_servers:246 - 📡 主機地址: 0.0.0.0
-2025-09-07 20:44:51 | INFO     | __main__:start_all_servers:247 - 🔧 主 API 端口: 8000
-2025-09-07 20:44:51 | INFO     | __main__:start_all_servers:248 - 📊 ETL API 端口: 8001
-2025-09-07 20:44:51 | INFO     | __main__:start_all_servers:249 - 📈 監控端口: 8002
-2025-09-07 20:44:51 | INFO     | __main__:start_all_servers:265 - ✅ 主 API 服務器進程已啟動 (PID: 4768)
-2025-09-07 20:44:53 | ERROR    | __main__:start_all_servers:306 - ❌ 啟動服務器失敗: cannot pickle 'weakref.ReferenceType' object
-2025-09-07 20:44:53 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
-2025-09-07 20:44:53 | INFO     | __main__:stop_all_servers:356 - 🔄 停止進程 MainAPI (PID: 4768)
-2025-09-07 20:44:53 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
-2025-09-07 20:44:53 | ERROR    | __main__:main:469 - ❌ 啟動失敗: cannot pickle 'weakref.ReferenceType' object
-2025-09-07 20:44:53 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
-2025-09-07 20:44:53 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
-2025-09-07 20:59:14 | INFO     | __main__:start_all_servers:245 - 🌟 啟動代理管理系統所有服務...
-2025-09-07 20:59:14 | INFO     | __main__:start_all_servers:246 - 📡 主機地址: 0.0.0.0
-2025-09-07 20:59:14 | INFO     | __main__:start_all_servers:247 - 🔧 主 API 端口: 8000
-2025-09-07 20:59:14 | INFO     | __main__:start_all_servers:248 - 📊 ETL API 端口: 8001
-2025-09-07 20:59:14 | INFO     | __main__:start_all_servers:249 - 📈 監控端口: 8002
-2025-09-07 20:59:14 | INFO     | __main__:start_all_servers:265 - ✅ 主 API 服務器進程已啟動 (PID: 15100)
-2025-09-07 20:59:16 | ERROR    | __main__:start_all_servers:306 - ❌ 啟動服務器失敗: cannot pickle 'weakref.ReferenceType' object
-2025-09-07 20:59:16 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
-2025-09-07 20:59:16 | INFO     | __main__:stop_all_servers:356 - 🔄 停止進程 MainAPI (PID: 15100)
-2025-09-07 20:59:16 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
-2025-09-07 20:59:16 | ERROR    | __main__:main:469 - ❌ 啟動失敗: cannot pickle 'weakref.ReferenceType' object
-2025-09-07 20:59:16 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
-2025-09-07 20:59:16 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
-2025-09-07 21:17:53 | INFO     | __main__:start_all_servers:245 - 🌟 啟動代理管理系統所有服務...
-2025-09-07 21:17:53 | INFO     | __main__:start_all_servers:246 - 📡 主機地址: 0.0.0.0
-2025-09-07 21:17:53 | INFO     | __main__:start_all_servers:247 - 🔧 主 API 端口: 8000
-2025-09-07 21:17:53 | INFO     | __main__:start_all_servers:248 - 📊 ETL API 端口: 8001
-2025-09-07 21:17:53 | INFO     | __main__:start_all_servers:249 - 📈 監控端口: 8002
-2025-09-07 21:17:53 | INFO     | __main__:start_all_servers:265 - ✅ 主 API 服務器進程已啟動 (PID: 26664)
-2025-09-07 21:17:55 | ERROR    | __main__:start_all_servers:306 - ❌ 啟動服務器失敗: cannot pickle 'weakref.ReferenceType' object
-2025-09-07 21:17:55 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
-2025-09-07 21:17:55 | INFO     | __main__:stop_all_servers:356 - 🔄 停止進程 MainAPI (PID: 26664)
-2025-09-07 21:17:56 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
-2025-09-07 21:17:56 | ERROR    | __main__:main:469 - ❌ 啟動失敗: cannot pickle 'weakref.ReferenceType' object
-2025-09-07 21:17:56 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
-2025-09-07 21:17:56 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
-2025-09-07 21:18:19 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-08 02:52:14 | INFO     | __main__:start_all_servers:245 - 🌟 啟動代理管理系統所有服務...
-2025-09-08 02:52:14 | INFO     | __main__:start_all_servers:246 - 📡 主機地址: 0.0.0.0
-2025-09-08 02:52:14 | INFO     | __main__:start_all_servers:247 - 🔧 主 API 端口: 8000
-2025-09-08 02:52:14 | INFO     | __main__:start_all_servers:248 - 📊 ETL API 端口: 8001
-2025-09-08 02:52:14 | INFO     | __main__:start_all_servers:249 - 📈 監控端口: 8002
-2025-09-08 02:52:14 | INFO     | __main__:start_all_servers:265 - ✅ 主 API 服務器進程已啟動 (PID: 30964)
-2025-09-08 02:52:16 | ERROR    | __main__:start_all_servers:306 - ❌ 啟動服務器失敗: cannot pickle 'weakref.ReferenceType' object
-2025-09-08 02:52:16 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
-2025-09-08 02:52:16 | INFO     | __main__:stop_all_servers:356 - 🔄 停止進程 MainAPI (PID: 30964)
-2025-09-08 02:52:16 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
-2025-09-08 02:52:16 | ERROR    | __main__:main:469 - ❌ 啟動失敗: cannot pickle 'weakref.ReferenceType' object
-2025-09-08 02:52:16 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
-2025-09-08 02:52:16 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
-2025-09-08 02:52:33 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-08 02:53:16 | INFO     | __main__:start_etl_api_server:126 - 🚀 啟動 ETL API 服務器 - 0.0.0.0:8001
-2025-09-08 02:53:16 | ERROR    | __main__:start_etl_api_server:136 - ❌ ETL API 服務器啟動失敗: attempted relative import beyond top-level package
-2025-09-08 02:53:16 | ERROR    | __main__:main:469 - ❌ 啟動失敗: attempted relative import beyond top-level package
-2025-09-08 02:53:16 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
-2025-09-08 02:53:16 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
-2025-09-08 02:55:47 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-08 02:58:10 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 127.0.0.1:8000
-2025-09-08 22:39:39 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
-2025-09-08 22:39:42 | INFO     | __main__:start_etl_api_server:126 - 🚀 啟動 ETL API 服務器 - 0.0.0.0:8001
-2025-09-08 22:39:43 | ERROR    | __main__:start_main_api_server:120 - ❌ 主 API 服務器啟動失敗: `BaseSettings` has been moved to the `pydantic-settings` package. See https://docs.pydantic.dev/2.11/migration/#basesettings-has-moved-to-pydantic-settings for more details.
-
-For further information visit https://errors.pydantic.dev/2.11/u/import-error
-2025-09-08 22:39:43 | ERROR    | __main__:main:469 - ❌ 啟動失敗: `BaseSettings` has been moved to the `pydantic-settings` package. See https://docs.pydantic.dev/2.11/migration/#basesettings-has-moved-to-pydantic-settings for more details.
-
-For further information visit https://errors.pydantic.dev/2.11/u/import-error
-2025-09-08 22:39:43 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
-2025-09-08 22:39:43 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
-2025-09-08 22:39:43 | ERROR    | __main__:start_etl_api_server:136 - ❌ ETL API 服務器啟動失敗: attempted relative import beyond top-level package
-2025-09-08 22:39:43 | ERROR    | __main__:main:469 - ❌ 啟動失敗: attempted relative import beyond top-level package
-2025-09-08 22:39:43 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
-2025-09-08 22:39:43 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
+2025-09-10 08:20:26 | INFO     | __main__:start_all_servers:245 - 🌟 啟動代理管理系統所有服務...
+2025-09-10 08:20:26 | INFO     | __main__:start_all_servers:246 - 📡 主機地址: 0.0.0.0
+2025-09-10 08:20:26 | INFO     | __main__:start_all_servers:247 - 🔧 主 API 端口: 8000
+2025-09-10 08:20:26 | INFO     | __main__:start_all_servers:248 - 📊 ETL API 端口: 8001
+2025-09-10 08:20:26 | INFO     | __main__:start_all_servers:249 - 📈 監控端口: 8002
+2025-09-10 08:20:26 | INFO     | __main__:start_all_servers:265 - ✅ 主 API 服務器進程已啟動 (PID: 12612)
+2025-09-10 08:20:28 | ERROR    | __main__:start_all_servers:306 - ❌ 啟動服務器失敗: cannot pickle 'weakref.ReferenceType' object
+2025-09-10 08:20:28 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
+2025-09-10 08:20:28 | INFO     | __main__:stop_all_servers:356 - 🔄 停止進程 MainAPI (PID: 12612)
+2025-09-10 08:20:28 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
+2025-09-10 08:20:28 | ERROR    | __main__:main:469 - ❌ 啟動失敗: cannot pickle 'weakref.ReferenceType' object
+2025-09-10 08:20:28 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
+2025-09-10 08:20:28 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
+2025-09-10 08:21:08 | INFO     | __main__:start_all_servers:245 - 🌟 啟動代理管理系統所有服務...
+2025-09-10 08:21:08 | INFO     | __main__:start_all_servers:246 - 📡 主機地址: 0.0.0.0
+2025-09-10 08:21:08 | INFO     | __main__:start_all_servers:247 - 🔧 主 API 端口: 8000
+2025-09-10 08:21:08 | INFO     | __main__:start_all_servers:248 - 📊 ETL API 端口: 8001
+2025-09-10 08:21:08 | INFO     | __main__:start_all_servers:249 - 📈 監控端口: 8002
+2025-09-10 08:21:08 | INFO     | __main__:start_all_servers:265 - ✅ 主 API 服務器進程已啟動 (PID: 32528)
+2025-09-10 08:21:10 | ERROR    | __main__:start_all_servers:306 - ❌ 啟動服務器失敗: cannot pickle 'weakref.ReferenceType' object
+2025-09-10 08:21:10 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
+2025-09-10 08:21:10 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
+2025-09-10 08:21:10 | ERROR    | __main__:main:469 - ❌ 啟動失敗: cannot pickle 'weakref.ReferenceType' object
+2025-09-10 08:21:10 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
+2025-09-10 08:21:10 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
+2025-09-10 08:21:13 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
+2025-09-10 08:21:15 | ERROR    | __main__:start_main_api_server:120 - ❌ 主 API 服務器啟動失敗: name 'ProxyManager' is not defined
+2025-09-10 08:21:15 | ERROR    | __main__:main:469 - ❌ 啟動失敗: name 'ProxyManager' is not defined
+2025-09-10 08:21:15 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
+2025-09-10 08:21:15 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止

@@ -17,9 +17,13 @@ import logging
 from pathlib import Path
 
 from .models import ProxyNode, ProxyProtocol, ProxyAnonymity, ProxyStatus
+from prometheus_client import Counter
+from .api_shared import FETCH_SOURCE_COUNT  # reuse existing counter
 from .config import get_config
 
 logger = logging.getLogger(__name__)
+
+# 使用 api_shared.FETCH_SOURCE_COUNT 作為統一計數器
 
 
 class ProxyFetcher(ABC):
@@ -250,26 +254,32 @@ class ProxyFetcherManager:
         all_proxies = []
         
         # 從傳統獲取器獲取
-        for fetcher in self.fetchers:
+    for fetcher in self.fetchers:
             if not fetcher.enabled:
                 continue
             
             try:
-                proxies = await fetcher.fetch_proxies(limit_per_fetcher)
-                all_proxies.extend(proxies)
-                logger.info(f"✅ {fetcher.name} 獲取到 {len(proxies)} 個代理")
+        proxies = await fetcher.fetch_proxies(limit_per_fetcher)
+        all_proxies.extend(proxies)
+                outcome = "success" if proxies else "empty"
+                FETCH_SOURCE_COUNT.labels(source=fetcher.name, outcome=outcome).inc()
+        logger.info(f"✅ {fetcher.name} 獲取到 {len(proxies)} 個代理")
             except Exception as e:
                 logger.error(f"❌ {fetcher.name} 獲取失敗: {e}")
                 fetcher.fetch_errors += 1
+                FETCH_SOURCE_COUNT.labels(source=fetcher.name, outcome="error").inc()
         
         # 從高級獲取器獲取
-        if self.advanced_manager:
+    if self.advanced_manager:
             try:
-                advanced_proxies = await self.advanced_manager.fetch_all_proxies()
-                all_proxies.extend(advanced_proxies)
-                logger.info(f"✅ 高級獲取器獲取到 {len(advanced_proxies)} 個代理")
+        advanced_proxies = await self.advanced_manager.fetch_all_proxies()
+        all_proxies.extend(advanced_proxies)
+                outcome = "success" if advanced_proxies else "empty"
+                FETCH_SOURCE_COUNT.labels(source="advanced", outcome=outcome).inc()
+        logger.info(f"✅ 高級獲取器獲取到 {len(advanced_proxies)} 個代理")
             except Exception as e:
                 logger.error(f"❌ 高級獲取器失敗: {e}")
+                FETCH_SOURCE_COUNT.labels(source="advanced", outcome="error").inc()
         
         # 去重（基於 host:port）
         unique_proxies = {}

@@ -149,11 +149,11 @@ class ETLAPIManager:
             db_config = get_db_config()
             
             # 初始化 ETL 管道
-            etl_config = ETLConfig(
-                batch_size=1000,
-                validation_level=ValidationLevel.STANDARD,
-                enable_monitoring=True
-            )
+            # NOTE: proxy_etl_pipeline.ETLConfig 不包含 validation_level / enable_monitoring 參數
+            # 改為僅設定 batch_size，驗證層級與監控旗標由本管理器內部變數追蹤
+            etl_config = ETLConfig(batch_size=100)
+            self._default_validation_level = ValidationLevel.STANDARD
+            self._monitoring_enabled = True
             self.etl_pipeline = ProxyETLPipeline(etl_config)
             
             # 初始化數據驗證器
@@ -210,11 +210,11 @@ class ETLAPIManager:
             job_info["started_at"] = datetime.now()
             
             # 配置 ETL 管道
+            # 僅可傳遞 batch_size，其餘參數不在 ETLConfig 定義中
             config = ETLConfig(
                 batch_size=job_info["config"]["batch_size"],
-                validation_level=ValidationLevel[job_info["config"]["validation_level"]],
-                enable_monitoring=job_info["config"]["enable_monitoring"]
             )
+            # 保留原有 validation_level / enable_monitoring 設定於 job_info 供後續流程（例如驗證器）使用
             
             # 執行 ETL 流程
             result = await self.etl_pipeline.process_data(
@@ -332,6 +332,23 @@ etl_app = FastAPI(
     docs_url="/etl/docs",
     redoc_url="/etl/redoc"
 )
+
+@etl_app.get("/", include_in_schema=False)
+async def root_index():
+    return {
+        "service": "ETL API",
+        "version": "1.0.0",
+        "docs": "/etl/docs",
+        "health": "/api/etl/health",
+        "endpoints_prefix": "/api/etl/*",
+        "message": "See /etl/docs for interactive API documentation"
+    }
+
+from fastapi.responses import RedirectResponse
+
+@etl_app.get("/health", include_in_schema=False)
+async def root_health_redirect():
+    return RedirectResponse(url="/api/etl/health")
 
 
 # ===== API 端點定義 =====

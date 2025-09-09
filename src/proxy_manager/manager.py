@@ -75,6 +75,8 @@ class ProxyManager:
         self._running = False
         self._tasks: List[asyncio.Task] = []
         self._fetch_lock = asyncio.Lock()
+    self._heartbeat: Dict[str, Any] = {}
+    self._task_registry: Dict[str, Dict[str, Any]] = {}
         
         # 統計
         self.stats = {
@@ -103,6 +105,9 @@ class ProxyManager:
             
             # 啟動自動任務
             await self._start_auto_tasks()
+
+            # 註冊心跳維護任務
+            self._tasks.append(asyncio.create_task(self._heartbeat_loop()))
             
             self._running = True
             self.stats['start_time'] = datetime.now()
@@ -138,6 +143,46 @@ class ProxyManager:
         
         # 停止組件
         await self.pool_manager.stop()
+
+    async def _heartbeat_loop(self):
+        """維護心跳資訊供 /api/system/tasks 查詢。"""
+        while self._running:
+            try:
+                self._heartbeat = {
+                    'timestamp': datetime.now().isoformat(),
+                    'active_tasks': len([t for t in self._tasks if not t.done()]),
+                    'stats_updates': self.stats.get('last_update'),
+                }
+                await asyncio.sleep(5)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:  # pragma: no cover
+                logger.debug(f"heartbeat loop error: {e}")
+                await asyncio.sleep(5)
+
+    def get_task_status(self) -> Dict[str, Any]:
+        """獲取系統任務與心跳狀態。"""
+        registry_snapshot = {}
+        for name, meta in self._task_registry.items():
+            ms = meta.copy()
+            task: asyncio.Task = ms.get('task')  # type: ignore
+            if isinstance(task, asyncio.Task):
+                ms['done'] = task.done()
+                ms['cancelled'] = task.cancelled()
+                if task.done() and 'ended_at' not in ms:
+                    ms['ended_at'] = datetime.now().isoformat()
+            ms.pop('task', None)
+            registry_snapshot[name] = ms
+        return {
+            'heartbeat': self._heartbeat,
+            'tasks': registry_snapshot,
+        }
+
+    def _register_task(self, name: str, task: asyncio.Task):
+        self._task_registry[name] = {
+            'created_at': datetime.now().isoformat(),
+            'task': task,
+        }
         
         if self.validator and hasattr(self.validator, 'close'):
             await self.validator.close()
@@ -199,10 +244,56 @@ class ProxyManager:
         async with self._fetch_lock:
             logger.info("🔍 開始獲取代理...")
             try:
-                all_proxies = await self.fetch_service.fetch_all()
+                # 延遲導入 metrics（避免循環依賴）
+                try:  # pragma: no cover - metrics optional path
+                    from .api_shared import FETCH_SOURCE_COUNT, VALIDATION_RESULT_COUNT  # type: ignore
+                except Exception:  # noqa: BLE001
+                    FETCH_SOURCE_COUNT = VALIDATION_RESULT_COUNT = None  # type: ignore
+                # 允許指定 sources（目前僅作過濾標記，實際 fetcher 可擴充）
+                all_proxies: List[ProxyNode] = []
+                if self.fetch_service is not None and hasattr(self.fetch_service, 'fetch_all'):
+                    all_proxies = await self.fetch_service.fetch_all()
+                else:
+                    # 從基本 fetcher_manager 聚合
+                    fetchers = getattr(self.fetcher_manager, 'fetchers', [])
+                    for fetcher in fetchers:
+                        name = getattr(fetcher, 'name', fetcher.__class__.__name__)
+                        if sources and name not in sources:
+                            continue
+                        try:
+                            result = await fetcher.fetch()
+                            if result:
+                                all_proxies.extend(result)
+                                if FETCH_SOURCE_COUNT:
+                                    FETCH_SOURCE_COUNT.labels(source=name, outcome="success").inc()
+                            else:
+                                if FETCH_SOURCE_COUNT:
+                                    FETCH_SOURCE_COUNT.labels(source=name, outcome="empty").inc()
+                        except Exception as fe:  # noqa: BLE001
+                            logger.warning(f"單一 fetcher 失敗: {fe}")
+                            if FETCH_SOURCE_COUNT:
+                                FETCH_SOURCE_COUNT.labels(source=name, outcome="error").inc()
                 if not all_proxies:
+                    logger.info("未獲取到任何代理")
                     return []
-                valid_proxies = await self.validation_service.validate(all_proxies)
+                if self.validation_service is not None and hasattr(self.validation_service, 'validate'):
+                    valid_proxies = await self.validation_service.validate(all_proxies)
+                    if VALIDATION_RESULT_COUNT:
+                        # 粗略計數：視為全部 working（詳細需在 validator 內鉤子）
+                        VALIDATION_RESULT_COUNT.labels(outcome="working").inc(len(valid_proxies))
+                elif self.batch_validator is not None:
+                    batch_results = await self.batch_validator.validate_large_batch(all_proxies)
+                    valid_proxies = [r.proxy for r in batch_results if getattr(r, 'is_working', False)]
+                    if VALIDATION_RESULT_COUNT:
+                        working = sum(1 for r in batch_results if getattr(r, 'is_working', False))
+                        failed = len(batch_results) - working
+                        if working:
+                            VALIDATION_RESULT_COUNT.labels(outcome="working").inc(working)
+                        if failed:
+                            VALIDATION_RESULT_COUNT.labels(outcome="failed").inc(failed)
+                else:
+                    # 無驗證器情況直接回傳全部（降級模式）
+                    valid_proxies = all_proxies
                 await self.pool_manager.add_proxies(valid_proxies)
                 self.stats['total_fetched'] += len(all_proxies)
                 self.stats['total_validated'] += len(all_proxies)
@@ -293,14 +384,23 @@ class ProxyManager:
     async def _save_data(self):
         """保存數據"""
         try:
-            await self.persistence_service.save_snapshot()
+            if self.persistence_service is not None and hasattr(self.persistence_service, 'save_snapshot'):
+                await self.persistence_service.save_snapshot()
+            else:
+                logger.debug("persistence_service 未初始化，跳過保存數據")
             
         except Exception as e:
             logger.error(f"❌ 保存數據失敗: {e}")
     
-    async def _cleanup_old_backups(self):
     async def _cleanup_old_backups(self):  # 保留向後兼容呼叫
-        await self.persistence_service._prune_old(self.config.backup_dir, keep=10)
+        """清理舊備份（向後兼容舊名稱）。"""
+        try:
+            if self.persistence_service is not None and hasattr(self.persistence_service, '_prune_old'):
+                await self.persistence_service._prune_old(self.config.backup_dir, keep=10)  # type: ignore[attr-defined]
+            else:
+                logger.debug("persistence_service 未初始化，跳過備份清理")
+        except Exception as e:
+            logger.error(f"清理舊備份失敗: {e}")
     
     def get_stats(self) -> Dict[str, Any]:
         """獲取統計信息"""
@@ -324,6 +424,32 @@ class ProxyManager:
                 'active_tasks': len(self._tasks)
             }
         }
+
+    async def background_sync_to_etl(self, pool_types: Optional[List[str]] = None):
+        """背景同步代理資料到 ETL（目前 mock，僅統計輸出）。"""
+        pool_types = pool_types or ['hot', 'warm', 'cold']
+        try:
+            collected = 0
+            mapping = { 'hot': PoolType.HOT, 'warm': PoolType.WARM, 'cold': PoolType.COLD }
+            for name in pool_types:
+                ptype = mapping.get(name)
+                if not ptype:
+                    continue
+                pool = self.pool_manager.pools.get(ptype)
+                if not pool:
+                    continue
+                collected += len(pool.proxies)
+            logger.info(f"[ETL-SYNC] collected={collected} pools={pool_types}")
+            # TODO: 呼叫 ETL API 將資料推送
+        except Exception as e:  # pragma: no cover
+            logger.error(f"[ETL-SYNC] failed: {e}")
+
+    async def schedule_etl_sync(self, pool_types: Optional[List[str]] = None):
+        if not self._running:
+            return
+        task = asyncio.create_task(self.background_sync_to_etl(pool_types))
+        self._tasks.append(task)
+        self._register_task(f"etl_sync_{datetime.now().strftime('%H%M%S')}", task)
     
     async def export_proxies(self, 
                            file_path: Path,

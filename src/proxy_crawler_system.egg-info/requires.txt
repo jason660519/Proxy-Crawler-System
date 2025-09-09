@@ -40,11 +40,24 @@ pydantic-settings>=2.10.1
 aiohttp-cors>=0.8.1
 prometheus-client>=0.22.1
 
+[browser]
+playwright>=1.40.0
+selenium>=4.15.0
+undetected-chromedriver>=3.5.5
+webdriver-manager>=4.0.1
+
 [browser-automation]
 playwright>=1.40.0
 selenium>=4.15.0
 undetected-chromedriver>=3.5.5
 webdriver-manager>=4.0.1
+
+[crawler]
+httpx>=0.24.0
+aiohttp>=3.8.0
+parsel>=1.8.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
 
 [dev]
 pytest>=7.4.0
@@ -53,6 +66,15 @@ pytest-cov>=4.1.0
 black>=23.0.0
 ruff>=0.0.280
 mypy>=1.5.0
+
+[full]
+proxy-crawler-system[browser,crawler,html_md,monitoring,validation]
+
+[html_md]
+markdownify>=0.11.6
+trafilatura>=1.6.0
+html2text>=2020.1.16
+readability-lxml>=0.8.1
 
 [monitoring]
 prometheus-client>=0.19.0
@@ -66,3 +88,8 @@ fake-useragent>=1.4.0
 [scrapy-framework]
 scrapy>=2.11.0
 scrapy-playwright>=0.0.28
+
+[validation]
+geoip2>=4.8.0
+fake-useragent>=1.4.0
+PySocks>=1.7.1

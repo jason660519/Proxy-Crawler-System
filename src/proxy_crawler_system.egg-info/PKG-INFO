@@ -78,6 +78,28 @@ Provides-Extra: monitoring
 Requires-Dist: prometheus-client>=0.19.0; extra == "monitoring"
 Requires-Dist: tenacity>=8.2.3; extra == "monitoring"
 Requires-Dist: retrying>=1.3.4; extra == "monitoring"
+Provides-Extra: crawler
+Requires-Dist: httpx>=0.24.0; extra == "crawler"
+Requires-Dist: aiohttp>=3.8.0; extra == "crawler"
+Requires-Dist: parsel>=1.8.0; extra == "crawler"
+Requires-Dist: beautifulsoup4>=4.12.0; extra == "crawler"
+Requires-Dist: lxml>=4.9.0; extra == "crawler"
+Provides-Extra: validation
+Requires-Dist: geoip2>=4.8.0; extra == "validation"
+Requires-Dist: fake-useragent>=1.4.0; extra == "validation"
+Requires-Dist: PySocks>=1.7.1; extra == "validation"
+Provides-Extra: html-md
+Requires-Dist: markdownify>=0.11.6; extra == "html-md"
+Requires-Dist: trafilatura>=1.6.0; extra == "html-md"
+Requires-Dist: html2text>=2020.1.16; extra == "html-md"
+Requires-Dist: readability-lxml>=0.8.1; extra == "html-md"
+Provides-Extra: browser
+Requires-Dist: playwright>=1.40.0; extra == "browser"
+Requires-Dist: selenium>=4.15.0; extra == "browser"
+Requires-Dist: undetected-chromedriver>=3.5.5; extra == "browser"
+Requires-Dist: webdriver-manager>=4.0.1; extra == "browser"
+Provides-Extra: full
+Requires-Dist: proxy-crawler-system[browser,crawler,html_md,monitoring,validation]; extra == "full"
 
 # JasonSpider - 代理爬蟲與管理系統
 
@@ -156,13 +178,13 @@ cd JasonSpider
 uv venv
 uv shell
 
-# 3. 安裝依賴
+# 3. 安裝依賴（推薦）
 uv sync
-# 或使用 pip
-pip install -r requirements.txt
+# 備註: 以 pyproject.toml 為主，requirements.txt 僅作相容用途
 
-# 4. 配置 API 金鑰（可選）
-python setup_api_config.py interactive
+# 4. 配置環境與 API 金鑰
+cp .env.example .env  # Windows PowerShell: Copy-Item .env.example .env
+python setup_api_config.py interactive  # 可選
 
 # 5. 測試核心功能
 python test_core_functionality.py
@@ -321,5 +343,7 @@ fix(api): resolve markdown conversion encoding issue
 - [Beautiful Soup 文檔](https://www.crummy.com/software/BeautifulSoup/bs4/doc/)
 
 ---
+
+**新增**: 已加入集中設定模組 `config.settings` 與 `/metrics` 指標端點；請勿在程式碼硬編碼金鑰。
 
 **注意**: 本專案仍在積極開發中，部分功能可能尚未完全實現。請參考文檔了解最新進度。

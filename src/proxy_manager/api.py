@@ -35,10 +35,45 @@ from .api_shared import (
     require_api_key,
     REQUEST_COUNT,
     REQUEST_LATENCY,
+    get_proxy_manager,
+    proxy_manager as GLOBAL_PROXY_MANAGER_REF,
 )
+from .manager import ProxyManager  # Import for type hints & initialization
 
 # Create app instance (re-added after refactor)
-app = FastAPI(title="Proxy Manager API", version="1.0.0")
+async def _lifespan(app: FastAPI):
+    # Initialize global proxy manager if not already
+    from .api_shared import proxy_manager as pm_ref
+    # 讀取 git commit hash
+    commit_hash = None
+    try:
+        import subprocess, pathlib
+        result = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, cwd=pathlib.Path(__file__).parent.parent.parent)
+        if result.returncode == 0:
+            commit_hash = result.stdout.strip()
+    except Exception:
+        pass
+    app.state.commit_hash = commit_hash
+    if pm_ref is None:
+        mgr = ProxyManager()
+        try:
+            await mgr.start()
+            from . import api_shared
+            api_shared.proxy_manager = mgr
+            logging.getLogger(__name__).info("✅ ProxyManager initialized in lifespan")
+        except Exception as e:
+            logging.getLogger(__name__).error(f"❌ Failed to start ProxyManager: {e}")
+            raise
+    yield
+    # Shutdown logic
+    from .api_shared import proxy_manager as pm_ref_shutdown
+    if pm_ref_shutdown:
+        try:
+            await pm_ref_shutdown.stop()
+        except Exception:
+            pass
+
+app = FastAPI(title="Proxy Manager API", version="1.0.0", lifespan=_lifespan)
 
 # Mount modular routers
 app.include_router(routes_proxies.router)
@@ -46,6 +81,31 @@ app.include_router(routes_stats.router)
 app.include_router(routes_maintenance.router)
 app.include_router(routes_health_etl.router)
 app.include_router(routes_database.router)
+
+# ---------------------------------------------------------------------------
+# Root & convenience endpoints
+# ---------------------------------------------------------------------------
+from fastapi.responses import RedirectResponse  # local import (FastAPI already present)
+
+@app.get("/", include_in_schema=False)
+async def root_index():
+    """Root index: provide quick links instead of 404."""
+    return {
+        "service": "Proxy Manager API",
+        "version": app.version,
+    "commit": getattr(app.state, 'commit_hash', None),
+        "docs": "/docs",
+        "openapi": "/openapi.json",
+        "health": "/api/health",
+        "metrics": "/metrics",
+        "endpoints_prefix": "/api/*",
+        "message": "See /docs for interactive API documentation"
+    }
+
+@app.get("/health", include_in_schema=False)
+async def root_health_redirect():
+    """Redirect /health -> /api/health for convenience (browser friendly)."""
+    return RedirectResponse(url="/api/health")
 
 
 ## Stats & pools endpoints moved to routes_stats / routes_health_etl

@@ -15,6 +15,13 @@ class PersistenceService:
     async def save_snapshot(self) -> None:
         cfg = self.manager.config
         data_file = cfg.data_dir / "proxy_pools.json"
+        # Ensure directories exist
+        try:
+            cfg.data_dir.mkdir(parents=True, exist_ok=True)
+            cfg.backup_dir.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            logger.warning("PersistenceService: 無法建立資料目錄 %s", e)
+        # Save data to files
         await self.manager.pool_manager.save_to_file(data_file)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_file = cfg.backup_dir / f"proxy_pools_{timestamp}.json"

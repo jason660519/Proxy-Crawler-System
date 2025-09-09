@@ -26,13 +26,22 @@ async def health_check(manager: ProxyManager = Depends(get_proxy_manager)):
         uptime = (dt.now() - start_time).total_seconds()
     # TODO: 加入真正 DB / Redis 檢查呼叫
     overall = 'healthy' if stats['status']['running'] else 'degraded'
-    return HealthResponse(
+    response = HealthResponse(
         status=overall,
         timestamp=datetime.utcnow(),
         uptime_seconds=uptime,
         total_proxies=stats['pool_summary']['total_proxies'],
         active_proxies=stats['pool_summary']['total_active_proxies']
     )
+    # 動態附加版本/commit
+    from fastapi import Request
+    # FastAPI dependency injection 不直接給 request，改用 manager.config or global;簡化: 直接返回 dict
+    from fastapi import Response
+    from ..api import app as main_app
+    data = response.dict()
+    data["version"] = getattr(main_app, 'version', None)
+    data["commit"] = getattr(main_app.state, 'commit_hash', None)
+    return data
 
 @router.get('/api/pools', summary='獲取池詳細信息')
 async def get_pools(manager=Depends(get_proxy_manager)):
@@ -90,4 +99,12 @@ async def metrics_summary(manager=Depends(get_proxy_manager)):
             'failed_requests': total_requests - successful_requests,
         },
         'mock': True
+    }
+
+@router.get('/api/system/tasks', summary='取得系統任務與心跳狀態')
+async def system_tasks(manager=Depends(get_proxy_manager)):
+    return {
+        'success': True,
+        'data': manager.get_task_status(),
+        'timestamp': datetime.utcnow().isoformat()
     }
