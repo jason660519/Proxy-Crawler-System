@@ -22,6 +22,15 @@ import aiohttp
 from loguru import logger
 
 from ..crawlers.base_crawler import ProxyNode
+try:  # metrics optional import to avoid circular issues in some contexts
+    from ..api_shared import (
+        VALIDATION_LATENCY,
+        VALIDATION_STATUS_COUNT,
+        VALIDATION_ANONYMITY_COUNT,
+        VALIDATION_GEO_DETECT_COUNT,
+    )  # type: ignore
+except Exception:  # noqa: BLE001
+    VALIDATION_LATENCY = VALIDATION_STATUS_COUNT = VALIDATION_ANONYMITY_COUNT = VALIDATION_GEO_DETECT_COUNT = None  # type: ignore
 
 
 class ProxyStatus(Enum):
@@ -189,15 +198,41 @@ class ProxyValidator:
             
         except Exception as e:
             logger.error(f"驗證代理 {proxy.ip}:{proxy.port} 時發生錯誤: {str(e)}")
-            return ValidationResult(
+            vr = ValidationResult(
                 proxy=proxy,
                 status=ProxyStatus.FAILED,
                 error_message=str(e)
             )
+            return vr
         
         finally:
             # 更新統計信息
             self.stats['total_tested'] += 1
+            # Metrics emission
+            try:  # pragma: no cover - best effort metrics
+                duration = time.time() - start_time
+                if 'result' in locals():
+                    status_val = result.status.value
+                    anonymity_val = getattr(result.anonymity_level, 'value', 'unknown')
+                    geo_ok = 'success' if result.detected_country else 'failure'
+                elif 'vr' in locals():
+                    status_val = vr.status.value
+                    anonymity_val = getattr(vr.anonymity_level, 'value', 'unknown')
+                    geo_ok = 'failure'
+                else:
+                    status_val = 'unknown'
+                    anonymity_val = 'unknown'
+                    geo_ok = 'failure'
+                if VALIDATION_LATENCY:
+                    VALIDATION_LATENCY.observe(duration)
+                if VALIDATION_STATUS_COUNT:
+                    VALIDATION_STATUS_COUNT.labels(status=status_val).inc()
+                if VALIDATION_ANONYMITY_COUNT and anonymity_val:
+                    VALIDATION_ANONYMITY_COUNT.labels(level=anonymity_val).inc()
+                if VALIDATION_GEO_DETECT_COUNT:
+                    VALIDATION_GEO_DETECT_COUNT.labels(outcome=geo_ok).inc()
+            except Exception:
+                pass
     
     async def validate_proxies(self, proxies: List[ProxyNode], 
                              test_anonymity: bool = True,

@@ -5,6 +5,7 @@
 """
 
 from fastapi import FastAPI, Request
+from contextlib import asynccontextmanager
 from fastapi.responses import JSONResponse, Response
 import os
 import sys
@@ -16,13 +17,42 @@ from typing import Dict, Any
 # 添加專案根目錄到 Python 路徑
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# 創建 FastAPI 應用程式實例
+proxy_manager_instance = None  # global placeholder
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):  # pragma: no cover - startup/shutdown orchestration
+    global proxy_manager_instance
+    print("[LIFESPAN] startup begin")
+    try:
+        from src.proxy_manager.manager import ProxyManager, ProxyManagerConfig
+        cfg = ProxyManagerConfig()
+        proxy_manager_instance = ProxyManager(cfg)
+        await proxy_manager_instance.start()
+        # inject to proxy_manager.api module global
+        try:
+            import src.proxy_manager.api as proxy_api_module
+            proxy_api_module.proxy_manager = proxy_manager_instance  # type: ignore
+        except Exception as ie:  # noqa: BLE001
+            print(f"[LIFESPAN] inject proxy manager failed: {ie}")
+        print("[LIFESPAN] proxy manager started")
+    except Exception as e:  # noqa: BLE001
+        print(f"[LIFESPAN] startup error: {e}")
+    yield
+    print("[LIFESPAN] shutdown begin")
+    try:
+        if proxy_manager_instance:
+            await proxy_manager_instance.stop()
+            print("[LIFESPAN] proxy manager stopped")
+    except Exception as e:  # noqa: BLE001
+        print(f"[LIFESPAN] shutdown error: {e}")
+
 app = FastAPI(
     title="Proxy Crawler & Management System",
     description="專業的代理伺服器爬取與管理系統",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # 基本指標
@@ -41,47 +71,14 @@ async def metrics_middleware(request: Request, call_next):  # pragma: no cover
 
 # 導入並掛載代理管理器 API
 try:
-    from src.proxy_manager.api import app as proxy_api, proxy_manager
-    # 直接將所有路由添加到主應用
-    for route in proxy_api.routes:
+    from src.proxy_manager import api as proxy_api_module  # import module to access app
+    for route in proxy_api_module.app.routes:  # merge without submount
         app.routes.append(route)
-    print("✅ 代理管理器 API 已掛載到 /api")
+    print("✅ 代理管理器 API 路由已合併")
 except ImportError as e:
     print(f"⚠️ 無法載入代理管理器 API: {e}")
 
-# 添加啟動事件來初始化代理管理器
-@app.on_event("startup")
-async def startup_event():
-    """主應用啟動事件"""
-    print("[DEBUG] 主應用 startup_event 被調用")
-    
-    # 初始化代理管理器
-    try:
-        from src.proxy_manager.manager import ProxyManager, ProxyManagerConfig
-        
-        print("[DEBUG] 開始創建代理管理器配置")
-        config = ProxyManagerConfig()
-        print("[DEBUG] 配置創建成功")
-        
-        print("[DEBUG] 開始創建代理管理器")
-        manager = ProxyManager(config)
-        print("[DEBUG] 代理管理器創建成功，開始啟動")
-        
-        await manager.start()
-        print("[DEBUG] 代理管理器啟動成功")
-        
-        # 將管理器設置到 proxy_api 模組中
-        import src.proxy_manager.api as proxy_api_module
-        proxy_api_module.proxy_manager = manager
-        
-        print("✅ 代理管理器在主應用中初始化成功")
-        
-    except Exception as e:
-        print(f"[DEBUG] 代理管理器初始化失敗: {e}")
-        import traceback
-        error_details = traceback.format_exc()
-        print(f"[DEBUG] 詳細錯誤信息: {error_details}")
-        # 不要 raise，讓服務繼續運行
+## Removed deprecated on_event startup in favor of lifespan
 
 # 導入並掛載 ETL API
 try:
@@ -149,9 +146,10 @@ async def system_status() -> Dict[str, Any]:
             "timestamp": datetime.now().isoformat()
         },
         "configuration": {
-            "db_user": os.getenv("DB_USER", "not_set"),
-            "db_name": os.getenv("DB_NAME", "not_set"),
-            "redis_service": os.getenv("REDIS_SERVICE", "redis_cache")
+            # 脫敏：僅顯示是否設定，不顯示實際敏感值
+            "database_configured": bool(os.getenv("DB_USER")) and bool(os.getenv("DB_NAME")),
+            "redis_configured": bool(os.getenv("REDIS_SERVICE")),
+            "metrics_enabled": settings.enable_metrics
         }
     }
 
