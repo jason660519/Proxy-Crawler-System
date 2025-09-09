@@ -1,0 +1,6 @@
+ip,port,username,password,anonymity,country
+192.168.1.100,8080,,,high,US
+10.0.0.1,3128,user1,pass1,medium,CN
+172.16.0.1,1080,,,low,JP
+203.0.113.1,8888,admin,secret,high,DE
+198.51.100.1,9999,,,medium,FR

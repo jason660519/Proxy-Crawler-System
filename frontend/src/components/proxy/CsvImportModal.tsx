@@ -263,9 +263,29 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
             
             if (!ip) return;
             
+            // 處理端口：如果沒有提供端口，根據協議設置默認端口
+            let port: number | undefined;
+            if (columns[1] && columns[1].trim() !== '') {
+              port = parseInt(columns[1]);
+            } else {
+              // 根據協議設置默認端口
+              const protocol = columns[2] && columns[2].trim() !== '' ? columns[2].toLowerCase() : 'http';
+              switch (protocol) {
+                case 'https':
+                  port = 443;
+                  break;
+                case 'socks4':
+                case 'socks5':
+                  port = 1080;
+                  break;
+                default:
+                  port = 8080; // HTTP 代理常用端口
+              }
+            }
+            
             const proxy: ParsedProxy = {
               ip,
-              port: columns[1] ? parseInt(columns[1]) : undefined,
+              port,
               protocol: (columns[2] as any) || 'http',
               username: columns[3] || undefined,
               password: columns[4] || undefined,

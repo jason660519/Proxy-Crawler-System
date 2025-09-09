@@ -1,11 +1,10 @@
 """代理驗證器模組
 
-此包提供代理驗證相關的功能，包括：
-- 代理連通性測試
-- 速度測試
-- 匿名性檢測
-- 地理位置驗證
-- 協議支援檢測
+此模組提供完整的代理驗證功能：
+- ProxyValidator: 單個代理驗證
+- BatchValidator: 批量代理驗證
+- CoreValidator: 核心驗證器，提供統一接口和質量評分
+- 支援多種驗證方式、匿名性檢測和質量評分
 """
 
 from .proxy_validator import (
@@ -15,11 +14,25 @@ from .proxy_validator import (
     AnonymityLevel
 )
 from .batch_validator import BatchValidator
+from .core_validator import (
+    CoreValidator, 
+    EnhancedValidationResult, 
+    ValidationConfig, 
+    ValidationLevel,
+    QualityScore,
+    QualityMetric
+)
 
 __all__ = [
     'ProxyValidator',
     'ValidationResult', 
     'ProxyStatus',
     'AnonymityLevel',
-    'BatchValidator'
+    'BatchValidator',
+    'CoreValidator',
+    'EnhancedValidationResult',
+    'ValidationConfig',
+    'ValidationLevel',
+    'QualityScore',
+    'QualityMetric'
 ]

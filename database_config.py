@@ -68,12 +68,13 @@ class DatabaseConfig:
             >>> config.get_database_url('async')
             'postgresql+asyncpg://proxyadmin:password@postgres_db:5432/proxypool'
         """
-        # 在本地環境使用 SQLite 作為備用
-        if self.environment == 'local':
-            if driver == 'async':
-                return 'sqlite+aiosqlite:///./proxy_pool.db'
-            else:
-                return 'sqlite:///./proxy_pool.db'
+        # 本地環境也使用 PostgreSQL（需要本地安裝 PostgreSQL）
+        # 如果需要 SQLite 備用，請確保應用支持 SQLite
+        # if self.environment == 'local':
+        #     if driver == 'async':
+        #         return 'sqlite+aiosqlite:///./proxy_pool.db'
+        #     else:
+        #         return 'sqlite:///./proxy_pool.db'
         
         # 根據環境決定主機名
         host = self._get_database_host()
@@ -81,7 +82,7 @@ class DatabaseConfig:
         
         # 根據驅動類型決定協議
         if driver == 'async':
-            protocol = 'postgresql+asyncpg'
+            protocol = 'postgresql'  # asyncpg 只接受 postgresql 或 postgres
         else:
             protocol = 'postgresql'
         

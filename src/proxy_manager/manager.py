@@ -52,6 +52,7 @@ class ProxyManager:
         self.pool_manager = ProxyPoolManager()
         self.validator: Optional[ProxyValidator] = None
         self.batch_validator: Optional[BatchValidator] = None
+        self.database_service: Optional['DatabaseService'] = None
         
         # 狀態
         self._running = False
@@ -123,6 +124,10 @@ class ProxyManager:
         if self.validator and hasattr(self.validator, 'close'):
             await self.validator.close()
         
+        # 清理數據庫服務
+        if self.database_service:
+            await self.database_service.cleanup()
+        
         await self.advanced_fetcher_manager.close()
         await self.scanner.close()
         
@@ -147,6 +152,11 @@ class ProxyManager:
             self.config.validation,
             self.config.batch_validation_size
         )
+        
+        # 初始化數據庫服務
+        from .database_service import DatabaseService
+        self.database_service = DatabaseService()
+        await self.database_service.initialize()
         
         # 啟動池管理器
         await self.pool_manager.start()
@@ -464,6 +474,38 @@ class ProxyManager:
                         )
                         proxies.append(proxy)
         
+        elif file_path.suffix.lower() == '.csv':
+            import csv
+            async with aiofiles.open(file_path, 'r', encoding='utf-8') as f:
+                content = await f.read()
+                
+            # 使用StringIO處理CSV內容
+            import io
+            csv_file = io.StringIO(content)
+            reader = csv.DictReader(csv_file)
+            
+            for row in reader:
+                try:
+                    # 支持多種CSV格式
+                    host = row.get('host') or row.get('ip') or row.get('address')
+                    port = row.get('port')
+                    protocol = row.get('protocol', 'http').lower()
+                    anonymity = row.get('anonymity', 'unknown').lower()
+                    country = row.get('country', '')
+                    
+                    if host and port:
+                        proxy = ProxyNode(
+                            host=host.strip(),
+                            port=int(str(port).strip()),
+                            protocol=ProxyProtocol.HTTP if protocol == 'http' else ProxyProtocol.HTTPS if protocol == 'https' else ProxyProtocol.SOCKS5 if protocol == 'socks5' else ProxyProtocol.HTTP,
+                            anonymity=ProxyAnonymity.HIGH if anonymity == 'high' else ProxyAnonymity.MEDIUM if anonymity == 'medium' else ProxyAnonymity.LOW if anonymity == 'low' else ProxyAnonymity.UNKNOWN,
+                            country=country.strip() if country else None
+                        )
+                        proxies.append(proxy)
+                except (ValueError, KeyError) as e:
+                    logger.warning(f"跳過無效的CSV行: {row}, 錯誤: {e}")
+                    continue
+        
         else:
             raise ValueError(f"不支持的文件格式: {file_path.suffix}")
         
@@ -478,6 +520,63 @@ class ProxyManager:
             await self.pool_manager.add_proxies(proxies)
             logger.info(f"📥 導入 {len(proxies)} 個代理（未驗證）")
             return len(proxies)
+    
+    async def test_proxies(self, proxy_ids: List[str], test_url: str = "http://httpbin.org/ip", 
+                          timeout: int = 10, concurrent: int = 5) -> List[Dict[str, Any]]:
+        """測試代理連通性
+        
+        Args:
+            proxy_ids: 要測試的代理ID列表
+            test_url: 測試URL
+            timeout: 超時時間（秒）
+            concurrent: 並發數量
+            
+        Returns:
+            List[Dict[str, Any]]: 測試結果列表
+        """
+        if not self.validator:
+            logger.error("驗證器未初始化")
+            return []
+        
+        try:
+            # 根據ID獲取代理
+            proxies_to_test = []
+            for proxy_id in proxy_ids:
+                proxy = await self.database_service.get_proxy_by_id(proxy_id)
+                if proxy:
+                    proxies_to_test.append(proxy)
+                else:
+                    logger.warning(f"找不到代理 ID: {proxy_id}")
+            
+            if not proxies_to_test:
+                logger.warning("沒有找到要測試的代理")
+                return []
+            
+            logger.info(f"開始測試 {len(proxies_to_test)} 個代理")
+            
+            # 使用驗證器測試代理
+            validation_results = await self.validator.validate_proxies(
+                proxies_to_test, 
+                test_anonymity=False, 
+                test_geo=False
+            )
+            
+            # 轉換結果格式
+            results = []
+            for result in validation_results:
+                results.append({
+                    "proxy_id": result.proxy.id if hasattr(result.proxy, 'id') else f"{result.proxy.host}:{result.proxy.port}",
+                    "success": result.status == ProxyStatus.WORKING,
+                    "response_time": result.response_time,
+                    "error": result.error_message if result.error_message else None
+                })
+            
+            logger.info(f"代理測試完成，成功: {sum(1 for r in results if r['success'])}/{len(results)}")
+            return results
+            
+        except Exception as e:
+            logger.error(f"代理測試失敗: {e}")
+            return []
 
 
 # 使用示例

@@ -507,9 +507,13 @@ key: 'actions' as any,
   const handleCsvImport = useCallback(async (proxies: any[]) => {
     try {
       const importPromises = proxies.map(proxy => {
+        // 確保端口存在，如果沒有則使用默認端口
+        const port = proxy.port || (proxy.protocol === 'https' ? 443 : proxy.protocol === 'socks4' || proxy.protocol === 'socks5' ? 1080 : 8080);
+        const protocol = proxy.protocol || 'http';
+        
         const proxyData = {
-          url: `${proxy.protocol || 'http'}://${proxy.ip}${proxy.port ? ':' + proxy.port : ''}`,
-          type: (proxy.protocol || 'http') as ProxyProtocol,
+          url: `${protocol}://${proxy.ip}:${port}`,
+          type: protocol as ProxyProtocol,
           username: proxy.username,
           password: proxy.password,
           country: proxy.country,
@@ -525,6 +529,7 @@ key: 'actions' as any,
       handleLoadProxies();
       showNotification(`成功導入 ${proxies.length} 個代理`, 'success');
     } catch (error) {
+      console.error('CSV導入錯誤:', error);
       showNotification('批量導入失敗', 'error');
       throw error;
     }

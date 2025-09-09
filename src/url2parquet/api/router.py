@@ -1,7 +1,9 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import time
+import os
 
 from ..config import PipelineOptions
 from ..types import JobStatus, JobResult
@@ -214,6 +216,49 @@ async def get_file_content(job_id: str, format: str) -> Dict[str, Any]:
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to read file: {str(e)}")
+
+
+@router.get("/jobs/{job_id}/files/{format}/download")
+async def download_file(job_id: str, format: str):
+    """以正確的檔案型態串流下載生成的檔案（含 parquet 二進位）。"""
+    job = _jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="job not found")
+
+    # 找到對應格式的文件
+    file_info = None
+    for file in job.files:
+        if file.get("format") == format:
+            file_info = file
+            break
+
+    if not file_info:
+        raise HTTPException(status_code=404, detail=f"file with format {format} not found")
+
+    path = file_info.get("path")
+    if not path or not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="file not found on disk")
+
+    filename = os.path.basename(path)
+
+    # 根據格式決定 MIME 類型
+    content_type_map = {
+        "md": "text/markdown; charset=utf-8",
+        "json": "application/json; charset=utf-8",
+        "parquet": "application/octet-stream",
+        "csv": "text/csv; charset=utf-8",
+        "txt": "text/plain; charset=utf-8",
+    }
+    media_type = content_type_map.get(format.lower(), "application/octet-stream")
+
+    try:
+        return FileResponse(
+            path,
+            media_type=media_type,
+            filename=filename
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to stream file: {str(e)}")
 
 
 @router.post("/jobs/{job_id}/confirm-redirect")

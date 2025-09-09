@@ -148,7 +148,14 @@ class ExportRequest(BaseModel):
     """導出請求模型"""
     format_type: str = Field(default="json", pattern="^(json|txt|csv)$")
     pool_types: Optional[List[str]] = None
-    filename: Optional[str] = None
+
+
+class ImportRequest(BaseModel):
+    """導入請求模型"""
+    file_path: str = Field(description="要導入的文件路徑")
+    validate_proxies: bool = Field(default=True, description="是否驗證導入的代理")
+
+
 # Prometheus metrics
 REQUEST_COUNT = Counter("proxy_api_requests_total", "Total API requests", ["endpoint", "method", "status"])
 POOL_ACTIVE = Gauge("proxy_pool_active", "Active proxies in pool")
@@ -279,6 +286,14 @@ try:
 except Exception as e:
     logger.warning(f"⚠️ 無法掛載 URL2Parquet 路由: {e}")
 
+# 掛載代理管理 API 路由
+try:
+    from src.api.proxy_management_api import router as proxy_management_router
+    app.include_router(proxy_management_router)
+    logger.info("✅ 代理管理 API 路由已掛載到 /api")
+except Exception as e:
+    logger.warning(f"⚠️ 無法掛載代理管理 API 路由: {e}")
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -353,7 +368,7 @@ async def api_root():
     }
 
 
-@app.get("/api/health", response_model=HealthResponse, summary="健康檢查")
+@app.get("/health", response_model=HealthResponse, summary="健康檢查")
 async def health_check(manager: ProxyManager = Depends(get_proxy_manager)):
     """健康檢查接口（包含 DB 與 Redis 連線檢查）"""
     stats = manager.get_stats()
@@ -408,7 +423,7 @@ async def health_check(manager: ProxyManager = Depends(get_proxy_manager)):
     )
 
 
-@app.get("/api/proxy", response_model=ProxyResponse, summary="獲取單個代理")
+@app.get("/proxy", response_model=ProxyResponse, summary="獲取單個代理")
 async def get_proxy(
     protocol: Optional[str] = Query(None, description="協議類型 (http, https, socks4, socks5)"),
     anonymity: Optional[str] = Query(None, description="匿名度 (transparent, anonymous, elite)"),
@@ -476,7 +491,7 @@ async def get_proxy(
             pass
 
 
-@app.get("/api/proxies", response_model=List[ProxyResponse], summary="批量獲取代理")
+@app.get("/proxies", response_model=List[ProxyResponse], summary="批量獲取代理")
 async def get_proxies(
     count: int = Query(10, ge=1, le=100, description="獲取數量"),
     protocol: Optional[str] = Query(None, description="協議類型"),
@@ -531,7 +546,7 @@ async def get_proxies(
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
 
 
-@app.post("/api/proxies/filter", response_model=List[ProxyResponse], summary="使用複雜條件篩選代理")
+@app.post("/proxies/filter", response_model=List[ProxyResponse], summary="使用複雜條件篩選代理")
 async def filter_proxies(
     filter_request: ProxyFilterRequest,
     count: int = Query(10, ge=1, le=100, description="獲取數量"),
@@ -570,7 +585,7 @@ async def filter_proxies(
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
 
 
-@app.get("/api/stats", response_model=StatsResponse, summary="獲取統計信息")
+@app.get("/stats", response_model=StatsResponse, summary="獲取統計信息")
 async def get_stats(manager: ProxyManager = Depends(get_proxy_manager)):
     """獲取統計信息"""
     try:
@@ -611,7 +626,7 @@ class MetricsTrendsPoint(BaseModel):
 
 # 刪除重複的 metrics/trends 端點定義，保留更詳細的版本
 
-@app.post("/api/fetch", summary="手動獲取代理")
+@app.post("/fetch", summary="手動獲取代理")
 async def fetch_proxies(
     fetch_request: FetchRequest,
     background_tasks: BackgroundTasks,
@@ -637,7 +652,7 @@ async def fetch_proxies(
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
 
 
-@app.post("/api/validate", summary="手動驗證代理池", dependencies=[Depends(require_api_key)])
+@app.post("/validate", summary="手動驗證代理池", dependencies=[Depends(require_api_key)])
 async def validate_pools(
     background_tasks: BackgroundTasks,
     manager: ProxyManager = Depends(get_proxy_manager)
@@ -657,7 +672,7 @@ async def validate_pools(
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
 
 
-@app.post("/api/cleanup", summary="手動清理代理池", dependencies=[Depends(require_api_key)])
+@app.post("/cleanup", summary="手動清理代理池", dependencies=[Depends(require_api_key)])
 async def cleanup_pools(
     background_tasks: BackgroundTasks,
     manager: ProxyManager = Depends(get_proxy_manager)
@@ -677,7 +692,7 @@ async def cleanup_pools(
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
 
 
-@app.post("/api/export", summary="導出代理", dependencies=[Depends(require_api_key)])
+@app.post("/export", summary="導出代理", dependencies=[Depends(require_api_key)])
 async def export_proxies(
     export_request: ExportRequest,
     manager: ProxyManager = Depends(get_proxy_manager)
@@ -730,7 +745,45 @@ async def export_proxies(
         raise HTTPException(status_code=500, detail=f"導出失敗: {e}")
 
 
-@app.get("/api/download/{filename}", summary="下載導出文件")
+@app.post("/import", summary="導入代理", dependencies=[Depends(require_api_key)])
+async def import_proxies_endpoint(
+    import_request: ImportRequest,
+    manager: ProxyManager = Depends(get_proxy_manager)
+):
+    """從文件導入代理"""
+    try:
+        file_path = Path(import_request.file_path)
+        
+        # 檢查文件是否存在
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail=f"文件不存在: {import_request.file_path}")
+        
+        # 檢查文件格式
+        if file_path.suffix.lower() not in ['.json', '.txt', '.csv']:
+            raise HTTPException(status_code=400, detail="不支持的文件格式，僅支持 .json, .txt, .csv")
+        
+        # 導入代理
+        count = await manager.import_proxies(
+            file_path,
+            validate=import_request.validate_proxies
+        )
+        
+        return {
+            "message": "代理導入成功",
+            "file_path": str(file_path),
+            "count": count,
+            "validated": import_request.validate_proxies,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ 導入代理失敗: {e}")
+        raise HTTPException(status_code=500, detail=f"導入失敗: {e}")
+
+
+@app.get("/download/{filename}", summary="下載導出文件")
 async def download_file(filename: str):
     """下載導出的文件"""
     file_path = Path("data/exports") / filename
@@ -745,7 +798,7 @@ async def download_file(filename: str):
     )
 
 
-@app.get("/api/proxies/{proxy_id}", response_model=ProxyResponse, summary="獲取單個代理")
+@app.get("/proxies/{proxy_id}", response_model=ProxyResponse, summary="獲取單個代理")
 async def get_proxy_by_id(proxy_id: str):
     """根據ID獲取單個代理"""
     try:
@@ -773,7 +826,7 @@ async def get_proxy_by_id(proxy_id: str):
         )
 
 
-@app.post("/api/proxies/batch", response_model=ProxyResponse, summary="批量獲取代理")
+@app.post("/proxies/batch", response_model=ProxyResponse, summary="批量獲取代理")
 async def get_proxies_batch(
     filter_request: ProxyFilterRequest,
     count: int = Query(10, ge=1, le=100, description="獲取數量"),
@@ -808,7 +861,7 @@ async def get_proxies_batch(
         )
 
 
-@app.post("/api/database/proxies", response_model=ProxyResponse, summary="從數據庫獲取代理")
+@app.post("/database/proxies", response_model=ProxyResponse, summary="從數據庫獲取代理")
 async def get_database_proxies(
     page: int = Query(1, ge=1, description="頁碼"),
     page_size: int = Query(20, ge=1, le=100, description="每頁數量"),
@@ -878,7 +931,7 @@ async def get_database_proxies(
         )
 
 
-@app.get("/api/stats/detailed", summary="獲取詳細統計信息")
+@app.get("/stats/detailed", summary="獲取詳細統計信息")
 async def get_detailed_stats(manager: ProxyManager = Depends(get_proxy_manager)):
     """獲取詳細統計信息"""
     try:
@@ -904,7 +957,7 @@ async def get_detailed_stats(manager: ProxyManager = Depends(get_proxy_manager))
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
 
 
-@app.get("/api/pools", summary="獲取池詳細信息")
+@app.get("/pools", summary="獲取池詳細信息")
 async def get_pools_info(manager: ProxyManager = Depends(get_proxy_manager)):
     """獲取所有池的詳細信息"""
     try:
@@ -924,7 +977,7 @@ async def get_pools_info(manager: ProxyManager = Depends(get_proxy_manager)):
         raise HTTPException(status_code=500, detail="內部服務器錯誤")
 
 
-@app.post("/api/etl/sync", summary="同步代理數據到 ETL 系統", dependencies=[Depends(require_api_key)])
+@app.post("/etl/sync", summary="同步代理數據到 ETL 系統", dependencies=[Depends(require_api_key)])
 async def sync_to_etl(
     background_tasks: BackgroundTasks,
     pool_types: Optional[str] = Query("hot,warm,cold", description="要同步的池類型"),
@@ -960,7 +1013,7 @@ async def sync_to_etl(
         raise HTTPException(status_code=500, detail=f"啟動數據同步失敗: {e}")
 
 
-@app.get("/api/etl/status", summary="獲取 ETL 系統狀態")
+@app.get("/etl/status", summary="獲取 ETL 系統狀態")
 async def get_etl_status():
     """獲取 ETL 系統的狀態信息"""
     if not ETL_AVAILABLE:
@@ -989,7 +1042,7 @@ async def get_etl_status():
         raise HTTPException(status_code=500, detail=f"獲取 ETL 狀態失敗: {e}")
 
 
-@app.get("/api/metrics/summary", summary="獲取系統指標摘要")
+@app.get("/metrics/summary", summary="獲取系統指標摘要")
 async def get_metrics_summary(manager: ProxyManager = Depends(get_proxy_manager)):
     """獲取系統關鍵指標的摘要信息，供前端儀表板使用"""
     try:
@@ -1048,7 +1101,7 @@ async def get_metrics_summary(manager: ProxyManager = Depends(get_proxy_manager)
         raise HTTPException(status_code=500, detail=f"獲取指標摘要失敗: {e}")
 
 
-@app.get("/api/metrics/trends", summary="獲取系統指標趨勢")
+@app.get("/metrics/trends", summary="獲取系統指標趨勢")
 async def get_metrics_trends(
     hours: int = Query(24, description="查詢最近幾小時的趨勢數據"),
     manager: ProxyManager = Depends(get_proxy_manager)
@@ -1101,7 +1154,7 @@ async def get_metrics_trends(
         raise HTTPException(status_code=500, detail=f"獲取指標趨勢失敗: {e}")
 
 
-@app.post("/api/batch/validate", summary="批量驗證代理", dependencies=[Depends(require_api_key)])
+@app.post("/batch/validate", summary="批量驗證代理", dependencies=[Depends(require_api_key)])
 async def batch_validate_proxies(
     background_tasks: BackgroundTasks,
     pool_types: Optional[str] = Query("hot,warm,cold", description="要驗證的池類型"),

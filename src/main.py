@@ -27,7 +27,12 @@ app = FastAPI(
 # 添加 CORS 中間件
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,9 +41,8 @@ app.add_middleware(
 # 導入並掛載代理管理器 API
 try:
     from src.proxy_manager.api import app as proxy_api, proxy_manager
-    # 直接將所有路由添加到主應用
-    for route in proxy_api.routes:
-        app.routes.append(route)
+    # 使用 mount 方式掛載子應用
+    app.mount("/api", proxy_api)
     print("代理管理器 API 已掛載到 /api")
 except ImportError as e:
     print(f"無法載入代理管理器 API: {e}")

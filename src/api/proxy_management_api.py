@@ -12,11 +12,20 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
 from datetime import datetime
 import asyncio
-from ..core.proxy_manager import ProxyManager
-from ..models.proxy import ProxyNode, ProxyStatus, ProxyProtocol, AnonymityLevel
+from ..proxy_manager.manager import ProxyManager
+from ..proxy_manager.models import ProxyNode, ProxyStatus, ProxyProtocol, ProxyAnonymity
 from ..utils.pagination import PaginationParams, PaginatedResponse
-from ..utils.validation import validate_proxy_format
+# from ..proxy_manager.validators import validate_proxy_format
 from ..utils.logging import get_logger
+
+# ============= 輔助函數 =============
+
+def validate_proxy_format(ip: str, port: int) -> bool:
+    """驗證代理格式"""
+    import re
+    # 簡單的IP格式驗證
+    ip_pattern = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
+    return bool(re.match(ip_pattern, ip)) and 1 <= port <= 65535
 
 # ============= 路由器設定 =============
 
@@ -30,7 +39,7 @@ class ProxyFilters(BaseModel):
     status: Optional[List[ProxyStatus]] = Field(None, description="狀態篩選")
     protocol: Optional[List[ProxyProtocol]] = Field(None, description="協議篩選")
     country: Optional[List[str]] = Field(None, description="國家篩選")
-    anonymity: Optional[List[AnonymityLevel]] = Field(None, description="匿名等級篩選")
+    anonymity: Optional[List[ProxyAnonymity]] = Field(None, description="匿名等級篩選")
     search: Optional[str] = Field(None, description="搜尋關鍵字")
     min_speed: Optional[float] = Field(None, ge=0, description="最小響應速度 (ms)")
     max_speed: Optional[float] = Field(None, ge=0, description="最大響應速度 (ms)")
@@ -46,7 +55,7 @@ class ProxyCreateRequest(BaseModel):
     password: Optional[str] = Field(None, description="密碼")
     country: Optional[str] = Field(None, description="國家")
     city: Optional[str] = Field(None, description="城市")
-    anonymity: Optional[AnonymityLevel] = Field(AnonymityLevel.UNKNOWN, description="匿名等級")
+    anonymity: Optional[ProxyAnonymity] = Field(ProxyAnonymity.UNKNOWN, description="匿名等級")
     source: Optional[str] = Field(None, description="來源")
     tags: Optional[List[str]] = Field(default_factory=list, description="標籤")
 
@@ -55,7 +64,7 @@ class ProxyUpdateRequest(BaseModel):
     status: Optional[ProxyStatus] = Field(None, description="狀態")
     country: Optional[str] = Field(None, description="國家")
     city: Optional[str] = Field(None, description="城市")
-    anonymity: Optional[AnonymityLevel] = Field(None, description="匿名等級")
+    anonymity: Optional[ProxyAnonymity] = Field(None, description="匿名等級")
     tags: Optional[List[str]] = Field(None, description="標籤")
     notes: Optional[str] = Field(None, description="備註")
 
@@ -83,7 +92,7 @@ class ProxyResponse(BaseModel):
     country: Optional[str]
     country_code: Optional[str]
     city: Optional[str]
-    anonymity: AnonymityLevel
+    anonymity: ProxyAnonymity
     status: ProxyStatus
     response_time: Optional[float]
     last_checked: Optional[datetime]
@@ -134,9 +143,10 @@ class ProxyStatistics(BaseModel):
 
 async def get_proxy_manager() -> ProxyManager:
     """獲取代理管理器實例"""
-    # 這裡應該從應用程式上下文中獲取代理管理器
-    # 暫時返回一個模擬實例
-    return ProxyManager()
+    from ..proxy_manager.api import proxy_manager
+    if proxy_manager is None:
+        raise HTTPException(status_code=503, detail="代理管理器未初始化")
+    return proxy_manager
 
 # ============= API 端點 =============
 

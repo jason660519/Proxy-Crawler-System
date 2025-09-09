@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Space } from '../components/ui/Space';
 import { apiClient } from '../services/http';
+import http from '../services/http';
 
 interface ProxyInfo {
   ip: string;
@@ -46,6 +47,7 @@ const UrlToParquetWizard: React.FC = () => {
   const [markdownContents, setMarkdownContents] = useState<{[key: string]: string}>({});
   const [redirects, setRedirects] = useState<any[]>([]);
   const [showRedirectDialog, setShowRedirectDialog] = useState(false);
+  const [isPolling, setIsPolling] = useState<boolean>(false);
 
   // 解析 Markdown 中的代理表格
   const parseProxyTable = (markdown: string, sourceUrl?: string): ProxyInfo[] => {
@@ -135,8 +137,8 @@ const UrlToParquetWizard: React.FC = () => {
       const data = await apiClient.post<any>('/api/url2parquet/jobs', { 
         urls: validUrls, 
         output_formats: ['md', 'json', 'parquet'],
-        timeout_seconds: 30
-      });
+        timeout_seconds: 60
+      }, { timeout: 60000 });
       
       // 檢查是否為重定向響應
       if (data.status === 'redirected' && data.redirects) {
@@ -154,21 +156,11 @@ const UrlToParquetWizard: React.FC = () => {
       };
       
       setResults([jobResult]);
+      // 啟動檔案清單輪詢（避免後端尚未立即寫入 files）
+      startPollingFiles(jobResult.job_id);
       
-      // 如果有文件資訊，嘗試獲取 Markdown 內容
-      if (data.result && data.result.files) {
-        const mdFile = data.result.files.find((file: any) => file.format === 'md');
-        if (mdFile && data.job_id) {
-          try {
-            // 獲取 Markdown 文件內容
-            const fileResponse = await apiClient.get(`/api/url2parquet/jobs/${data.job_id}/files/md`);
-            setMarkdownContents({ [data.job_id]: fileResponse.content });
-          } catch (e) {
-            console.warn('無法獲取 Markdown 內容:', e);
-            setMarkdownContents({ [data.job_id]: '無法獲取 Markdown 內容' });
-          }
-        }
-      }
+      // 嘗試立即獲取 Markdown（若已有 files）
+      tryFetchMarkdownIfReady(data.job_id, data.result?.files || []);
     } catch (e: any) {
       setError(e?.message || '轉換失敗');
     } finally {
@@ -183,7 +175,7 @@ const UrlToParquetWizard: React.FC = () => {
     
     try {
       const redirectUrls = redirects.map(r => r.final_url);
-      const data = await apiClient.post(`/api/url2parquet/jobs/${redirects[0].job_id || 'temp'}/confirm-redirect`, redirectUrls);
+      const data = await apiClient.post(`/api/url2parquet/jobs/${redirects[0].job_id || 'temp'}/confirm-redirect`, redirectUrls, { timeout: 60000 } as any);
       
       const jobResult: JobResult = {
         job_id: data.job_id,
@@ -193,20 +185,10 @@ const UrlToParquetWizard: React.FC = () => {
       };
       
       setResults([jobResult]);
+      // 重定向確認後同樣輪詢檔案清單
+      startPollingFiles(jobResult.job_id);
       
-      // 如果有文件資訊，嘗試獲取 Markdown 內容
-      if (data.result && data.result.files) {
-        const mdFile = data.result.files.find((file: any) => file.format === 'md');
-        if (mdFile && data.job_id) {
-          try {
-            const fileResponse = await apiClient.get(`/api/url2parquet/jobs/${data.job_id}/files/md`);
-            setMarkdownContents({ [data.job_id]: fileResponse.content });
-          } catch (e) {
-            console.warn('無法獲取 Markdown 內容:', e);
-            setMarkdownContents({ [data.job_id]: '無法獲取 Markdown 內容' });
-          }
-        }
-      }
+      tryFetchMarkdownIfReady(data.job_id, data.result?.files || []);
     } catch (e: any) {
       setError(e?.message || '重定向處理失敗');
     } finally {
@@ -271,17 +253,48 @@ const UrlToParquetWizard: React.FC = () => {
       if (result.result && result.result.files) {
         for (const file of result.result.files) {
           try {
-            const response = await apiClient.get(`/api/url2parquet/jobs/${result.job_id}/files/${file.format}`);
-            const blob = new Blob([response.content], { type: 'text/plain;charset=utf-8;' });
+            // 以二進位 blob 方式下載（支援 parquet）
+            const resp = await http.get(
+              `/api/url2parquet/jobs/${result.job_id}/files/${file.format}/download`,
+              { responseType: 'blob', timeout: 60000 }
+            );
+            const contentDisposition = resp.headers['content-disposition'] as string | undefined;
+            const suggested = contentDisposition?.match(/filename="?([^";]+)"?/i)?.[1];
+            const filename = suggested || `${file.format}_${result.job_id}.${file.format}`;
+            const blob = new Blob([resp.data]);
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `${file.format}_${result.job_id}.${file.format}`;
+            link.download = filename;
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
           } catch (e) {
             console.warn(`無法下載文件 ${file.format}:`, e);
           }
         }
       }
+    }
+  };
+
+  // 針對單一檔案提供立即下載按鈕
+  const handleDownloadSingle = async (jobId: string, format: string) => {
+    try {
+      const resp = await http.get(
+        `/api/url2parquet/jobs/${jobId}/files/${format}/download`,
+        { responseType: 'blob', timeout: 60000 }
+      );
+      const contentDisposition = resp.headers['content-disposition'] as string | undefined;
+      const suggested = contentDisposition?.match(/filename="?([^";]+)"?/i)?.[1];
+      const filename = suggested || `${format}_${jobId}.${format}`;
+      const blob = new Blob([resp.data]);
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.warn(`無法下載文件 ${format}:`, e);
     }
   };
 
@@ -300,6 +313,71 @@ const UrlToParquetWizard: React.FC = () => {
     
     setProxyList(allProxies);
   }, [markdownContents, results]);
+
+  // ====== 輪詢與刷新邏輯 ======
+  const updateResultFiles = (jobId: string, files: Array<{ format: string; path: string; size: number }>) => {
+    if (!files || files.length === 0) return;
+    setResults(prev => prev.map(r => r.job_id === jobId ? { ...r, result: { ...(r.result || {}), files } } as any : r));
+    // 有了 files 後自動嘗試載入 Markdown
+    tryFetchMarkdownIfReady(jobId, files);
+  };
+
+  const tryFetchMarkdownIfReady = async (jobId: string, files: Array<{ format: string }>) => {
+    const hasMd = Array.isArray(files) && files.some(f => f.format === 'md');
+    if (!hasMd || !jobId) return;
+    if (markdownContents[jobId]) return; // 已載入過
+    try {
+      const fileResponse = await apiClient.get(`/api/url2parquet/jobs/${jobId}/files/md`, { timeout: 60000 } as any);
+      setMarkdownContents(prev => ({ ...prev, [jobId]: fileResponse.content }));
+    } catch (e) {
+      console.warn('無法獲取 Markdown 內容:', e);
+      setMarkdownContents(prev => ({ ...prev, [jobId]: '無法獲取 Markdown 內容' }));
+    }
+  };
+
+  const fetchJobFilesOnce = async (jobId: string) => {
+    try {
+      // 先查詢 /download（只回 files）
+      const dl = await apiClient.get<{ files: any[] }>(`/api/url2parquet/jobs/${jobId}/download`, { timeout: 30000 } as any);
+      const files = (dl as any)?.files || [];
+      if (files && files.length > 0) {
+        updateResultFiles(jobId, files as any);
+        return true;
+      }
+
+      // 回退查詢 /jobs/{id}
+      const job = await apiClient.get<any>(`/api/url2parquet/jobs/${jobId}`, { timeout: 30000 } as any);
+      const jobFiles = job?.files || job?.result?.files || [];
+      if (jobFiles && jobFiles.length > 0) {
+        updateResultFiles(jobId, jobFiles);
+        return true;
+      }
+    } catch (e) {
+      console.warn('刷新檔案清單失敗:', e);
+    }
+    return false;
+  };
+
+  const startPollingFiles = async (jobId: string) => {
+    if (!jobId || isPolling) return;
+    setIsPolling(true);
+    const start = Date.now();
+    const timeoutMs = 60000; // 最長 60 秒
+    const intervalMs = 2000; // 每 2 秒一次
+
+    const timer = setInterval(async () => {
+      const ok = await fetchJobFilesOnce(jobId);
+      if (ok) {
+        clearInterval(timer);
+        setIsPolling(false);
+        return;
+      }
+      if (Date.now() - start > timeoutMs) {
+        clearInterval(timer);
+        setIsPolling(false);
+      }
+    }, intervalMs);
+  };
 
   return (
     <Space direction="vertical" size={16}>
@@ -398,16 +476,36 @@ const UrlToParquetWizard: React.FC = () => {
                   <Typography>任務 ID: {result.job_id}</Typography>
                   <Typography>狀態: {result.status}</Typography>
                   <Typography>處理的 URL: {result.urls.join(', ')}</Typography>
-                  {result.result && result.result.files && (
+                  {result.result && result.result.files && result.result.files.length > 0 ? (
                     <div>
                       <Typography>生成的文件:</Typography>
                       <ul>
                         {result.result.files.map((file: any, fileIndex: number) => (
-                          <li key={fileIndex}>
-                            {file.format.toUpperCase()}: {file.path} ({file.size} bytes)
+                          <li key={fileIndex} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span>{file.format.toUpperCase()}: {file.path} ({file.size} bytes)</span>
+                            <Button size="small" variant="outline" onClick={() => handleDownloadSingle(result.job_id, file.format)}>
+                              下載
+                            </Button>
                           </li>
                         ))}
                       </ul>
+                    </div>
+                  ) : (
+                    <div>
+                      <Typography color="textSecondary">尚未生成檔案清單，可能仍在處理或寫入中。</Typography>
+                      <Space>
+                        <Button size="small" variant="outline" onClick={() => fetchJobFilesOnce(result.job_id)} disabled={loading}>
+                          刷新檔案清單
+                        </Button>
+                        {!isPolling && (
+                          <Button size="small" onClick={() => startPollingFiles(result.job_id)}>
+                            啟動自動刷新
+                          </Button>
+                        )}
+                        {isPolling && (
+                          <Typography color="textSecondary">自動刷新中...</Typography>
+                        )}
+                      </Space>
                     </div>
                   )}
                 </Space>

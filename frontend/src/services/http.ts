@@ -15,9 +15,17 @@ const getEnvVar = (key: string, defaultValue: string): string => {
   return (window as any)?.[`__${key}__`] || defaultValue;
 };
 
-const API_BASE_URL = getEnvVar('VITE_API_BASE_URL', '');
-const ETL_BASE_URL = getEnvVar('VITE_ETL_BASE_URL', '/etl');
-const REQUEST_TIMEOUT = parseInt(getEnvVar('VITE_REQUEST_TIMEOUT', '15000'));
+// 預設使用 Vite 開發代理，將 API 基底路徑設為 /api
+const RAW_API_BASE_URL = getEnvVar('VITE_API_BASE_URL', '/api');
+const RAW_ETL_BASE_URL = getEnvVar('VITE_ETL_BASE_URL', '/etl');
+
+// 在開發環境（Vite dev server）強制走代理，以避免瀏覽器直連 localhost:8000 造成 CORS
+const isDev = typeof import.meta !== 'undefined' && (import.meta as any).env?.DEV;
+const runningOnVite = typeof window !== 'undefined' && /:5173$/.test(window.location.host);
+
+const API_BASE_URL = (isDev || runningOnVite) ? '/api' : RAW_API_BASE_URL;
+const ETL_BASE_URL = (isDev || runningOnVite) ? '/etl' : RAW_ETL_BASE_URL;
+const REQUEST_TIMEOUT = parseInt(getEnvVar('VITE_REQUEST_TIMEOUT', '60000'));
 const API_KEY = getEnvVar('VITE_API_KEY', '');
 
 // 請求攔截器：添加通用標頭
@@ -38,6 +46,19 @@ const requestInterceptor = (config: any): any => {
     ...config.headers
   };
 
+  // 規範 URL：避免 baseURL 已含 /api 或 /etl 又傳入以 /api 或 /etl 開頭的路徑，導致 /api/api/xxx
+  try {
+    const base: string = config.baseURL || '';
+    if (typeof config.url === 'string') {
+      if (/\/api\/?$/.test(base) && config.url.startsWith('/api/')) {
+        config.url = config.url.replace(/^\/api\//, '/');
+      }
+      if (/\/etl\/?$/.test(base) && config.url.startsWith('/etl/')) {
+        config.url = config.url.replace(/^\/etl\//, '/');
+      }
+    }
+  } catch {}
+
   return config;
 };
 
@@ -49,6 +70,11 @@ const responseInterceptor = {
   onRejected: (error: any): Promise<never> => {
     // 網路錯誤
     if (!error.response) {
+      // axios 超時或中斷大多沒有 response
+      if (error.code === 'ECONNABORTED' || /timeout/i.test(error.message)) {
+        console.error('請求逾時:', error.message);
+        return Promise.reject(new Error('請求逾時，請稍後再試'));
+      }
       console.error('網路錯誤:', error.message);
       return Promise.reject(new Error('網路連線失敗，請檢查網路狀態'));
     }

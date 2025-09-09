@@ -1,0 +1,379 @@
+# Proxy Crawler System - 主配置文件
+# 系統核心配置和運行參數
+
+# 應用程序基本信息
+app:
+  name: "Proxy Crawler System"
+  version: "1.0.0"
+  description: "高性能代理爬蟲和管理系統"
+  environment: "production"  # development, testing, production
+  debug: false
+  timezone: "Asia/Taipei"
+
+# API 服務配置
+api:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 4
+  reload: false
+  log_level: "info"
+  access_log: true
+  cors_enabled: true
+  cors_origins:
+    - "*"
+  cors_methods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+    - "OPTIONS"
+  cors_headers:
+    - "*"
+  
+  # API 安全配置
+  security:
+    api_key_required: false
+    api_key_header: "X-API-Key"
+    rate_limiting_enabled: true
+    max_requests_per_minute: 1000
+    max_requests_per_hour: 10000
+    jwt_secret_key: "your-secret-key-here"
+    jwt_algorithm: "HS256"
+    jwt_expiration_hours: 24
+
+# Redis 配置
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+  password: ""
+  max_connections: 20
+  connection_timeout: 5
+  socket_timeout: 5
+  retry_on_timeout: true
+  health_check_interval: 30
+  
+  # Redis 鍵前綴
+  key_prefix: "proxy_crawler:"
+  
+  # 數據過期時間（秒）
+  expiration:
+    proxy_data: 86400      # 24小時
+    validation_result: 3600 # 1小時
+    task_result: 7200      # 2小時
+    cache_data: 1800       # 30分鐘
+    session_data: 3600     # 1小時
+
+# PostgreSQL 配置（可選）
+postgres:
+  host: "localhost"
+  port: 5432
+  database: "proxy_crawler"
+  username: "proxy_user"
+  password: "proxy_password"
+  pool_size: 10
+  max_overflow: 20
+  pool_timeout: 30
+  pool_recycle: 3600
+  echo: false
+
+# 日誌配置
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "json"  # text, json, structured
+  
+  # 文件日誌配置
+  file:
+    enabled: true
+    path: "logs/proxy-crawler.log"
+    max_size: "100MB"
+    backup_count: 5
+    rotation: "daily"  # daily, weekly, monthly, size
+  
+  # 控制台日誌配置
+  console:
+    enabled: true
+    colored: true
+  
+  # 結構化日誌配置
+  structured:
+    enabled: true
+    include_timestamp: true
+    include_level: true
+    include_logger: true
+    include_module: true
+    include_function: true
+    include_line: true
+
+# 代理驗證配置
+validation:
+  timeout: 30
+  retries: 3
+  concurrency: 50
+  batch_size: 100
+  
+  # 測試 URL 列表
+  test_urls:
+    - "http://httpbin.org/ip"
+    - "https://api.ipify.org"
+    - "http://icanhazip.com"
+    - "https://checkip.amazonaws.com"
+    - "http://whatismyipaddress.com/api"
+  
+  # User-Agent 列表
+  user_agents:
+    - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    - "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    - "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    - "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0"
+    - "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:121.0) Gecko/20100101 Firefox/121.0"
+  
+  # 驗證規則
+  rules:
+    min_response_time: 0.1    # 最小響應時間（秒）
+    max_response_time: 30.0   # 最大響應時間（秒）
+    min_success_rate: 0.8     # 最小成功率
+    min_anonymity_level: 1    # 最小匿名級別（1=透明, 2=匿名, 3=高匿）
+    check_ssl: true           # 檢查 SSL 支持
+    check_post: true          # 檢查 POST 請求支持
+    check_cookies: true       # 檢查 Cookie 支持
+
+# 任務調度配置
+scheduler:
+  max_workers: 10
+  task_timeout: 300
+  queue_size: 1000
+  batch_size: 100
+  schedule_interval: 60
+  
+  # 任務優先級
+  priorities:
+    validation: 1
+    crawling: 2
+    analysis: 3
+    cleanup: 4
+  
+  # 重試配置
+  retry:
+    max_attempts: 3
+    backoff_factor: 2
+    max_delay: 300
+
+# 存儲配置
+storage:
+  data_retention_days: 30
+  backup_enabled: true
+  backup_interval: 3600
+  compression_enabled: true
+  encryption_enabled: false
+  
+  # 清理配置
+  cleanup:
+    enabled: true
+    interval: 86400  # 24小時
+    keep_successful: 7  # 保留成功記錄天數
+    keep_failed: 3      # 保留失敗記錄天數
+
+# 性能配置
+performance:
+  cache_size: 10000
+  connection_pool_size: 100
+  max_memory_usage: "1GB"
+  optimization_enabled: true
+  profiling_enabled: false
+  
+  # 並發控制
+  concurrency:
+    max_concurrent_tasks: 100
+    max_concurrent_validations: 50
+    max_concurrent_crawls: 20
+    semaphore_timeout: 30
+
+# 監控配置
+monitoring:
+  enabled: true
+  prometheus_port: 9090
+  metrics_path: "/metrics"
+  health_check_path: "/health"
+  status_path: "/status"
+  
+  # 指標收集
+  metrics:
+    system_metrics: true
+    application_metrics: true
+    custom_metrics: true
+    collection_interval: 15
+  
+  # 告警配置
+  alerts:
+    enabled: true
+    email_notifications: false
+    webhook_notifications: false
+    slack_notifications: false
+    
+    # 告警閾值
+    thresholds:
+      cpu_usage: 80
+      memory_usage: 85
+      disk_usage: 90
+      error_rate: 5
+      response_time: 5000
+
+# 爬蟲配置
+crawler:
+  max_pages_per_site: 100
+  crawl_delay: 1
+  respect_robots_txt: true
+  max_depth: 3
+  
+  # 請求配置
+  request:
+    timeout: 30
+    max_redirects: 5
+    verify_ssl: false
+    
+  # 過濾配置
+  filters:
+    min_proxy_count: 10
+    max_proxy_count: 10000
+    allowed_protocols:
+      - "http"
+      - "https"
+      - "socks4"
+      - "socks5"
+    blocked_countries: []
+    allowed_countries: []
+
+# 代理源配置
+proxy_sources:
+  enabled_sources:
+    - "free_proxy_list"
+    - "proxy_list_download"
+    - "cool_proxy"
+    - "proxy_daily"
+    - "proxy_nova"
+  
+  # 源特定配置
+  sources:
+    free_proxy_list:
+      url: "https://free-proxy-list.net/"
+      selector: "table tbody tr"
+      update_interval: 3600
+    
+    proxy_list_download:
+      url: "https://www.proxy-list.download/"
+      update_interval: 7200
+    
+    cool_proxy:
+      url: "https://www.cool-proxy.net/"
+      update_interval: 3600
+
+# 功能開關
+features:
+  websocket_enabled: true
+  metrics_export: true
+  health_checks: true
+  auto_scaling: false
+  load_balancing: false
+  failover: true
+  backup_restore: true
+  data_export: true
+  api_documentation: true
+  admin_interface: true
+
+# 開發配置
+development:
+  debug_mode: false
+  hot_reload: false
+  profiling: false
+  mock_data: false
+  test_mode: false
+  
+  # 測試配置
+  testing:
+    use_test_database: true
+    mock_external_apis: true
+    fast_validation: true
+    skip_slow_tests: false
+
+# 部署配置
+deployment:
+  environment: "production"
+  container_name: "proxy-crawler"
+  restart_policy: "unless-stopped"
+  
+  # 資源限制
+  resources:
+    memory_limit: "2GB"
+    cpu_limit: "2.0"
+    disk_limit: "10GB"
+  
+  # 健康檢查
+  health_check:
+    enabled: true
+    interval: 30
+    timeout: 10
+    retries: 3
+    start_period: 60
+
+# 安全配置
+security:
+  encryption:
+    enabled: false
+    algorithm: "AES-256-GCM"
+    key_rotation_days: 90
+  
+  # 訪問控制
+  access_control:
+    ip_whitelist: []
+    ip_blacklist: []
+    country_whitelist: []
+    country_blacklist: []
+  
+  # 審計日誌
+  audit:
+    enabled: true
+    log_requests: true
+    log_responses: false
+    log_errors: true
+    retention_days: 90
+
+# 通知配置
+notifications:
+  email:
+    enabled: false
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    username: ""
+    password: ""
+    from_address: "noreply@proxycrawler.com"
+    to_addresses: []
+  
+  webhook:
+    enabled: false
+    url: ""
+    timeout: 10
+    retry_attempts: 3
+  
+  slack:
+    enabled: false
+    webhook_url: ""
+    channel: "#alerts"
+    username: "Proxy Crawler Bot"
+
+# 擴展配置
+extensions:
+  plugins_enabled: []
+  custom_validators: []
+  custom_crawlers: []
+  custom_filters: []
+  
+  # 插件配置
+  plugin_config: {}
+
+# 實驗性功能
+experimental:
+  machine_learning: false
+  ai_optimization: false
+  blockchain_integration: false
+  quantum_encryption: false
