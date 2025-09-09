@@ -8,14 +8,15 @@ import styled from 'styled-components';
 
 const DebugPanel = styled.div`
   position: fixed;
-  top: 10px;
+  bottom: 10px;
   right: 10px;
   background: var(--color-background-elevated);
   border: 1px solid var(--color-border-primary);
   border-radius: 8px;
   padding: 16px;
   font-size: 12px;
-  z-index: 9999;
+  /* 低於 Header（zIndex.header = 50），避免覆蓋右上角主題切換 */
+  z-index: 10;
   max-width: 300px;
   box-shadow: var(--color-shadow-medium);
   transition: all 0.3s ease;
@@ -95,13 +96,20 @@ interface ThemeDebuggerProps {
   theme: 'light' | 'dark';
   isDark: boolean;
   isVisible?: boolean;
+  /** 若在頁面內嵌顯示，使用 relative 流式佈局，不固定在角落 */
+  inline?: boolean;
 }
 
 export const ThemeDebugger: React.FC<ThemeDebuggerProps> = ({ 
   theme, 
   isDark, 
-  isVisible = false 
+  isVisible = false,
+  inline = false,
 }) => {
+  // 如果不是開發模式，強制不顯示，避免干擾使用者
+  if (!import.meta.env.DEV) {
+    isVisible = false;
+  }
   const [cssVars, setCssVars] = useState<Record<string, string>>({});
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -128,7 +136,7 @@ export const ThemeDebugger: React.FC<ThemeDebuggerProps> = ({
   if (!isVisible) return null;
 
   return (
-    <DebugPanel>
+    <DebugPanel style={inline ? { position: 'relative', bottom: 'auto', right: 'auto' } : undefined}>
       <DebugHeader>
         <DebugTitle>主題調試器</DebugTitle>
         <ToggleButton onClick={() => setIsExpanded(!isExpanded)}>

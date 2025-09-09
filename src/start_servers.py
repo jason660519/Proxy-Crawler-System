@@ -125,7 +125,7 @@ class ServerManager:
         try:
             logger.info(f"🚀 啟動 ETL API 服務器 - {host}:{port}")
             uvicorn.run(
-                "etl.etl_api:etl_app",
+                "src.etl.etl_api:etl_app",
                 host=host,
                 port=port,
                 log_level="info",

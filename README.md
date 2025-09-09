@@ -86,19 +86,64 @@ python setup_api_config.py interactive
 # 5. 測試核心功能
 python test_core_functionality.py
 
-# 6. 啟動服務
-python src/main.py
+# 6. 啟動服務（見下方速查指令與網址）
 ```
+
+> 提示：現在只需在專案根目錄執行 `uv sync`，即可快速、可靠地建立與專案定義完全一致的 Python 開發環境，無需再關心複雜的 pip 與 venv 指令。這大幅簡化入門流程並保證環境一致性。
 
 ### Docker 部署
 
 ```bash
-# 使用 Docker Compose 啟動所有服務
-docker-compose up -d
+# 使用 Docker Compose 啟動所有服務（新插件語法）
+docker compose up -d --build
 
-# 或單獨構建和運行
-docker build -t jason-spider .
-docker run -p 8000:8000 jason-spider
+# 停止並清理
+docker compose down
+```
+
+## 🧭 啟動與存取網址速查
+
+> 下列指令均在專案根目錄執行，除前端須先進入 `frontend`。
+
+### 前端（Vite 開發伺服器）
+
+```bash
+cd frontend
+npm ci
+npm run dev
+# 開啟瀏覽器存取
+# http://127.0.0.1:5173
+```
+
+### 主後端 API（Port 8000）
+
+```bash
+uv run python run_server.py
+# 健康檢查
+# http://127.0.0.1:8000/health
+# API 文件（Swagger）
+# http://127.0.0.1:8000/docs
+```
+
+### ETL API（Port 8001）
+
+> 注意：ETL API 的文件與健康檢查路徑與主後端不同。
+
+```bash
+uv run uvicorn src.etl.etl_api:etl_app --host 0.0.0.0 --port 8001 --log-level info
+# 文件（Swagger）
+# http://127.0.0.1:8001/etl/docs
+# 健康檢查
+# http://127.0.0.1:8001/api/etl/health
+```
+
+### 以 Docker 啟動（可選）
+
+```bash
+docker compose up -d --build
+# 主後端: http://127.0.0.1:8000
+# ETL API: http://127.0.0.1:8001 (文件與健康檢查同上)
+# Redis: 6379（容器內部網路）
 ```
 
 ## 📖 API 使用
@@ -147,6 +192,7 @@ cp .env.example .env
 - [API 參考文檔](API_REFERENCE.md) - 完整的 API 接口說明
 - [部署指南](DEPLOYMENT_GUIDE.md) - 詳細的部署和維護指南
 - [API 配置指南](API_CONFIGURATION.md) - API 金鑰配置說明
+- [專案依賴包說明（2025-09-08）](Docs/專案依賴包說明_2025-09-08.md) - 依賴套件用途與分類
 
 ### 專案文檔
 

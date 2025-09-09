@@ -601,6 +601,9 @@ export function useTheme() {
 
   // 跨組件同步：監聽主題變更事件
   useEffect(() => {
+    const handleToggleRequest = () => {
+      try { setTheme(prev => (prev === 'light' ? 'dark' : 'light')); } catch {}
+    };
     const handleThemeChanged = (e: Event) => {
       const newTheme = (e as CustomEvent<'light' | 'dark'>).detail;
       if (newTheme && newTheme !== theme) {
@@ -609,8 +612,10 @@ export function useTheme() {
     };
 
     window.addEventListener('js-theme-changed', handleThemeChanged as EventListener);
+    window.addEventListener('js-theme-request-toggle', handleToggleRequest as EventListener);
     return () => {
       window.removeEventListener('js-theme-changed', handleThemeChanged as EventListener);
+      window.removeEventListener('js-theme-request-toggle', handleToggleRequest as EventListener);
     };
   }, [theme, setTheme]);
 
