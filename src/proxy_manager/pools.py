@@ -251,21 +251,21 @@ class ProxyPool:
 
 class ProxyPoolManager:
     """代理池管理器"""
-    
+
     def __init__(self, config: Optional[PoolConfig] = None):
         self.config = config or PoolConfig()
         self.pools: Dict[PoolType, ProxyPool] = {
             PoolType.HOT: ProxyPool(PoolType.HOT, self.config),
             PoolType.WARM: ProxyPool(PoolType.WARM, self.config),
             PoolType.COLD: ProxyPool(PoolType.COLD, self.config),
-            PoolType.BLACKLIST: ProxyPool(PoolType.BLACKLIST, self.config)
+            PoolType.BLACKLIST: ProxyPool(PoolType.BLACKLIST, self.config),
         }
         self.validator: Optional[ProxyValidator] = None
         self._balance_task: Optional[asyncio.Task] = None
         self._running = False
-    # 租借機制: proxy_id -> (leased_at, lease_seconds)
-    self._leases: Dict[str, tuple[datetime, int]] = {}
-    self._default_lease_seconds = 30
+        # 租借機制: proxy_id -> (leased_at, lease_seconds)
+        self._leases: Dict[str, tuple[datetime, int]] = {}
+        self._default_lease_seconds = 30
     
     async def start(self):
         """啟動池管理器"""
@@ -292,7 +292,17 @@ class ProxyPoolManager:
                     pass
             
             if self.validator:
-                await self.validator.close()
+                # 兼容性關閉：若有 async close 則 await，否則嘗試同步 close_sync
+                try:
+                    if hasattr(self.validator, 'close') and asyncio.iscoroutinefunction(self.validator.close):  # type: ignore[arg-type]
+                        await self.validator.close()  # type: ignore[misc]
+                    elif hasattr(self.validator, 'close') and not asyncio.iscoroutinefunction(self.validator.close):  # type: ignore[arg-type]
+                        # 舊版同步關閉
+                        self.validator.close()  # type: ignore[call-arg]
+                    elif hasattr(self.validator, 'close_sync'):
+                        self.validator.close_sync()  # type: ignore[call-arg]
+                except Exception:
+                    pass
             
             logger.info("🛑 代理池管理器已停止")
     

@@ -38,7 +38,10 @@ from .api_shared import (
     get_proxy_manager,
     proxy_manager as GLOBAL_PROXY_MANAGER_REF,
 )
-from .manager import ProxyManager  # Import for type hints & initialization
+# 延遲導入 ProxyManager 以避免循環引用; 僅型別檢查時引用
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:  # pragma: no cover
+    from .manager import ProxyManager
 
 # Create app instance (re-added after refactor)
 async def _lifespan(app: FastAPI):
@@ -55,6 +58,7 @@ async def _lifespan(app: FastAPI):
         pass
     app.state.commit_hash = commit_hash
     if pm_ref is None:
+        from .manager import ProxyManager  # 延遲導入
         mgr = ProxyManager()
         try:
             await mgr.start()
@@ -107,6 +111,31 @@ async def root_health_redirect():
     """Redirect /health -> /api/health for convenience (browser friendly)."""
     return RedirectResponse(url="/api/health")
 
+@app.get("/api/system/health", summary="系統整體狀態")
+async def system_health():
+    """彙總 ProxyManager (若可用) 與基本服務狀態。"""
+    from .api_shared import proxy_manager as pm
+    base = {
+        "service": "Proxy Manager API",
+        "version": app.version,
+        "commit": getattr(app.state, 'commit_hash', None),
+        "timestamp": datetime.utcnow().isoformat() + 'Z'
+    }
+    if pm is None:
+        base["proxy_manager"] = {"initialized": False}
+    else:
+        try:
+            stats = pm.get_stats()  # type: ignore[attr-defined]
+            base["proxy_manager"] = {
+                "initialized": True,
+                "total_fetched": stats.get('total_fetched'),
+                "total_active": stats.get('total_active'),
+                "running": stats.get('start_time') is not None,
+            }
+        except Exception as e:
+            base["proxy_manager"] = {"initialized": True, "error": str(e)}
+    return base
+
 
 ## Stats & pools endpoints moved to routes_stats / routes_health_etl
 
@@ -115,7 +144,7 @@ async def root_health_redirect():
 async def sync_to_etl(
     background_tasks: BackgroundTasks,
     pool_types: Optional[str] = Query("hot,warm,cold", description="要同步的池類型"),
-    manager: ProxyManager = Depends(get_proxy_manager)
+    manager = Depends(get_proxy_manager)
 ):
     """將代理管理器中的數據同步到 ETL 系統"""
     if not ETL_AVAILABLE:
@@ -151,7 +180,7 @@ async def sync_to_etl(
 
 
 @app.get("/api/metrics/summary", summary="獲取系統指標摘要")
-async def get_metrics_summary(manager: ProxyManager = Depends(get_proxy_manager)):
+async def get_metrics_summary(manager = Depends(get_proxy_manager)):
     """獲取系統關鍵指標的摘要信息，供前端儀表板使用"""
     try:
         stats = manager.get_stats()
@@ -259,7 +288,7 @@ async def general_exception_handler(request, exc):
 
 # ===== 背景任務函數 =====
 
-async def _sync_data_to_etl(manager: ProxyManager, pool_types: List[str]):
+async def _sync_data_to_etl(manager, pool_types: List[str]):
     """同步數據到 ETL 系統的背景任務"""
     try:
         logger.info(f"🔄 開始同步數據到 ETL 系統，池類型: {pool_types}")

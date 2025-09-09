@@ -110,17 +110,18 @@ class ProxyValidator:
         # 獲取真實IP地址
         await self._get_real_ip()
     
-    async def close(self):
-        """關閉驗證器"""
+    async def close(self):  # async close
+        """關閉驗證器 (異步)"""
         if self.session:
-            await self.session.close()
+            try:
+                await self.session.close()
+            except Exception:  # noqa: BLE001
+                pass
             self.session = None
-    
-    def close(self):
-        """同步關閉驗證器（用於非異步上下文）"""
+
+    def close_sync(self):  # renamed to avoid shadowing async version
+        """同步關閉驗證器（標記會話釋放）"""
         if self.session and not self.session.closed:
-            # 在同步上下文中，我們不能直接關閉異步會話
-            # 但我們可以標記它為需要關閉
             self.session = None
     
     async def _get_real_ip(self):

@@ -10,10 +10,9 @@
 - 統一管理介面
 """
 
-# 核心管理組件
+# 核心管理組件 (延遲載入以避免循環匯入)
 from .pools import ProxyPool
-from .manager import ProxyManager
-# from .config import ProxyConfig  # 暫時註解掉，ProxyConfig類尚未實現
+# ProxyManager 不在此直接導入，供需要的模組自行局部導入以避免循環
 
 # 爬蟲管理組件
 from .crawler_manager import CrawlerManager
@@ -30,8 +29,8 @@ from .validators.proxy_validator import ProxyValidator, ValidationResult, ProxyS
 __all__ = [
     # 核心管理
     'ProxyPool',
-    'ProxyManager', 
-    'ProxyConfig',
+    # 'ProxyManager',  # 避免循環匯入
+    # 'ProxyConfig',
     
     # 爬蟲管理
     'CrawlerManager',

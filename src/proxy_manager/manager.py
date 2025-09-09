@@ -45,14 +45,13 @@ class ProxyManager:
     
     def __init__(self, config: Optional[ProxyManagerConfig] = None):
         self.config = config or ProxyManagerConfig()
-        
+
         # 核心組件
         self.fetcher_manager = ProxyFetcherManager()
-        # 為 AdvancedProxyFetcherManager 準備字典格式的配置
         advanced_config = {
             "proxyscrape_api_key": getattr(self.config.api, 'proxyscrape_api_key', None),
             "github_token": getattr(self.config.api, 'github_token', None),
-            "shodan_api_key": getattr(self.config.api, 'shodan_api_key', None)
+            "shodan_api_key": getattr(self.config.api, 'shodan_api_key', None),
         }
         self.advanced_fetcher_manager = AdvancedProxyFetcherManager(advanced_config)
         self.scanner = ProxyScanner(self.config.scanner)
@@ -60,7 +59,7 @@ class ProxyManager:
         self.pool_manager = ProxyPoolManager()
         self.validator: Optional[ProxyValidator] = None
         self.batch_validator: Optional[BatchValidator] = None
-        
+
         # 服務層組件
         if FetchService and ValidationService and PersistenceService:
             self.fetch_service = FetchService(self)  # type: ignore
@@ -71,13 +70,13 @@ class ProxyManager:
             self.validation_service = None  # type: ignore
             self.persistence_service = None  # type: ignore
 
-        # 狀態
+        # 狀態與控制
         self._running = False
         self._tasks: List[asyncio.Task] = []
         self._fetch_lock = asyncio.Lock()
-    self._heartbeat: Dict[str, Any] = {}
-    self._task_registry: Dict[str, Dict[str, Any]] = {}
-        
+        self._heartbeat: Dict[str, Any] = {}
+        self._task_registry: Dict[str, Dict[str, Any]] = {}
+
         # 統計
         self.stats = {
             'total_fetched': 0,
@@ -85,7 +84,7 @@ class ProxyManager:
             'total_active': 0,
             'last_fetch_time': None,
             'last_validation_time': None,
-            'start_time': None
+            'start_time': None,
         }
     
     async def start(self):
@@ -179,18 +178,11 @@ class ProxyManager:
         }
 
     def _register_task(self, name: str, task: asyncio.Task):
+        """註冊背景任務供監控。"""
         self._task_registry[name] = {
             'created_at': datetime.now().isoformat(),
             'task': task,
         }
-        
-        if self.validator and hasattr(self.validator, 'close'):
-            await self.validator.close()
-        
-        await self.advanced_fetcher_manager.close()
-        await self.scanner.close()
-        
-        logger.info("✅ 代理管理器已停止")
     
     async def _initialize_components(self):
         """初始化組件"""

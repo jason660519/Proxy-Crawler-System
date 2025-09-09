@@ -20,7 +20,9 @@ from pydantic import BaseModel, Field
 from prometheus_client import Counter, Gauge, Histogram
 
 from src.config.settings import settings
-from .manager import ProxyManager
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:  # 避免循環匯入僅供型別檢查
+    from .manager import ProxyManager  # pragma: no cover
 from .models import (
     ProxyNode,
     ProxyAnonymity,
@@ -126,7 +128,7 @@ class HealthResponse(BaseModel):
 
 class FetchRequest(BaseModel):
     sources: Optional[List[str]] = None
-    validate: bool = True
+    perform_validation: bool = True  # renamed from validate to avoid shadowing BaseModel.validate
 
 
 class ExportRequest(BaseModel):
@@ -179,7 +181,7 @@ VALIDATION_GEO_DETECT_COUNT = Counter(
 )
 
 # ---------- Global State ----------
-proxy_manager: Optional[ProxyManager] = None
+proxy_manager: Optional["ProxyManager"] = None  # forward ref
 ROLLUP_LOCK = asyncio.Lock()
 
 # ---------- Dependencies ----------
@@ -191,7 +193,7 @@ async def require_api_key(x_api_key: Optional[str] = Header(default=None)):
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 
-def get_proxy_manager() -> ProxyManager:
+def get_proxy_manager() -> "ProxyManager":
     if proxy_manager is None:
         raise HTTPException(status_code=503, detail="代理管理器未初始化")
     return proxy_manager
