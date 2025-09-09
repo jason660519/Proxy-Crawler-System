@@ -16,13 +16,13 @@ export const ProxyStatus = {
 export type ProxyStatus = typeof ProxyStatus[keyof typeof ProxyStatus];
 
 // 代理協議類型
-export const ProxyProtocol = {
+export const ProxyProtocolValues = {
   HTTP: 'http',
   HTTPS: 'https',
   SOCKS4: 'socks4',
   SOCKS5: 'socks5'
 } as const;
-export type ProxyProtocol = typeof ProxyProtocol[keyof typeof ProxyProtocol];
+export type ProxyProtocol = typeof ProxyProtocolValues[keyof typeof ProxyProtocolValues];
 
 // 代理匿名等級
 export const AnonymityLevel = {
@@ -38,7 +38,8 @@ export const TaskStatus = {
   RUNNING: 'running',
   COMPLETED: 'completed',
   FAILED: 'failed',
-  CANCELLED: 'cancelled'
+  CANCELLED: 'cancelled',
+  PAUSED: 'paused'
 } as const;
 export type TaskStatus = typeof TaskStatus[keyof typeof TaskStatus];
 
@@ -77,6 +78,15 @@ export interface ProxyNode {
   lastChecked?: string; // ISO 日期字串
   uptime?: number; // 百分比
   source?: string; // 來源網站
+  maxConcurrent?: number; // 最大併發數
+  timeout?: number; // 超時時間（毫秒）
+  enabled?: boolean; // 是否啟用
+  username?: string; // 用戶名
+  password?: string; // 密碼
+  url?: string; // 完整代理 URL
+  type?: string; // 代理類型（向後兼容）
+  healthScore?: number; // 健康分數
+  tags?: string[]; // 標籤
   createdAt: string;
   updatedAt: string;
 }
@@ -87,14 +97,117 @@ export interface Task {
   name: string;
   type: string;
   status: TaskStatus;
+  priority: TaskPriority;
   progress?: number; // 0-100
   startTime?: string;
   endTime?: string;
   duration?: number; // 毫秒
   result?: any;
   error?: string;
+  metadata?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
+}
+
+// 任務創建請求
+export interface TaskCreateRequest {
+  name: string;
+  type: string;
+  priority?: TaskPriority;
+  metadata?: Record<string, any>;
+}
+
+// 任務更新請求
+export interface TaskUpdateRequest {
+  name?: string;
+  priority?: TaskPriority;
+  metadata?: Record<string, any>;
+}
+
+// 任務統計介面
+export interface TaskStatistics {
+  total: number;
+  pending: number;
+  running: number;
+  completed: number;
+  failed: number;
+  cancelled: number;
+  paused: number;
+  successRate: number;
+  averageExecutionTime: number;
+  totalExecutionTime: number;
+}
+
+// 佇列狀態介面
+export interface QueueStatus {
+  isRunning: boolean;
+  queueSize: number;
+  activeWorkers: number;
+  maxWorkers: number;
+  processingRate: number;
+  lastProcessedAt?: string;
+}
+
+// 任務操作類型
+export const TaskOperation = {
+  START: 'start',
+  PAUSE: 'pause',
+  RESUME: 'resume',
+  CANCEL: 'cancel',
+  RETRY: 'retry',
+  DELETE: 'delete'
+} as const;
+export type TaskOperation = typeof TaskOperation[keyof typeof TaskOperation];
+
+// 佇列操作類型
+export const QueueOperation = {
+  START: 'start',
+  STOP: 'stop',
+  PAUSE: 'pause',
+  RESUME: 'resume',
+  CLEAR: 'clear'
+} as const;
+export type QueueOperation = typeof QueueOperation[keyof typeof QueueOperation];
+
+// 爬蟲任務介面（擴展基礎任務）
+export interface CrawlTask extends Task {
+  url: string;
+  description?: string;
+  priority: TaskPriority;
+  maxRetries: number;
+  timeout: number;
+  proxyIds: string[];
+  headers: Record<string, string>;
+  cookies: Record<string, string>;
+  scheduledAt?: Date;
+  recurring: boolean;
+  recurringPattern?: string;
+  enabled: boolean;
+}
+
+// 任務執行結果
+export interface TaskExecutionResult {
+  taskId: string;
+  success: boolean;
+  data?: any;
+  error?: string;
+  duration: number;
+  timestamp: string;
+}
+
+// 批量操作結果
+export interface BulkOperationResult {
+  success: boolean;
+  processed: number;
+  failed: number;
+  errors?: string[];
+  message: string;
+}
+
+// 排序配置
+export interface SortConfig {
+  field: string;
+  direction: 'asc' | 'desc';
 }
 
 // 健康狀態介面
@@ -141,6 +254,9 @@ export interface LogEntry {
   source: string;
   message: string;
   details?: Record<string, any>;
+  category?: string;
+  userId?: string;
+  requestId?: string;
 }
 
 // ============= UI 相關類型 =============
@@ -313,6 +429,175 @@ export interface SearchBoxProps extends BaseComponentProps {
   loading?: boolean;
 }
 
+// ============= 分頁管理相關類型 =============
+
+// 代理管理分頁
+export interface ProxyManagementState {
+  proxies: ProxyNode[];
+  selectedProxies: string[];
+  filters: ProxyFilters;
+  pagination: PaginationState;
+  loading: boolean;
+  error?: string;
+  total: number;
+  totalCount: number;
+}
+
+export interface ProxyFilters {
+  status?: ProxyStatus[];
+  protocol?: ProxyProtocol[];
+  country?: string[];
+  anonymity?: AnonymityLevel[];
+  search?: string;
+  speedRange?: [number, number];
+  healthScore?: { min: number; max: number };
+  type?: ProxyProtocol;
+  tags?: string[];
+}
+
+export interface ProxyBatchOperation {
+  type: 'test' | 'delete' | 'export' | 'tag';
+  proxyIds: string[];
+  options?: Record<string, any>;
+}
+
+// 任務佇列分頁
+export interface TaskQueueState {
+  tasks: Task[];
+  selectedTasks: string[];
+  filters: TaskFilters;
+  pagination: PaginationState;
+  loading: boolean;
+  error?: string;
+  totalCount: number;
+}
+
+export interface TaskFilters {
+  status?: TaskStatus[];
+  type?: string[];
+  search?: string;
+  dateRange?: [string, string];
+  priority?: TaskPriority[];
+}
+
+// 任務優先級
+export const TaskPriority = {
+  HIGH: 'high',
+  MEDIUM: 'medium',
+  LOW: 'low'
+} as const;
+export type TaskPriority = typeof TaskPriority[keyof typeof TaskPriority];
+
+export interface TaskSchedule {
+  id: string;
+  name: string;
+  type: string;
+  schedule: string; // cron expression
+  enabled: boolean;
+  lastRun?: string;
+  nextRun?: string;
+  createdAt: string;
+}
+
+// 系統日誌分頁
+export interface SystemLogsState {
+  logs: LogEntry[];
+  filters: LogFilters;
+  pagination: PaginationState;
+  loading: boolean;
+  error?: string;
+  realTimeEnabled: boolean;
+  totalCount: number;
+}
+
+export interface LogFilters {
+  level?: LogLevel[];
+  source?: string[];
+  search?: string;
+  timeRange?: [string, string];
+  dateRange?: [string, string];
+  category?: string;
+}
+
+export interface LogSource {
+  name: string;
+  label: string;
+  count: number;
+  enabled: boolean;
+}
+
+// 數據分析分頁
+export interface DataAnalyticsState {
+  metrics: SystemMetrics;
+  trends: TrendData;
+  reports: AnalyticsReport[];
+  loading: boolean;
+  error?: string;
+  timeRange: TimeRange;
+}
+
+export interface AnalyticsReport {
+  id: string;
+  name: string;
+  type: 'proxy_performance' | 'task_summary' | 'system_health' | 'custom';
+  data: any;
+  generatedAt: string;
+  format: 'chart' | 'table' | 'summary';
+}
+
+export interface TimeRange {
+  start: string;
+  end: string;
+  preset?: '1h' | '6h' | '24h' | '7d' | '30d' | 'custom';
+}
+
+// 通用分頁狀態
+export interface PaginationState {
+  current: number;
+  pageSize: number;
+  total: number;
+  showSizeChanger: boolean;
+  showQuickJumper: boolean;
+}
+
+// 表格排序狀態
+export interface SortState {
+  field?: string;
+  order?: 'asc' | 'desc';
+}
+
+
+
+// ============= 頁面導航相關類型 =============
+
+export interface PageTab {
+  key: string;
+  label: string;
+  icon?: string;
+  badge?: number;
+  disabled?: boolean;
+}
+
+export interface PageAction {
+  key: string;
+  label: string;
+  icon?: string;
+  type?: 'primary' | 'secondary' | 'danger';
+  disabled?: boolean;
+  onClick: () => void;
+}
+
+export interface PageToolbar {
+  search?: {
+    placeholder: string;
+    value: string;
+    onChange: (value: string) => void;
+  };
+  filters?: React.ReactNode;
+  actions?: PageAction[];
+  extra?: React.ReactNode;
+}
+
 // ============= Hook 類型 =============
 
 // API Hook 回傳類型
@@ -337,4 +622,35 @@ export interface UseLocalStorageOptions<T> {
     read: (value: string) => T;
     write: (value: T) => string;
   };
+}
+
+// 分頁 Hook 選項
+export interface UsePaginationOptions {
+  defaultPageSize?: number;
+  showSizeChanger?: boolean;
+  showQuickJumper?: boolean;
+  onPageChange?: (page: number, pageSize: number) => void;
+}
+
+// 表格 Hook 選項
+export interface UseTableOptions<T> {
+  data: T[];
+  pagination?: UsePaginationOptions;
+  sorting?: {
+    defaultSort?: SortState;
+    onSortChange?: (sort: SortState) => void;
+  };
+  selection?: {
+    type?: 'checkbox' | 'radio';
+    onSelectionChange?: (selectedKeys: string[], selectedRows: T[]) => void;
+  };
+}
+
+// 代理測試結果介面
+export interface ProxyTestResult {
+  proxy_id: string;
+  success: boolean;
+  response_time?: number;
+  error?: string;
+  tested_at: string;
 }

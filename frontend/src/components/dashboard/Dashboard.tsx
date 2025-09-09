@@ -9,6 +9,9 @@ import { HealthCard } from './HealthCard';
 import { TrendChart } from './TrendChart';
 import { TaskBoard } from './TaskBoard';
 import { LogViewer } from './LogViewer';
+import { AdvancedAnalytics } from './AdvancedAnalytics';
+import { DataVisualization } from './DataVisualization';
+import { AnalyticsReport } from './AnalyticsReport';
 import { spacing } from '../../styles';
 // ============= 類型定義 =============
 
@@ -98,7 +101,10 @@ const DashboardGrid = styled.div`
   grid-template-columns: 1fr 1fr;
   grid-template-areas:
     "health trends"
-    "tasks logs";
+    "tasks logs"
+    "analytics analytics"
+    "visualization visualization"
+    "report report";
   
   @media (max-width: 1200px) {
     grid-template-columns: 1fr;
@@ -106,7 +112,10 @@ const DashboardGrid = styled.div`
       "health"
       "trends"
       "tasks"
-      "logs";
+      "logs"
+      "analytics"
+      "visualization"
+      "report";
   }
 `;
 
@@ -279,6 +288,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
         
         <GridItem gridArea="logs" minHeight="400px">
           <LogViewer maxItems={50} autoScroll={true} />
+        </GridItem>
+        
+        <GridItem gridArea="analytics" minHeight="400px">
+          <AdvancedAnalytics />
+        </GridItem>
+        
+        <GridItem gridArea="visualization" minHeight="300px">
+          <DataVisualization 
+            title="系統性能趨勢"
+            chartType="area"
+            height={300}
+          />
+        </GridItem>
+        
+        <GridItem gridArea="report" minHeight="500px">
+          <AnalyticsReport />
         </GridItem>
       </DashboardGrid>
       

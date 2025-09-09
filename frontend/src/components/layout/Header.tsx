@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback } from 'react';
 import styled from 'styled-components';
-import { Button, Input } from '../ui';
+import { Input } from '../ui';
 import { useGlobalSearch, useTheme } from '../../hooks';
 import { spacing, borderRadius, shadows, zIndex } from '../../styles';
 import type { ProxyNode } from '../../types';
@@ -141,11 +141,7 @@ const RightSection = styled.div`
   gap: ${spacing[3]};
 `;
 
-const QuickActions = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${spacing[2]};
-`;
+
 
 const NotificationButton = styled.button<{ hasUnread: boolean }>`
   position: relative;
@@ -201,9 +197,7 @@ const ThemeToggle = styled.button`
 
 export const Header: React.FC<HeaderProps> = ({
   showSearch = true,
-  showQuickActions = true,
   showNotifications = true,
-  customActions,
   onSearch,
   onNotificationClick,
   onToggleTheme,
@@ -260,23 +254,7 @@ export const Header: React.FC<HeaderProps> = ({
     console.log('Navigate to proxy:', proxy);
   }, []);
 
-  const handleQuickAction = useCallback((action: string) => {
-    switch (action) {
-      case 'refresh':
-        window.location.reload();
-        break;
-      case 'settings':
-        // 導航到設定頁面
-        console.log('Navigate to settings');
-        break;
-      case 'help':
-        // 開啟說明文件
-        console.log('Open help');
-        break;
-      default:
-        break;
-    }
-  }, []);
+
 
   return (
     <HeaderContainer>

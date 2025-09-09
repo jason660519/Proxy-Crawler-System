@@ -66,6 +66,30 @@ async def startup_event():
         error_details = traceback.format_exc()
         print(f"[DEBUG] 詳細錯誤信息: {error_details}")
         # 不要 raise，讓服務繼續運行
+    
+    # 初始化任務管理器
+    try:
+        from src.core.task_manager import TaskManager
+        
+        print("[DEBUG] 開始創建任務管理器")
+        task_manager = TaskManager()
+        print("[DEBUG] 任務管理器創建成功，開始初始化")
+        
+        await task_manager.initialize()
+        print("[DEBUG] 任務管理器初始化成功")
+        
+        # 將任務管理器設置到全局變量中
+        import src.api.task_queue_api as task_queue_api_module
+        task_queue_api_module._task_manager_instance = task_manager
+        
+        print("✅ 任務管理器在主應用中初始化成功")
+        
+    except Exception as e:
+        print(f"[DEBUG] 任務管理器初始化失敗: {e}")
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"[DEBUG] 詳細錯誤信息: {error_details}")
+        # 不要 raise，讓服務繼續運行
 
 # 導入並掛載 ETL API
 try:
@@ -82,6 +106,30 @@ try:
     print("✅ HTML to Markdown API 已掛載到 /html2md")
 except ImportError as e:
     print(f"⚠️ 無法載入 HTML to Markdown API: {e}")
+
+# 導入並掛載任務佇列管理 API
+try:
+    from src.api.task_queue import router as task_queue_router
+    app.include_router(task_queue_router, prefix="/api/tasks", tags=["任務佇列"])
+    print("✅ 任務佇列管理 API 已掛載到 /api/tasks")
+except ImportError as e:
+    print(f"⚠️ 無法載入任務佇列管理 API: {e}")
+
+# 導入並掛載系統日誌管理 API
+try:
+    from src.api.system_logs import router as system_logs_router
+    app.include_router(system_logs_router, prefix="/api/logs", tags=["系統日誌"])
+    print("✅ 系統日誌管理 API 已掛載到 /api/logs")
+except ImportError as e:
+    print(f"⚠️ 無法載入系統日誌管理 API: {e}")
+
+# 導入並掛載數據分析 API
+try:
+    from src.api.data_analytics import router as data_analytics_router
+    app.include_router(data_analytics_router, prefix="/api/analytics", tags=["數據分析"])
+    print("✅ 數據分析 API 已掛載到 /api/analytics")
+except ImportError as e:
+    print(f"⚠️ 無法載入數據分析 API: {e}")
 
 
 @app.get("/")

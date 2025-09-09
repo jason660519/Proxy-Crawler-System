@@ -699,7 +699,6 @@ export const hooks = {
   
   // 任務管理
   useTasks,
-  useTaskQueue,
   
   // 日誌
   useLogs,
@@ -710,5 +709,11 @@ export const hooks = {
   // 主題
   useTheme
 };
+
+// 專案特定 Hooks exports
+export { useProxyManagement } from './useProxyManagement';
+export { useSystemLogs } from './useSystemLogs';
+export { useNotification } from './useNotification';
+export { useWebSocket } from './useWebSocket';
 
 export default hooks;

@@ -271,6 +271,14 @@ if ETL_AVAILABLE:
 else:
     logger.warning("⚠️ ETL API 不可用，跳過掛載")
 
+# 掛載 URL2Parquet 路由
+try:
+    from src.url2parquet.api.router import router as url2parquet_router
+    app.include_router(url2parquet_router)
+    logger.info("✅ URL2Parquet 路由已掛載到 /api/url2parquet")
+except Exception as e:
+    logger.warning(f"⚠️ 無法掛載 URL2Parquet 路由: {e}")
+
 
 @app.on_event("startup")
 async def startup_event():

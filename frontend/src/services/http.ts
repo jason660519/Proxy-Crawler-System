@@ -16,7 +16,7 @@ const getEnvVar = (key: string, defaultValue: string): string => {
 };
 
 const API_BASE_URL = getEnvVar('VITE_API_BASE_URL', '');
-const ETL_BASE_URL = getEnvVar('VITE_ETL_BASE_URL', 'http://localhost:8001');
+const ETL_BASE_URL = getEnvVar('VITE_ETL_BASE_URL', '/etl');
 const REQUEST_TIMEOUT = parseInt(getEnvVar('VITE_REQUEST_TIMEOUT', '15000'));
 const API_KEY = getEnvVar('VITE_API_KEY', '');
 

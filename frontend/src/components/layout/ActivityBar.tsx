@@ -352,6 +352,15 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
       label: '數據分析',
     },
     {
+      id: 'url2parquet',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3 5h18v2H3V5zm0 6h18v2H3v-2zm0 6h12v2H3v-2z" />
+        </svg>
+      ),
+      label: 'URL 轉換',
+    },
+    {
       id: 'settings',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">

@@ -7,8 +7,8 @@ export default defineConfig({
   server: {
     host: true,
     // Development: allow all hosts (for tunnels). Do NOT use in production.
-    // Vite v5: 'any' disables host check
-    allowedHosts: 'any',
+    // Vite v5: true disables host check
+    allowedHosts: true,
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000',

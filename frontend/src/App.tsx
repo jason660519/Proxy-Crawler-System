@@ -10,6 +10,10 @@ import { Dashboard, OperationsDashboard, MetricsOverview, Settings } from './com
 import { ThemeDebugger } from './components/debug';
 import { useTheme, useHealthStatus } from './hooks';
 import { createGlobalStyles, lightTheme, darkTheme } from './styles';
+import ProxyManagement from './pages/ProxyManagement';
+import TaskQueue from './pages/TaskQueue';
+import SystemLogs from './pages/SystemLogs';
+import UrlToParquetWizard from './pages/UrlToParquetWizard';
 
 
 // ============= 全域樣式 =============
@@ -151,26 +155,17 @@ const App: React.FC = () => {
       
       case 'proxies':
         return (
-          <WelcomeMessage>
-            <WelcomeTitle>代理管理</WelcomeTitle>
-            <WelcomeSubtitle>代理節點管理功能正在開發中...</WelcomeSubtitle>
-          </WelcomeMessage>
+          <ProxyManagement />
         );
       
       case 'tasks':
         return (
-          <WelcomeMessage>
-            <WelcomeTitle>任務佇列</WelcomeTitle>
-            <WelcomeSubtitle>任務管理功能正在開發中...</WelcomeSubtitle>
-          </WelcomeMessage>
+          <TaskQueue />
         );
       
       case 'logs':
         return (
-          <WelcomeMessage>
-            <WelcomeTitle>系統日誌</WelcomeTitle>
-            <WelcomeSubtitle>日誌查看功能正在開發中...</WelcomeSubtitle>
-          </WelcomeMessage>
+          <SystemLogs />
         );
       
       case 'analytics':
@@ -186,6 +181,10 @@ const App: React.FC = () => {
       case 'settings':
         return (
           <Settings />
+        );
+      case 'url2parquet':
+        return (
+          <UrlToParquetWizard />
         );
       
       default:

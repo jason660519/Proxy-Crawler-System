@@ -3,7 +3,7 @@
  * 放置主題調試器與其他開發者選項
  */
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { ThemeDebugger } from '../debug/ThemeDebugger';
 import { useTheme } from '../../hooks';
