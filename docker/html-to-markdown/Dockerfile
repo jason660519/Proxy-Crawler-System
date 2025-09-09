@@ -29,11 +29,11 @@ RUN apt-get update && apt-get install -y \
 # 安裝 uv 包管理器
 RUN pip install uv
 
-# 複製依賴文件
-    COPY requirements_html_to_markdown.txt .
-    
-    # 安裝 Python 依賴
-    RUN pip install -r requirements_html_to_markdown.txt
+# 複製依賴文件（統一使用專案根的 requirements.txt）
+COPY requirements.txt ./
+
+# 安裝 Python 依賴
+RUN pip install -r requirements.txt
 
 # 複製源代碼和配置
 COPY src/ ./src/
@@ -60,5 +60,5 @@ RUN useradd -m -u 1000 converter && \
 
 USER converter
 
-# 默認命令（啟動 API 服務）
-CMD ["python", "-m", "src.html_to_markdown.api_server"]
+# 默認命令（啟動 API 服務，避免雙重載入導致重複註冊指標）
+CMD ["uvicorn", "src.html_to_markdown.api_server:app", "--host", "0.0.0.0", "--port", "8001"]

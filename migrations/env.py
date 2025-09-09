@@ -18,7 +18,7 @@ if config.config_file_name is not None:
 db_user = os.getenv("DB_USER", "proxyadmin")
 db_pass = os.getenv("DB_PASSWORD", "secretpassword")
 db_name = os.getenv("DB_NAME", "proxypool")
-db_host = os.getenv("DB_HOST", os.getenv("DB_SERVICE", "localhost"))
+db_host = os.getenv("DB_HOST", os.getenv("DB_SERVICE", "postgres_db"))
 db_port = os.getenv("DB_PORT", "5432")
 config.set_main_option(
     "sqlalchemy.url",

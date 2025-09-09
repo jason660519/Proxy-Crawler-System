@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import styled, { ThemeProvider, createGlobalStyle } from 'styled-components';
 import { Header, ActivityBar } from './components/layout';
-import { Dashboard, OperationsDashboard, MetricsOverview } from './components/dashboard';
+import { Dashboard, OperationsDashboard, MetricsOverview, Settings } from './components/dashboard';
 import { ThemeDebugger } from './components/debug';
 import { useTheme, useHealthStatus } from './hooks';
 import { createGlobalStyles, lightTheme, darkTheme } from './styles';
@@ -106,6 +106,21 @@ const App: React.FC = () => {
   useHealthStatus();
   const [activeView, setActiveView] = useState('dashboard');
   const [isInitializing, setIsInitializing] = useState(true);
+  // 控制是否顯示主題調試器（僅開發環境，且需使用者顯式開啟）
+  const isThemeDebugVisible = (() => {
+    try {
+      const url = new URL(window.location.href);
+      const qp = url.searchParams.get('debugTheme');
+      if (qp === '1') {
+        window.sessionStorage.setItem('js-theme-debugger', '1');
+      } else if (qp === '0') {
+        window.sessionStorage.removeItem('js-theme-debugger');
+      }
+      return Boolean(import.meta.env.DEV && window.sessionStorage.getItem('js-theme-debugger') === '1');
+    } catch {
+      return false;
+    }
+  })();
 
   // 模擬初始化過程
   useEffect(() => {
@@ -170,10 +185,7 @@ const App: React.FC = () => {
       
       case 'settings':
         return (
-          <WelcomeMessage>
-            <WelcomeTitle>系統設定</WelcomeTitle>
-            <WelcomeSubtitle>系統設定功能正在開發中...</WelcomeSubtitle>
-          </WelcomeMessage>
+          <Settings />
         );
       
       default:
@@ -211,6 +223,11 @@ const App: React.FC = () => {
           showSearch={true}
           showQuickActions={true}
           showNotifications={true}
+          themeName={theme}
+          onToggleTheme={() => {
+            // 與 useTheme 保持同一來源，避免多實例不同步
+            try { (window as any).dispatchEvent?.(new CustomEvent('js-theme-request-toggle')); } catch {}
+          }}
           onNotificationClick={handleNotificationClick}
         />
         
@@ -228,7 +245,7 @@ const App: React.FC = () => {
         </MainContainer>
         
         {/* 主題調試器 - 只在開發環境顯示 */}
-        {import.meta.env.DEV && (
+        {isThemeDebugVisible && (
           <ThemeDebugger 
             theme={theme} 
             isDark={isDark} 

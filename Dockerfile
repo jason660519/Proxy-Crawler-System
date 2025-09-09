@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     g++ \
     curl \
     netcat-openbsd \
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 # 安裝 uv 包管理器
@@ -27,7 +28,7 @@ COPY *.py ./
 COPY alembic.ini ./
 COPY migrations/ ./migrations/
 COPY tools/prestart.sh ./tools/prestart.sh
-RUN chmod +x ./tools/prestart.sh
+RUN dos2unix ./tools/prestart.sh && chmod +x ./tools/prestart.sh
 
 # 創建必要的目錄
 RUN mkdir -p /app/logs /app/data /app/output

@@ -10,6 +10,7 @@ export { HealthCard } from './HealthCard';
 export { TrendChart } from './TrendChart';
 export { TaskBoard } from './TaskBoard';
 export { LogViewer } from './LogViewer';
+export { Settings } from '../settings/Settings';
 
 // 類型導出
 export type { 

@@ -18,7 +18,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 import uvicorn
 from loguru import logger
-from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST, CollectorRegistry
 
 from .data_pipeline import HTMLToMarkdownPipeline, DataPipelineConfig
 from .core import ConversionConfig, ConversionEngine, ContentScope, OutputFormat
@@ -83,13 +83,25 @@ app = FastAPI(
 # 全域變數
 pipeline: Optional[HTMLToMarkdownPipeline] = None
 
-# Prometheus metrics
-REQUEST_COUNT = Counter("html2md_requests_total", "Total API requests", ["endpoint", "method", "status"])
+# Prometheus metrics (use dedicated registry to avoid duplicate registration on re-import)
+PROM_REGISTRY = 'PROMETHEUS_REGISTRY'
+if PROM_REGISTRY not in globals():
+    globals()[PROM_REGISTRY] = CollectorRegistry()
+
+REGISTRY = globals()[PROM_REGISTRY]
+
+REQUEST_COUNT = Counter(
+    "html2md_requests_total",
+    "Total API requests",
+    ["endpoint", "method", "status"],
+    registry=REGISTRY,
+)
 REQUEST_LATENCY = Histogram(
     "html2md_request_duration_seconds",
     "Request duration in seconds",
     ["endpoint", "method", "status"],
-    buckets=(0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10)
+    buckets=(0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10),
+    registry=REGISTRY,
 )
 
 
@@ -183,7 +195,7 @@ async def get_pipeline_status():
 
 @app.get("/metrics")
 async def metrics():
-    return JSONResponse(content=generate_latest().decode("utf-8"), media_type=CONTENT_TYPE_LATEST)
+    return JSONResponse(content=generate_latest(REGISTRY).decode("utf-8"), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.post("/convert", response_model=ConversionResponse)

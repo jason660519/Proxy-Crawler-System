@@ -68,6 +68,13 @@ class DatabaseConfig:
             >>> config.get_database_url('async')
             'postgresql+asyncpg://proxyadmin:password@postgres_db:5432/proxypool'
         """
+        # 在本地環境使用 SQLite 作為備用
+        if self.environment == 'local':
+            if driver == 'async':
+                return 'sqlite+aiosqlite:///./proxy_pool.db'
+            else:
+                return 'sqlite:///./proxy_pool.db'
+        
         # 根據環境決定主機名
         host = self._get_database_host()
         port = str(settings.db_port)
@@ -107,9 +114,9 @@ class DatabaseConfig:
             str: 根據環境返回對應的主機名
         """
         if self.environment == 'docker':
-            return os.getenv('DB_SERVICE', 'postgres_db')
+            return 'postgres_db'
         else:
-            return settings.db_host
+            return settings.effective_db_host
     
     def _get_redis_host(self) -> str:
         """取得 Redis 主機名

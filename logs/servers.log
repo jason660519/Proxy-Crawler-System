@@ -103,3 +103,17 @@
 2025-09-08 02:53:16 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
 2025-09-08 02:55:47 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
 2025-09-08 02:58:10 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 127.0.0.1:8000
+2025-09-08 22:39:39 | INFO     | __main__:start_main_api_server:110 - 🚀 啟動主 API 服務器 - 0.0.0.0:8000
+2025-09-08 22:39:42 | INFO     | __main__:start_etl_api_server:126 - 🚀 啟動 ETL API 服務器 - 0.0.0.0:8001
+2025-09-08 22:39:43 | ERROR    | __main__:start_main_api_server:120 - ❌ 主 API 服務器啟動失敗: `BaseSettings` has been moved to the `pydantic-settings` package. See https://docs.pydantic.dev/2.11/migration/#basesettings-has-moved-to-pydantic-settings for more details.
+
+For further information visit https://errors.pydantic.dev/2.11/u/import-error
+2025-09-08 22:39:43 | ERROR    | __main__:main:469 - ❌ 啟動失敗: `BaseSettings` has been moved to the `pydantic-settings` package. See https://docs.pydantic.dev/2.11/migration/#basesettings-has-moved-to-pydantic-settings for more details.
+
+For further information visit https://errors.pydantic.dev/2.11/u/import-error
+2025-09-08 22:39:43 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
+2025-09-08 22:39:43 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
+2025-09-08 22:39:43 | ERROR    | __main__:start_etl_api_server:136 - ❌ ETL API 服務器啟動失敗: attempted relative import beyond top-level package
+2025-09-08 22:39:43 | ERROR    | __main__:main:469 - ❌ 啟動失敗: attempted relative import beyond top-level package
+2025-09-08 22:39:43 | INFO     | __main__:stop_all_servers:351 - 🛑 正在停止所有服務器...
+2025-09-08 22:39:43 | INFO     | __main__:stop_all_servers:369 - ✅ 所有服務器已停止
