@@ -1,6 +1,12 @@
 analysis
+api
 config
+core
 etl
 html_to_markdown
+models
 monitoring
+optimization
 proxy_manager
+url2parquet
+utils

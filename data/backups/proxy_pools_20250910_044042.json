@@ -1,0 +1,82 @@
+{
+  "timestamp": "2025-09-10T04:40:42.565129",
+  "config": {
+    "hot_pool_max_size": 100,
+    "warm_pool_max_size": 500,
+    "cold_pool_max_size": 1000,
+    "blacklist_max_size": 2000,
+    "hot_pool_min_score": 0.8,
+    "warm_pool_min_score": 0.5,
+    "cold_pool_min_score": 0.2,
+    "hot_pool_max_response_time": 3000,
+    "warm_pool_max_response_time": 8000,
+    "hot_pool_revalidate_hours": 1,
+    "warm_pool_revalidate_hours": 6,
+    "cold_pool_revalidate_hours": 24,
+    "blacklist_cleanup_days": 7,
+    "auto_balance_enabled": true,
+    "balance_check_interval_minutes": 30
+  },
+  "pools": {
+    "hot": {
+      "proxies": [],
+      "stats": {
+        "pool_type": "PoolType.HOT",
+        "total_count": 0,
+        "active_count": 0,
+        "average_score": 0,
+        "average_response_time": 0,
+        "last_updated": "2025-09-10 04:40:42.565129",
+        "success_rate": 0,
+        "protocol_distribution": {},
+        "anonymity_distribution": {},
+        "country_distribution": {}
+      }
+    },
+    "warm": {
+      "proxies": [],
+      "stats": {
+        "pool_type": "PoolType.WARM",
+        "total_count": 0,
+        "active_count": 0,
+        "average_score": 0,
+        "average_response_time": 0,
+        "last_updated": "2025-09-10 04:40:42.565129",
+        "success_rate": 0,
+        "protocol_distribution": {},
+        "anonymity_distribution": {},
+        "country_distribution": {}
+      }
+    },
+    "cold": {
+      "proxies": [],
+      "stats": {
+        "pool_type": "PoolType.COLD",
+        "total_count": 0,
+        "active_count": 0,
+        "average_score": 0,
+        "average_response_time": 0,
+        "last_updated": "2025-09-10 04:40:42.565129",
+        "success_rate": 0,
+        "protocol_distribution": {},
+        "anonymity_distribution": {},
+        "country_distribution": {}
+      }
+    },
+    "blacklist": {
+      "proxies": [],
+      "stats": {
+        "pool_type": "PoolType.BLACKLIST",
+        "total_count": 0,
+        "active_count": 0,
+        "average_score": 0,
+        "average_response_time": 0,
+        "last_updated": "2025-09-10 04:40:42.565129",
+        "success_rate": 0,
+        "protocol_distribution": {},
+        "anonymity_distribution": {},
+        "country_distribution": {}
+      }
+    }
+  }
+}

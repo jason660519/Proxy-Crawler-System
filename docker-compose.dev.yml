@@ -1,0 +1,149 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 資料庫服務
+  postgres:
+    image: postgres:15
+    container_name: proxy_postgres_dev
+    environment:
+      POSTGRES_DB: proxy_crawler
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - proxy_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Redis 快取服務
+  redis:
+    image: redis:7-alpine
+    container_name: proxy_redis_dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - proxy_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # 後端 API 服務 (開發模式)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: proxy_backend_dev
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/proxy_crawler
+      - REDIS_URL=redis://redis:6379
+      - ENVIRONMENT=development
+      - DEBUG=true
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - /app/.venv  # 排除虛擬環境目錄
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - proxy_network
+    command: >
+      sh -c "
+        echo '正在設置 uv 虛擬環境...' &&
+        uv venv &&
+        echo '正在安裝 Python 依賴...' &&
+        uv pip install -r requirements.txt &&
+        echo '正在啟動後端服務...' &&
+        uv run uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+    restart: unless-stopped
+
+  # 前端開發服務
+  frontend:
+    image: node:18-alpine
+    container_name: proxy_frontend_dev
+    working_dir: /app/frontend
+    environment:
+      - NODE_ENV=development
+      - VITE_API_BASE_URL=http://localhost:8000
+    ports:
+      - "5174:5174"
+    volumes:
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules  # 排除 node_modules
+    networks:
+      - proxy_network
+    command: >
+      sh -c "
+        echo '正在安裝前端依賴...' &&
+        npm install &&
+        echo '正在啟動前端開發服務器...' &&
+        npm run dev -- --host 0.0.0.0 --port 5174
+      "
+    restart: unless-stopped
+
+  # HTML to Markdown 處理服務
+  html-to-markdown:
+    build:
+      context: ./docker/html-to-markdown
+      dockerfile: Dockerfile
+    container_name: proxy_html_markdown_dev
+    ports:
+      - "3001:3001"
+    networks:
+      - proxy_network
+    restart: unless-stopped
+
+# 開發工具服務 (可選)
+profiles:
+  tools:
+    # pgAdmin 資料庫管理工具
+    pgadmin:
+      image: dpage/pgadmin4:latest
+      container_name: proxy_pgadmin_dev
+      environment:
+        PGADMIN_DEFAULT_EMAIL: admin@example.com
+        PGADMIN_DEFAULT_PASSWORD: admin
+      ports:
+        - "5050:80"
+      depends_on:
+        - postgres
+      networks:
+        - proxy_network
+
+    # Redis Commander 管理工具
+    redis-commander:
+      image: rediscommander/redis-commander:latest
+      container_name: proxy_redis_commander_dev
+      environment:
+        REDIS_HOSTS: local:redis:6379
+      ports:
+        - "8081:8081"
+      depends_on:
+        - redis
+      networks:
+        - proxy_network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  proxy_network:
+    driver: bridge
+    name: proxy_dev_network

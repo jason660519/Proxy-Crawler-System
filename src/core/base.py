@@ -50,6 +50,54 @@ class TaskPriority(str, Enum):
     URGENT = "urgent"
 
 
+class ProxyStatus(StatusEnum):
+    """代理狀態列舉"""
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    TESTING = "testing"
+    FAILED = "failed"
+    BLOCKED = "blocked"
+
+
+class AnonymityLevel(str, Enum):
+    """匿名級別列舉"""
+    TRANSPARENT = "transparent"
+    ANONYMOUS = "anonymous"
+    ELITE = "elite"
+
+
+class ValidationResult(BaseModel):
+    """驗證結果模型"""
+    is_valid: bool = Field(..., description="是否有效")
+    response_time: Optional[float] = Field(None, description="響應時間（秒）")
+    anonymity_level: Optional[AnonymityLevel] = Field(None, description="匿名級別")
+    error_message: Optional[str] = Field(None, description="錯誤訊息")
+    tested_at: datetime = Field(default_factory=datetime.now, description="測試時間")
+
+
+class ProxyInfo(BaseEntity):
+    """代理資訊模型"""
+    host: str = Field(..., description="主機地址")
+    port: int = Field(..., ge=1, le=65535, description="端口號")
+    protocol: str = Field(..., description="協議類型")
+    username: Optional[str] = Field(None, description="用戶名")
+    password: Optional[str] = Field(None, description="密碼")
+    status: ProxyStatus = Field(default=ProxyStatus.INACTIVE, description="狀態")
+    anonymity_level: Optional[AnonymityLevel] = Field(None, description="匿名級別")
+    response_time: Optional[float] = Field(None, description="響應時間")
+    last_validated: Optional[datetime] = Field(None, description="最後驗證時間")
+    validation_count: int = Field(default=0, description="驗證次數")
+    success_count: int = Field(default=0, description="成功次數")
+
+
+class TaskConfig(BaseModel):
+    """任務配置模型"""
+    max_retries: int = Field(default=3, ge=0, description="最大重試次數")
+    timeout: float = Field(default=30.0, gt=0, description="超時時間（秒）")
+    priority: TaskPriority = Field(default=TaskPriority.MEDIUM, description="優先級")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="元數據")
+
+
 class LogLevel(str, Enum):
     """日誌等級列舉"""
     DEBUG = "debug"

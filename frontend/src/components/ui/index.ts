@@ -40,6 +40,9 @@ export type { SpinnerProps } from './Spinner';
 export { Progress } from './Progress';
 export type { ProgressProps } from './Progress';
 
+export { Icon } from './Icon';
+export type { IconProps, IconName } from './Icon';
+
 // 新增組件
 export { DataTable } from './DataTable';
 export type { DataTableProps, DataTableColumn } from './DataTable';

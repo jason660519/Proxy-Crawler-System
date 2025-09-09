@@ -1,0 +1,18 @@
+{
+  "url": "https://free-proxy-list.net/ssl-proxy.html",
+  "files": [
+    {
+      "format": "md",
+      "path": "data\\url2parquet\\outputs\\5ddb874b_content.md",
+      "size": 24381
+    },
+    {
+      "format": "json",
+      "path": "data\\url2parquet\\outputs\\5ddb874b_content.json",
+      "size": 24461
+    }
+  ],
+  "checksum": "5cf87cb5ddb874b320212a94246b9be98a63f1195d77bb5f5d1470911d3f599e",
+  "engine": "smart",
+  "processing_time_ms": 2951
+}

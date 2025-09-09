@@ -535,15 +535,7 @@ key: 'actions' as any,
     }
   }, [createProxy, handleLoadProxies, showNotification]);
 
-  const handleHealthCheckComplete = useCallback((results: any[]) => {
-    // 處理健康檢查完成後的邏輯
-    const successCount = results.filter(r => r.status === 'success').length;
-    const totalCount = results.length;
-    showNotification(`健康檢查完成：${successCount}/${totalCount} 通過`, 'success');
-    
-    // 重新載入代理列表以更新健康狀態
-    handleLoadProxies();
-  }, [showNotification, handleLoadProxies]);
+
 
   // 批量操作處理函數
   const handleBatchTest = useCallback(async (proxyIds: string[]) => {
@@ -591,7 +583,7 @@ key: 'actions' as any,
     const headers = ['ID', '代理地址', '端口', '類型', '國家', '狀態', '健康分數', '響應時間', '最後檢查時間'];
     const rows = data.map(proxy => [
       proxy.id,
-      proxy.host,
+      proxy.ip,
       proxy.port,
       proxy.type || 'http',
       proxy.country || '',
@@ -632,8 +624,8 @@ key: 'actions' as any,
   
   return (
     <PageLayout
-      title="代理管理"
-      subtitle="管理和監控代理節點"
+      title="Proxies Validator (代理驗證)"
+      subtitle="驗證你的Proxy IP"
       loading={state.loading}
       error={state.error}
       className={className}
@@ -648,7 +640,11 @@ key: 'actions' as any,
           </Button>
           <Button
             variant="secondary"
-            onClick={() => setShowImportModal(true)}
+            onClick={() => {
+              console.log('Import button clicked, current state:', showImportModal);
+              setShowImportModal(true);
+              console.log('Import button clicked, setting state to true');
+            }}
             disabled={state.loading}
           >
             導入 CSV
@@ -713,7 +709,7 @@ key: 'actions' as any,
         {showHealthCheck && (
           <HealthCheckEngine
             proxies={filteredProxies}
-            onHealthCheckComplete={(results) => {
+            onHealthCheckComplete={() => {
               // 更新代理健康狀態
               showNotification('健康檢查結果已更新', 'success');
               handleLoadProxies();
@@ -950,7 +946,10 @@ key: 'actions' as any,
         {/* CSV 導入模態框 */}
         <CsvImportModal
           isOpen={showImportModal}
-          onClose={() => setShowImportModal(false)}
+          onClose={() => {
+            console.log('Modal onClose called');
+            setShowImportModal(false);
+          }}
           onImport={handleCsvImport}
         />
       </ProxyManagementContainer>

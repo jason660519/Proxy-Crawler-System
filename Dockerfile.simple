@@ -1,0 +1,51 @@
+# 簡化版 Dockerfile - 整合所有功能到單一容器
+# 基於 Python 3.11 的輕量級映像
+
+FROM python:3.11-slim
+
+# 設置工作目錄
+WORKDIR /app
+
+# 安裝系統依賴
+RUN apt-get update && apt-get install -y \
+    curl \
+    gcc \
+    g++ \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# 複製依賴文件
+COPY requirements.txt .
+
+# 安裝 Python 依賴
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# 複製應用程式代碼
+COPY src/ ./src/
+COPY config/ ./config/
+
+# 複製簡化版的啟動腳本
+COPY docker/simple/ ./docker/simple/
+
+# 創建必要的目錄
+RUN mkdir -p /app/logs /app/data /app/static /app/templates
+
+# 複製靜態文件和模板（如果存在）
+COPY static/ ./static/ 2>/dev/null || true
+COPY templates/ ./templates/ 2>/dev/null || true
+
+# 設置環境變數
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV ENVIRONMENT=production
+
+# 暴露端口
+EXPOSE 8000 8080
+
+# 健康檢查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# 啟動腳本
+CMD ["python", "src/simple_main.py"]

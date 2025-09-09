@@ -54,7 +54,8 @@ class ProxyNode:
     @property
     def proxy_url(self) -> str:
         """獲取代理 URL 格式"""
-        protocol = self.protocol.lower()
+        protocol_value = self.protocol.value if hasattr(self.protocol, 'value') else str(self.protocol)
+        protocol = protocol_value.lower()
         if protocol in ['socks4', 'socks5']:
             return f"{protocol}://{self.ip}:{self.port}"
         else:
@@ -267,7 +268,7 @@ class BaseCrawler(ABC):
             是否有效
         """
         # 檢查 IP 格式
-        ip_parts = proxy.ip.split('.')
+        ip_parts = proxy.host.split('.')
         if len(ip_parts) != 4:
             return False
         
@@ -284,7 +285,8 @@ class BaseCrawler(ABC):
             return False
         
         # 檢查協議
-        if proxy.protocol.upper() not in ['HTTP', 'HTTPS', 'SOCKS4', 'SOCKS5']:
+        protocol_value = proxy.protocol.value if hasattr(proxy.protocol, 'value') else str(proxy.protocol)
+        if protocol_value.upper() not in ['HTTP', 'HTTPS', 'SOCKS4', 'SOCKS5']:
             return False
         
         return True
@@ -342,7 +344,7 @@ class BaseCrawler(ABC):
                 if self.validate_proxy_data(proxy):
                     valid_proxies.append(proxy)
                 else:
-                    logger.debug(f"[{self.source_name}] 無效代理: {proxy.ip}:{proxy.port}")
+                    logger.debug(f"[{self.source_name}] 無效代理: {proxy.host}:{proxy.port}")
             
             self.stats['proxies_found'] = len(valid_proxies)
             logger.info(f"[{self.source_name}] 爬取完成，找到 {len(valid_proxies)} 個有效代理")

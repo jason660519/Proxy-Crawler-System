@@ -146,7 +146,8 @@ class ProxyValidator:
             proxy_url = self._build_proxy_url(proxy)
             
             # 選擇測試URL
-            test_urls = self.test_urls.get('https' if proxy.protocol.upper() == 'HTTPS' else 'http', 
+            protocol_value = proxy.protocol.value if hasattr(proxy.protocol, 'value') else str(proxy.protocol)
+            test_urls = self.test_urls.get('https' if protocol_value.upper() == 'HTTPS' else 'http', 
                                          self.test_urls['http'])
             
             # 基本連通性測試
@@ -169,7 +170,8 @@ class ProxyValidator:
             )
             
             # 測試HTTPS支援
-            if proxy.protocol.upper() in ['HTTP', 'HTTPS']:
+            protocol_value = proxy.protocol.value if hasattr(proxy.protocol, 'value') else str(proxy.protocol)
+            if protocol_value.upper() in ['HTTP', 'HTTPS']:
                 https_support = await self._test_https_support(proxy_url)
                 result.supports_https = https_support
             
@@ -188,7 +190,7 @@ class ProxyValidator:
             return result
             
         except Exception as e:
-            logger.error(f"驗證代理 {proxy.ip}:{proxy.port} 時發生錯誤: {str(e)}")
+            logger.error(f"驗證代理 {proxy.host}:{proxy.port} 時發生錯誤: {str(e)}")
             return ValidationResult(
                 proxy=proxy,
                 status=ProxyStatus.FAILED,
@@ -254,11 +256,11 @@ class ProxyValidator:
         Returns:
             代理URL字符串
         """
-        protocol = proxy.protocol.lower()
+        protocol = proxy.protocol.value.lower()
         if protocol in ['socks4', 'socks5']:
-            return f"{protocol}://{proxy.ip}:{proxy.port}"
+            return f"{protocol}://{proxy.host}:{proxy.port}"
         else:
-            return f"http://{proxy.ip}:{proxy.port}"
+            return f"http://{proxy.host}:{proxy.port}"
     
     async def _test_connectivity(self, proxy_url: str, test_url: str) -> Dict[str, Any]:
         """測試代理連通性
@@ -542,7 +544,7 @@ async def main():
     
     # 顯示結果
     for result in results:
-        logger.info(f"代理 {result.proxy.ip}:{result.proxy.port}")
+        logger.info(f"代理 {result.proxy.host}:{result.proxy.port}")
         logger.info(f"  狀態: {result.status.value}")
         if result.response_time:
             logger.info(f"  響應時間: {result.response_time:.2f}s")

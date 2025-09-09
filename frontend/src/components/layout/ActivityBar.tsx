@@ -11,6 +11,7 @@ import { spacing, borderRadius, zIndex } from '../../styles';
 import type { SystemMetrics, HealthStatus } from '../../types';
 import { TaskStatus } from '../../types';
 import { ROUTE_ITEMS } from '../../router';
+import { Icon } from '../ui/Icon';
 
 // ============= 類型定義 =============
 
@@ -23,14 +24,7 @@ export interface ActivityBarProps {
   mainHealth?: HealthStatus;
 }
 
-interface ActivityItem {
-  id: string;
-  icon: React.ReactNode;
-  label: string;
-  badge?: number | string;
-  badgeType?: 'info' | 'warning' | 'error' | 'success';
-  disabled?: boolean;
-}
+// 移除未使用的ActivityItem介面
 
 // ============= 樣式定義 =============
 
@@ -306,7 +300,8 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
     // 根據項目 ID 添加動態徽章
     switch (item.id) {
       case 'proxies':
-        badge = systemMetrics?.totalProxies || 0;
+        // 只在有真實數據且大於0時才顯示徽章，避免顯示假數據
+        badge = systemMetrics?.totalProxies && systemMetrics.totalProxies > 0 ? systemMetrics.totalProxies : undefined;
         badgeType = 'info';
         break;
       case 'tasks':
@@ -361,7 +356,7 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
             title={collapsed ? item.label : undefined}
           >
             <ActivityIcon>
-              {item.icon}
+              <Icon name={item.icon} size={20} />
               {item.badge && (
                 <ActivityBadge $type={item.badgeType || 'info'} $collapsed={collapsed}>
                   {item.badge}

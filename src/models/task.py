@@ -75,3 +75,7 @@ class Task:
     def can_retry(self) -> bool:
         """檢查任務是否可以重試"""
         return self.status == TaskStatus.FAILED and self.retry_count < self.max_retries
+
+
+# 為了向後兼容，創建別名
+TaskModel = Task

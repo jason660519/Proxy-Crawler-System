@@ -26,6 +26,7 @@ readability-lxml>=0.8.1         # 可讀性內容提取
 pydantic>=2.0.0
 dataclasses-json>=0.6.0         # dataclass JSON 序列化
 pandas>=2.1.0
+pyarrow>=14.0.0
 numpy>=1.24.0
 
 # 機器學習和數據分析

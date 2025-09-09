@@ -14,11 +14,24 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass, asdict
 from contextlib import asynccontextmanager
+from enum import Enum
 
 import redis.asyncio as redis
 from redis.asyncio import ConnectionPool
 
 from .connection_manager import RedisConnectionManager
+
+
+class ValidationStatus(Enum):
+    """驗證狀態枚舉
+    
+    定義代理驗證的各種狀態。
+    """
+    SUCCESS = "success"  # 驗證成功
+    FAILED = "failed"    # 驗證失敗
+    PENDING = "pending"  # 等待驗證
+    TIMEOUT = "timeout"  # 驗證超時
+    ERROR = "error"      # 驗證錯誤
 
 
 @dataclass
@@ -202,7 +215,7 @@ class RedisStorageManager:
         if not self.connection_manager.is_connected:
             raise ConnectionError("Redis未連接，請先調用connect()方法")
     
-    def _serialize_data(self, data: Union[ProxyData, ValidationData, Dict]) -> str:
+    def _serialize_data(self, data: Union[Dict, ProxyData, ValidationData]) -> str:
         """序列化數據為JSON字符串
         
         Args:
@@ -211,25 +224,24 @@ class RedisStorageManager:
         Returns:
             JSON字符串
         """
-        if isinstance(data, (ProxyData, ValidationData)):
-            # 轉換dataclass為字典
-            data_dict = asdict(data)
-            # 處理datetime對象
-            for key, value in data_dict.items():
-                if isinstance(value, datetime):
-                    data_dict[key] = value.isoformat()
-            return json.dumps(data_dict, ensure_ascii=False)
+        def json_serializer(obj):
+            """自定義JSON序列化器"""
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            elif hasattr(obj, 'value'):  # 處理枚舉類型
+                return obj.value
+            elif hasattr(obj, '__dict__'):
+                return obj.__dict__
+            else:
+                return str(obj)
+        
+        if hasattr(data, 'to_dict'):
+            data_dict = data.to_dict()
+            return json.dumps(data_dict, ensure_ascii=False, default=json_serializer)
         elif isinstance(data, dict):
-            # 處理字典中的datetime對象
-            processed_data = {}
-            for key, value in data.items():
-                if isinstance(value, datetime):
-                    processed_data[key] = value.isoformat()
-                else:
-                    processed_data[key] = value
-            return json.dumps(processed_data, ensure_ascii=False)
+            return json.dumps(data, ensure_ascii=False, default=json_serializer)
         else:
-            return json.dumps(data, ensure_ascii=False)
+            return json.dumps(data, ensure_ascii=False, default=json_serializer)
     
     def _deserialize_data(self, data_str: str, data_type: type = dict) -> Union[Dict, ProxyData, ValidationData]:
         """反序列化JSON字符串為數據對象

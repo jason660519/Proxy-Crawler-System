@@ -109,7 +109,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ theme, onNotificationClick
         showSearch={true}
         showQuickActions={true}
         showNotifications={true}
-        themeName={theme}
+        themeName={theme as 'light' | 'dark'}
         onToggleTheme={() => {
           // 與 useTheme 保持同一來源，避免多實例不同步
           try { (window as any).dispatchEvent?.(new CustomEvent('js-theme-request-toggle')); } catch {}

@@ -14,7 +14,15 @@ from .base import (
     ValidationResult, ProxyInfo, TaskConfig
 )
 from .config import Config, get_config
-from .logger import setup_logger, get_logger
+from .logger import (
+    setup_logger,
+    get_logger,
+    get_default_logger,
+    configure_logging,
+    LoggerMixin,
+    StructuredFormatter,
+    SimpleFormatter
+)
 from .task_manager import TaskManager, TaskType, TaskAction
 from .tasks import Task, TaskCreateRequest, TaskUpdateRequest, TaskStatistics
 from .workflow_scheduler import (

@@ -56,6 +56,7 @@ Requires-Dist: asyncpg>=0.30.0
 Requires-Dist: pydantic-settings>=2.10.1
 Requires-Dist: aiohttp-cors>=0.8.1
 Requires-Dist: prometheus-client>=0.22.1
+Requires-Dist: psutil>=7.0.0
 Provides-Extra: dev
 Requires-Dist: pytest>=7.4.0; extra == "dev"
 Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
@@ -81,7 +82,7 @@ Requires-Dist: retrying>=1.3.4; extra == "monitoring"
 
 # JasonSpider - 代理爬蟲與管理系統
 
-一個功能完整的代理爬蟲與管理系統，支援多來源代理獲取、HTML 轉 Markdown 服務，以及智能代理管理功能。
+一個高效、可擴展的代理IP爬取、驗證和管理系統，具備完整的監控、優化和API功能。支援多來源代理獲取、HTML 轉 Markdown 服務，以及智能代理管理功能。
 
 ## 🚀 主要功能
 
@@ -229,7 +230,7 @@ docker compose up -d --build
 
 ## 📖 API 使用
 
-### HTML to Markdown 轉換
+### HTML to Markdown 轉換（即將淘汰，改用 URL2Parquet）
 
 ```bash
 # 基本轉換
@@ -241,6 +242,21 @@ curl -X POST "http://localhost:8000/convert" \
 curl -X POST "http://localhost:8000/batch-convert" \
      -H "Content-Type: application/json" \
      -d '{"items": [{"html": "<h1>Title 1</h1>"}, {"html": "<h2>Title 2</h2>"}]}'
+```
+
+### URL2Parquet（新一代內容轉換管線）
+
+```bash
+# 建立轉換任務（單/多 URL）
+curl -X POST "http://127.0.0.1:8000/api/url2parquet/jobs" \
+     -H "Content-Type: application/json" \
+     -d '{"urls":["https://example.com"],"output_formats":["md","json"],"timeout_seconds":10}'
+
+# 查詢任務狀態
+curl "http://127.0.0.1:8000/api/url2parquet/jobs/<job_id>"
+
+# 取得下載清單（檔案路徑）
+curl "http://127.0.0.1:8000/api/url2parquet/jobs/<job_id>/download"
 ```
 
 ### 代理網站檢查

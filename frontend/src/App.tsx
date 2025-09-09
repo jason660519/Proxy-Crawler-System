@@ -51,30 +51,7 @@ const LoadingSpinner = styled.div`
   }
 `;
 
-const WelcomeMessage = styled.div`
-  text-align: center;
-  padding: 48px 24px;
-`;
-
-const WelcomeTitle = styled.h1`
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin-bottom: 16px;
-  background: linear-gradient(135deg, var(--color-interactive-primary), var(--color-interactive-primaryHover));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-`;
-
-const WelcomeSubtitle = styled.p`
-  font-size: 1.125rem;
-  color: var(--color-text-secondary);
-  margin-bottom: 32px;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-  line-height: 1.6;
-`;
+// 移除未使用的styled組件
 
 
 

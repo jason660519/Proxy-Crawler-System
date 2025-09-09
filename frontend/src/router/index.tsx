@@ -44,9 +44,9 @@ export const ROUTE_ITEMS = [
   {
     id: 'proxies', 
     path: ROUTES.PROXIES,
-    label: '代理管理',
+    label: '驗證你的Proxy IP',
     icon: 'proxy',
-    description: '代理伺服器配置和狀態監控'
+    description: 'Proxies Validator (代理驗證)'
   },
   {
     id: 'tasks',

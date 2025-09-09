@@ -68,3 +68,7 @@ class Proxy:
             self.success_rate = self.successful_requests / self.total_requests
         else:
             self.success_rate = 0.0
+
+
+# 為了向後兼容，創建別名
+ProxyModel = Proxy

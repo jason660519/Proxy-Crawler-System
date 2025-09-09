@@ -14,13 +14,15 @@ import { apiClient } from './client';
 import { proxyApi } from './proxyApi';
 import { taskApi } from './taskApi';
 import { logsApi } from './logsApi';
+import * as url2parquetApi from './url2parquetApi';
 
-export { proxyApi, taskApi, logsApi };
+export { proxyApi, taskApi, logsApi, url2parquetApi };
 
 // 預設導出
 export default {
   client: apiClient,
   proxy: proxyApi,
   task: taskApi,
-  logs: logsApi
+  logs: logsApi,
+  url2parquet: url2parquetApi
 };

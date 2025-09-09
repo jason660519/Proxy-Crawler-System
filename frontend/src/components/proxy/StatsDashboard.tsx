@@ -303,10 +303,10 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
     return Object.entries(countryCount)
       .map(([country, count]) => ({
         country,
-        count,
-        percentage: (count / proxies.length) * 100
+        count: count as number,
+        percentage: ((count as number) / proxies.length) * 100
       }))
-      .sort((a, b) => b.count - a.count)
+      .sort((a, b) => (b.count as number) - (a.count as number))
       .slice(0, 5);
   }, [proxies]);
 
@@ -320,10 +320,10 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
     return Object.entries(protocolCount)
       .map(([protocol, count]) => ({
         protocol,
-        count,
-        percentage: (count / proxies.length) * 100
+        count: count as number,
+        percentage: ((count as number) / proxies.length) * 100
       }))
-      .sort((a, b) => b.count - a.count);
+      .sort((a, b) => (b.count as number) - (a.count as number));
   }, [proxies]);
 
   const alerts: Alert[] = useMemo(() => {
@@ -386,7 +386,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         <Controls>
           <Select
             value={timeRange}
-            onChange={setTimeRange}
+            onChange={(value) => setTimeRange(value as string)}
             options={[
               { value: '1h', label: '過去 1 小時' },
               { value: '24h', label: '過去 24 小時' },

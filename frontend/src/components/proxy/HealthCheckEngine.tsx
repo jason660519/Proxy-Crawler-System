@@ -9,7 +9,7 @@
  * - 檢測歷史記錄
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import styled from 'styled-components';
 import { Card, Button, Progress, Select, Input } from '../ui';
 import { StatusIndicator } from '../ui/StatusIndicator';
@@ -199,7 +199,7 @@ export const HealthCheckEngine: React.FC<HealthCheckEngineProps> = ({
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<HealthCheckResult[]>([]);
-  const [selectedProxies, setSelectedProxies] = useState<string[]>([]);
+  const [selectedProxies] = useState<string[]>([]);
   const [testUrl, setTestUrl] = useState('https://httpbin.org/ip');
   const [timeout, setTimeout] = useState(10000);
   const [concurrency, setConcurrency] = useState(5);
@@ -266,7 +266,7 @@ export const HealthCheckEngine: React.FC<HealthCheckEngineProps> = ({
       const responseTime = Date.now() - startTime;
       
       if (response.ok) {
-        const data = await response.json();
+        await response.json();
         result.status = 'success';
         result.responseTime = responseTime;
         result.healthScore = calculateHealthScore(responseTime, true);
@@ -435,7 +435,7 @@ export const HealthCheckEngine: React.FC<HealthCheckEngineProps> = ({
           <label>結果篩選</label>
           <Select
             value={filterStatus}
-            onChange={setFilterStatus}
+            onChange={(value) => setFilterStatus(value as string)}
             options={[
               { value: 'all', label: '全部結果' },
               { value: 'success', label: '成功' },
@@ -481,7 +481,7 @@ export const HealthCheckEngine: React.FC<HealthCheckEngineProps> = ({
             <ProgressLabel>檢查進度</ProgressLabel>
             <ProgressStatus>{Math.round(progress)}% 完成</ProgressStatus>
           </ProgressHeader>
-          <Progress value={progress} max={100} />
+          <Progress percent={progress} />
         </ProgressSection>
       )}
 

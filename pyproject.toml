@@ -74,6 +74,7 @@ dependencies = [
     "pydantic-settings>=2.10.1",
     "aiohttp-cors>=0.8.1",
     "prometheus-client>=0.22.1",
+    "psutil>=7.0.0",
 ]
 
 [project.optional-dependencies]

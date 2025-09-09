@@ -134,7 +134,44 @@ class Url2ParquetPipeline:
             )
             files.append({"format": "json", "path": str(json_path), "size": json_path.stat().st_size})
 
-        # parquet/csv can be added in follow-ups; keep MVP minimal
+        # CSV output (optional)
+        if "csv" in self.options.output_formats:
+            try:
+                import pandas as pd  # type: ignore
+
+                csv_path = out_dir / f"{checksum[7:15]}_content.csv"
+                row = {
+                    "url": url,
+                    "markdown": markdown,
+                    "engine": self.options.engine,
+                    "checksum": checksum,
+                    "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()),
+                    "content_length": len(html or ""),
+                }
+                pd.DataFrame([row]).to_csv(csv_path, index=False)
+                files.append({"format": "csv", "path": str(csv_path), "size": csv_path.stat().st_size})
+            except Exception as e:
+                print(f"CSV 輸出失敗: {e}")
+
+        # Parquet output (optional)
+        if "parquet" in self.options.output_formats:
+            try:
+                import pandas as pd  # type: ignore
+
+                parquet_path = out_dir / f"{checksum[7:15]}_content.parquet"
+                row = {
+                    "url": url,
+                    "markdown": markdown,
+                    "engine": self.options.engine,
+                    "checksum": checksum,
+                    "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()),
+                    "content_length": len(html or ""),
+                }
+                # 使用 pyarrow 引擎寫入 Parquet
+                pd.DataFrame([row]).to_parquet(parquet_path, index=False, engine="pyarrow")
+                files.append({"format": "parquet", "path": str(parquet_path), "size": parquet_path.stat().st_size})
+            except Exception as e:
+                print(f"Parquet 輸出失敗: {e}")
 
         elapsed_ms = int((time.time() - started) * 1000)
         return {

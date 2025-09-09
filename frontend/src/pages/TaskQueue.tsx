@@ -335,7 +335,7 @@ export const TaskQueue: React.FC<TaskQueueProps> = ({ className }) => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <StatusIndicator 
             status={task.status as any} 
-            size={"sm" as any}
+            size={"small" as any}
             
           />
           {task.status === 'running' && (

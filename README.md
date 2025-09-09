@@ -1,6 +1,6 @@
 # JasonSpider - 代理爬蟲與管理系統
 
-一個高效、可擴展的代理IP爬取、驗證和管理系統，具備完整的監控、優化和API功能。支援多來源代理獲取、HTML 轉 Markdown 服務，以及智能代理管理功能。
+一個高效、可擴展的代理 IP 爬取、驗證和管理系統，具備完整的監控、優化和 API 功能。支援多來源代理獲取、HTML 轉 Markdown 服務，以及智能代理管理功能。
 
 ## 🚀 主要功能
 
@@ -65,6 +65,56 @@ JasonSpider/
 - 推薦使用 `uv` 進行依賴管理
 
 ### 快速開始
+
+#### 🚀 簡化版 Docker 環境 (新手推薦)
+
+如果您是新手或希望快速體驗系統功能，推薦使用簡化版配置：
+
+```bash
+# Windows PowerShell
+.\start-simple.ps1
+
+# 啟動後可以訪問：
+# - 整合應用: http://localhost:8000
+# - API 文檔: http://localhost:8000/docs
+# - 系統狀態: http://localhost:8000/health
+```
+
+**簡化版特點：**
+- 🎯 只需 2-3 個容器 (vs 完整版 7+ 個)
+- 💾 記憶體使用降低 70% (~500MB vs ~2GB)
+- ⚡ 啟動時間縮短 75% (~15秒 vs ~60秒)
+- 🔧 維護複雜度大幅降低
+
+#### 🔧 完整版 Docker 開發環境
+
+如果您需要完整的微服務架構和所有功能：
+
+```bash
+# Windows PowerShell
+.\start-dev.ps1
+
+# 啟動後可以訪問：
+# - 前端界面: http://localhost:3000
+# - 主後端 API: http://localhost:8000
+# - HTML 轉換服務: http://localhost:8001
+# - pgAdmin: http://localhost:8080
+# - Redis Commander: http://localhost:8081
+```
+
+詳細的 Docker 開發環境指南請參考：[DOCKER_DEV_README.md](DOCKER_DEV_README.md)
+
+#### 📋 配置選擇指南
+
+| 使用場景 | 推薦配置 | 資源需求 | 啟動時間 |
+|---------|---------|---------|----------|
+| 新手學習、快速測試 | 簡化版 | 低 (500MB) | 快 (15秒) |
+| 開發調試、功能完整 | 完整版 | 中 (2GB) | 中 (60秒) |
+| 生產部署 | 自定義 | 依需求 | 依配置 |
+
+> 📚 **詳細開發環境指南**：請參閱 [`DEV_ENVIRONMENT.md`](./DEV_ENVIRONMENT.md) 獲取完整的 Docker 和本地開發環境設置說明。
+
+#### 🏠 傳統本地環境設置
 
 ```bash
 # 1. 克隆專案
@@ -148,7 +198,54 @@ docker compose up -d --build
 
 ## 📖 API 使用
 
-### HTML to Markdown 轉換（即將淘汰，改用 URL2Parquet）
+### URL2Parquet（新一代內容轉換管線）
+
+URL2Parquet 是系統的核心功能，提供完整的網頁內容轉換和代理數據提取服務。
+
+#### 基本使用
+
+```bash
+# 建立轉換任務（支援多 URL 和重定向處理）
+curl -X POST "http://127.0.0.1:8000/api/url2parquet/jobs" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "urls": ["https://free-proxy-list.net/", "https://www.sslproxies.org/"],
+       "output_formats": ["md", "json", "parquet", "csv"],
+       "timeout_seconds": 30,
+       "engine": "smart"
+     }'
+
+# 查詢任務狀態
+curl "http://127.0.0.1:8000/api/url2parquet/jobs/<job_id>"
+
+# 取得文件下載清單
+curl "http://127.0.0.1:8000/api/url2parquet/jobs/<job_id>/download"
+
+# 下載特定格式文件
+curl "http://127.0.0.1:8000/api/url2parquet/jobs/<job_id>/files/parquet/download" \
+     --output "output.parquet"
+```
+
+#### 重定向處理
+
+```bash
+# 當檢測到重定向時，確認並繼續處理
+curl -X POST "http://127.0.0.1:8000/api/url2parquet/jobs/<job_id>/confirm-redirect" \
+     -H "Content-Type: application/json" \
+     -d '["https://redirected-url.com"]'
+```
+
+#### 本地文件管理
+
+```bash
+# 列出本地 Markdown 文件
+curl "http://127.0.0.1:8000/api/url2parquet/local-md?work_dir=data/url2parquet"
+
+# 讀取本地文件內容
+curl "http://127.0.0.1:8000/api/url2parquet/local-md/content?filename=sample.md&work_dir=data/url2parquet"
+```
+
+### HTML to Markdown 轉換（舊版，建議使用 URL2Parquet）
 
 ```bash
 # 基本轉換
@@ -162,26 +259,44 @@ curl -X POST "http://localhost:8000/batch-convert" \
      -d '{"items": [{"html": "<h1>Title 1</h1>"}, {"html": "<h2>Title 2</h2>"}]}'
 ```
 
-### URL2Parquet（新一代內容轉換管線）
-
-```bash
-# 建立轉換任務（單/多 URL）
-curl -X POST "http://127.0.0.1:8000/api/url2parquet/jobs" \
-     -H "Content-Type: application/json" \
-     -d '{"urls":["https://example.com"],"output_formats":["md","json"],"timeout_seconds":10}'
-
-# 查詢任務狀態
-curl "http://127.0.0.1:8000/api/url2parquet/jobs/<job_id>"
-
-# 取得下載清單（檔案路徑）
-curl "http://127.0.0.1:8000/api/url2parquet/jobs/<job_id>/download"
-```
-
 ### 代理網站檢查
 
 ```bash
 # 檢查所有代理網站狀態
 python check_proxy_websites.py
+```
+
+## 🧪 測試與驗證
+
+### 快速測試
+
+```bash
+# 運行整合測試（需要後端服務運行）
+.\test_integration.ps1
+
+# 或直接運行 Python 測試
+python test_url2parquet_integration.py
+```
+
+### 前端測試
+
+```bash
+cd frontend
+npm run dev
+# 訪問 http://127.0.0.1:5173
+# 使用 URL 轉換與代理擷取功能
+```
+
+### 手動 API 測試
+
+```bash
+# 1. 啟動後端服務
+uv run python run_server.py
+
+# 2. 在另一個終端測試 API
+curl -X POST "http://localhost:8000/api/url2parquet/jobs" \
+     -H "Content-Type: application/json" \
+     -d '{"urls":["https://free-proxy-list.net/"],"output_formats":["md","json","parquet","csv"]}'
 ```
 
 ## 🔧 配置

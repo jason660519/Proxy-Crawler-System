@@ -599,9 +599,9 @@ export const SystemLogs: React.FC<SystemLogsProps> = ({ className }) => {
                 清空
               </Button>
               <StatusIndicator
-                status={wsConnected ? 'success' : 'error'}
-                size="small"
-              />
+                 status={wsConnected ? 'success' : 'error'}
+                 size="small"
+               />
             </div>
           </LiveLogHeader>
           

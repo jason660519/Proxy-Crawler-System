@@ -139,7 +139,7 @@ class EnhancedValidationResult:
         """轉換為字典格式"""
         return {
             'proxy': {
-                'ip': self.proxy.ip,
+                'ip': self.proxy.host,
                 'port': self.proxy.port,
                 'protocol': self.proxy.protocol,
                 'country': self.proxy.country,
@@ -232,7 +232,7 @@ class CoreValidator:
         start_time = time.time()
         
         try:
-            logger.debug(f"開始驗證代理 {proxy.ip}:{proxy.port}")
+            logger.debug(f"開始驗證代理 {proxy.host}:{proxy.port}")
             
             # 獲取歷史數據
             historical_data = None
@@ -273,12 +273,12 @@ class CoreValidator:
             # 更新統計信息
             self._update_stats(enhanced_result)
             
-            logger.debug(f"代理 {proxy.ip}:{proxy.port} 驗證完成，狀態: {enhanced_result.status.value}")
+            logger.debug(f"代理 {proxy.host}:{proxy.port} 驗證完成，狀態: {enhanced_result.status.value}")
             
             return enhanced_result
             
         except Exception as e:
-            logger.error(f"驗證代理 {proxy.ip}:{proxy.port} 時發生錯誤: {str(e)}")
+            logger.error(f"驗證代理 {proxy.host}:{proxy.port} 時發生錯誤: {str(e)}")
             
             error_result = EnhancedValidationResult(
                 proxy=proxy,
@@ -504,11 +504,11 @@ class CoreValidator:
         Returns:
             代理URL字符串
         """
-        protocol = proxy.protocol.lower()
+        protocol = proxy.protocol.value.lower()
         if protocol in ['socks4', 'socks5']:
-            return f"{protocol}://{proxy.ip}:{proxy.port}"
+            return f"{protocol}://{proxy.host}:{proxy.port}"
         else:
-            return f"http://{proxy.ip}:{proxy.port}"
+            return f"http://{proxy.host}:{proxy.port}"
     
     async def _calculate_quality_score(self, result: EnhancedValidationResult) -> QualityScore:
         """計算質量評分
@@ -725,7 +725,7 @@ class CoreValidator:
             歷史數據字典或None
         """
         try:
-            proxy_id = f"{proxy.ip}:{proxy.port}"
+            proxy_id = f"{proxy.host}:{proxy.port}"
             
             # 獲取統計數據
             stats = await self.storage_manager.get_proxy_stats(proxy_id)
@@ -757,7 +757,7 @@ class CoreValidator:
             return stats
             
         except Exception as e:
-            logger.warning(f"獲取代理 {proxy.ip}:{proxy.port} 歷史數據時發生錯誤: {str(e)}")
+            logger.warning(f"獲取代理 {proxy.host}:{proxy.port} 歷史數據時發生錯誤: {str(e)}")
             return None
     
     async def _save_validation_result(self, result: EnhancedValidationResult):
@@ -767,7 +767,7 @@ class CoreValidator:
             result: 驗證結果
         """
         try:
-            proxy_id = f"{result.proxy.ip}:{result.proxy.port}"
+            proxy_id = f"{result.proxy.host}:{result.proxy.port}"
             
             # 創建驗證數據
             validation_data = ValidationData(
@@ -886,7 +886,11 @@ class CoreValidator:
             # 國家過濾
             if required_countries:
                 proxy_country = result.detected_country or result.proxy.country
-                if not proxy_country or proxy_country.upper() not in [c.upper() for c in required_countries]:
+                # 確保proxy_country是字符串
+                if hasattr(proxy_country, 'value'):
+                    proxy_country = proxy_country.value
+                proxy_country_str = str(proxy_country) if proxy_country else None
+                if not proxy_country_str or proxy_country_str.upper() not in [c.upper() for c in required_countries]:
                     continue
             
             filtered.append(result)
@@ -963,7 +967,7 @@ async def main():
         
         # 顯示結果
         for result in results:
-            logger.info(f"\n代理 {result.proxy.ip}:{result.proxy.port}")
+            logger.info(f"\n代理 {result.proxy.host}:{result.proxy.port}")
             logger.info(f"  狀態: {result.status.value}")
             logger.info(f"  質量評分: {result.quality_score.overall:.1f}")
             logger.info(f"  速度評分: {result.quality_score.speed:.1f}")

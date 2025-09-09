@@ -6,6 +6,7 @@ import { Card } from '../components/ui/Card';
 import { Space } from '../components/ui/Space';
 import { apiClient } from '../services/http';
 import http from '../services/http';
+import * as url2parquetApi from '../api/url2parquetApi';
 
 interface ProxyInfo {
   ip: string;
@@ -48,6 +49,10 @@ const UrlToParquetWizard: React.FC = () => {
   const [redirects, setRedirects] = useState<any[]>([]);
   const [showRedirectDialog, setShowRedirectDialog] = useState(false);
   const [isPolling, setIsPolling] = useState<boolean>(false);
+  const [pendingJobId, setPendingJobId] = useState<string | null>(null);
+  const [urlStatusMap, setUrlStatusMap] = useState<Record<string, 'pending' | 'redirected' | 'completed' | 'failed'>>({});
+  const [localMdFiles, setLocalMdFiles] = useState<Array<{ filename: string; size: number; modified: number }>>([]);
+  const [localMdLoading, setLocalMdLoading] = useState(false);
 
   // 解析 Markdown 中的代理表格
   const parseProxyTable = (markdown: string, sourceUrl?: string): ProxyInfo[] => {
@@ -134,15 +139,26 @@ const UrlToParquetWizard: React.FC = () => {
     }
     
     try {
-      const data = await apiClient.post<any>('/api/url2parquet/jobs', { 
-        urls: validUrls, 
-        output_formats: ['md', 'json', 'parquet'],
-        timeout_seconds: 60
-      }, { timeout: 60000 });
+      // 使用新的 API 封裝，確保 output_formats 正確傳遞
+      const data = await url2parquetApi.createJob({
+        urls: validUrls,
+        output_formats: ['md', 'json', 'parquet', 'csv'], // 明確包含所有格式
+        timeout_seconds: 60,
+        engine: 'smart',
+        obey_robots_txt: true,
+        max_concurrency: 4
+      });
       
       // 檢查是否為重定向響應
-      if (data.status === 'redirected' && data.redirects) {
-        setRedirects(data.redirects);
+      if (url2parquetApi.isRedirectResponse(data)) {
+        setPendingJobId(data.job_id);
+        // 標記原始 URL 為 redirected
+        const next: Record<string, any> = { ...urlStatusMap };
+        (data.redirects as any[]).forEach(r => {
+          next[r.original_url] = 'redirected';
+        });
+        setUrlStatusMap(next);
+        setRedirects(data.redirects || []);
         setShowRedirectDialog(true);
         setLoading(false);
         return;
@@ -158,6 +174,11 @@ const UrlToParquetWizard: React.FC = () => {
       setResults([jobResult]);
       // 啟動檔案清單輪詢（避免後端尚未立即寫入 files）
       startPollingFiles(jobResult.job_id);
+      setPendingJobId(jobResult.job_id);
+      // 標記第一個 URL 完成（後端目前回傳第一筆成功結果）
+      if (validUrls[0]) {
+        setUrlStatusMap(prev => ({ ...prev, [validUrls[0]]: 'completed' }));
+      }
       
       // 嘗試立即獲取 Markdown（若已有 files）
       tryFetchMarkdownIfReady(data.job_id, data.result?.files || []);
@@ -175,7 +196,10 @@ const UrlToParquetWizard: React.FC = () => {
     
     try {
       const redirectUrls = redirects.map(r => r.final_url);
-      const data = await apiClient.post(`/api/url2parquet/jobs/${redirects[0].job_id || 'temp'}/confirm-redirect`, redirectUrls, { timeout: 60000 } as any);
+      const jobId = pendingJobId || '';
+      
+      // 使用新的 API 封裝
+      const data = await url2parquetApi.confirmRedirect(jobId, redirectUrls);
       
       const jobResult: JobResult = {
         job_id: data.job_id,
@@ -187,6 +211,11 @@ const UrlToParquetWizard: React.FC = () => {
       setResults([jobResult]);
       // 重定向確認後同樣輪詢檔案清單
       startPollingFiles(jobResult.job_id);
+      setPendingJobId(jobResult.job_id);
+      // 標記重定向後第一個 URL 為完成
+      if (redirectUrls[0]) {
+        setUrlStatusMap(prev => ({ ...prev, [redirectUrls[0]]: 'completed' }));
+      }
       
       tryFetchMarkdownIfReady(data.job_id, data.result?.files || []);
     } catch (e: any) {
@@ -251,48 +280,65 @@ const UrlToParquetWizard: React.FC = () => {
     
     for (const result of results) {
       if (result.result && result.result.files) {
-        for (const file of result.result.files) {
-          try {
-            // 以二進位 blob 方式下載（支援 parquet）
-            const resp = await http.get(
-              `/api/url2parquet/jobs/${result.job_id}/files/${file.format}/download`,
-              { responseType: 'blob', timeout: 60000 }
-            );
-            const contentDisposition = resp.headers['content-disposition'] as string | undefined;
-            const suggested = contentDisposition?.match(/filename="?([^";]+)"?/i)?.[1];
-            const filename = suggested || `${file.format}_${result.job_id}.${file.format}`;
-            const blob = new Blob([resp.data]);
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          } catch (e) {
-            console.warn(`無法下載文件 ${file.format}:`, e);
-          }
+        try {
+          // 使用新的 API 封裝批量下載
+          await url2parquetApi.downloadAllFiles(result.job_id, result.result.files);
+        } catch (e) {
+          console.warn(`批量下載文件失敗:`, e);
         }
       }
+    }
+  };
+
+  // 本地 Markdown 上傳解析
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const handleUploadLocalMd = () => fileInputRef.current?.click();
+  const onLocalMdSelected: React.ChangeEventHandler<HTMLInputElement> = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const localId = `local_${Date.now()}`;
+      setMarkdownContents(prev => ({ ...prev, [localId]: text }));
+      const parsed = parseProxyTable(text, undefined);
+      if (parsed.length > 0) {
+        setProxyList(prev => [...prev, ...parsed]);
+      }
+    } catch (err) {
+      console.warn('讀取本地 Markdown 失敗', err);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // 從後端列出 outputs 內的 Markdown 檔案
+  const fetchLocalMdList = async () => {
+    setLocalMdLoading(true);
+    try {
+      const data = await url2parquetApi.getLocalMarkdownFiles('data/url2parquet', 50);
+      setLocalMdFiles(data.files);
+    } catch (err) {
+      console.warn('列出本地 Markdown 失敗', err);
+      setLocalMdFiles([]);
+    } finally {
+      setLocalMdLoading(false);
+    }
+  };
+
+  const loadLocalMdContent = async (filename: string) => {
+    try {
+      const data = await url2parquetApi.getLocalMarkdownContent(filename, 'data/url2parquet');
+      const localId = `local_${Date.now()}`;
+      setMarkdownContents(prev => ({ ...prev, [localId]: data.content }));
+    } catch (err) {
+      console.warn('讀取本地 Markdown 內容失敗', err);
     }
   };
 
   // 針對單一檔案提供立即下載按鈕
   const handleDownloadSingle = async (jobId: string, format: string) => {
     try {
-      const resp = await http.get(
-        `/api/url2parquet/jobs/${jobId}/files/${format}/download`,
-        { responseType: 'blob', timeout: 60000 }
-      );
-      const contentDisposition = resp.headers['content-disposition'] as string | undefined;
-      const suggested = contentDisposition?.match(/filename="?([^";]+)"?/i)?.[1];
-      const filename = suggested || `${format}_${jobId}.${format}`;
-      const blob = new Blob([resp.data]);
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      await url2parquetApi.downloadFile(jobId, format, `${format}_${jobId}.${format}`);
     } catch (e) {
       console.warn(`無法下載文件 ${format}:`, e);
     }
@@ -327,7 +373,7 @@ const UrlToParquetWizard: React.FC = () => {
     if (!hasMd || !jobId) return;
     if (markdownContents[jobId]) return; // 已載入過
     try {
-      const fileResponse = await apiClient.get(`/api/url2parquet/jobs/${jobId}/files/md`, { timeout: 60000 } as any);
+      const fileResponse = await url2parquetApi.getFileContent(jobId, 'md');
       setMarkdownContents(prev => ({ ...prev, [jobId]: fileResponse.content }));
     } catch (e) {
       console.warn('無法獲取 Markdown 內容:', e);
@@ -337,17 +383,16 @@ const UrlToParquetWizard: React.FC = () => {
 
   const fetchJobFilesOnce = async (jobId: string) => {
     try {
-      // 先查詢 /download（只回 files）
-      const dl = await apiClient.get<{ files: any[] }>(`/api/url2parquet/jobs/${jobId}/download`, { timeout: 30000 } as any);
-      const files = (dl as any)?.files || [];
+      // 使用新的 API 封裝
+      const { files } = await url2parquetApi.getJobFiles(jobId);
       if (files && files.length > 0) {
-        updateResultFiles(jobId, files as any);
+        updateResultFiles(jobId, files);
         return true;
       }
 
-      // 回退查詢 /jobs/{id}
-      const job = await apiClient.get<any>(`/api/url2parquet/jobs/${jobId}`, { timeout: 30000 } as any);
-      const jobFiles = job?.files || job?.result?.files || [];
+      // 回退查詢任務狀態
+      const job = await url2parquetApi.getJob(jobId);
+      const jobFiles = job?.result?.files || [];
       if (jobFiles && jobFiles.length > 0) {
         updateResultFiles(jobId, jobFiles);
         return true;
@@ -361,25 +406,29 @@ const UrlToParquetWizard: React.FC = () => {
   const startPollingFiles = async (jobId: string) => {
     if (!jobId || isPolling) return;
     setIsPolling(true);
-    const start = Date.now();
-    const timeoutMs = 60000; // 最長 60 秒
-    const intervalMs = 2000; // 每 2 秒一次
-
-    const timer = setInterval(async () => {
-      const ok = await fetchJobFilesOnce(jobId);
-      if (ok) {
-        clearInterval(timer);
-        setIsPolling(false);
-        return;
-      }
-      if (Date.now() - start > timeoutMs) {
-        clearInterval(timer);
-        setIsPolling(false);
-      }
-    }, intervalMs);
+    
+    try {
+      // 使用新的 API 封裝的輪詢工具
+      await url2parquetApi.pollJobFilesUntilReady(
+        jobId,
+        (files) => {
+          updateResultFiles(jobId, files);
+        },
+        {
+          interval: 2000,
+          timeout: 60000,
+          maxAttempts: 30
+        }
+      );
+    } catch (error) {
+      console.warn('輪詢文件失敗:', error);
+    } finally {
+      setIsPolling(false);
+    }
   };
 
   return (
+    <>
     <Space direction="vertical" size={16}>
       <Typography variant="h3">URL 轉換與代理擷取</Typography>
       
@@ -387,9 +436,19 @@ const UrlToParquetWizard: React.FC = () => {
       <Card>
         <Space direction="vertical" size={12}>
           <Typography variant="h4">代理網站 URL 列表</Typography>
-          <Typography color="textSecondary">
+          <Typography color="secondary">
             輸入要爬取的代理網站URL，系統會自動轉換為Markdown、JSON、Parquet格式
           </Typography>
+          {/* 簡易 URL 狀態列 */}
+          {urls.some(u => urlStatusMap[u]) && (
+            <div style={{ fontSize: 12, color: '#666' }}>
+              {urls.map(u => (
+                <div key={u}>
+                  <strong>{u}</strong>：{urlStatusMap[u] === 'completed' ? '完成' : urlStatusMap[u] === 'redirected' ? '已重定向，等待確認' : urlStatusMap[u] === 'failed' ? '失敗' : '待處理'}
+                </div>
+              ))}
+            </div>
+          )}
           
           {urls.map((url, index) => (
             <div key={index} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -402,7 +461,7 @@ const UrlToParquetWizard: React.FC = () => {
               {urls.length > 1 && (
                 <Button 
                   onClick={() => removeUrl(index)} 
-                  size="small" 
+                  size="sm" 
                   variant="outline"
                   style={{ color: 'red' }}
                 >
@@ -413,7 +472,7 @@ const UrlToParquetWizard: React.FC = () => {
           ))}
           
           <div style={{ display: 'flex', gap: '8px' }}>
-            <Button onClick={addUrl} variant="outline" size="small">
+            <Button onClick={addUrl} variant="outline" size="sm">
               + 添加 URL
             </Button>
             <Button 
@@ -447,7 +506,7 @@ const UrlToParquetWizard: React.FC = () => {
                 <Space direction="vertical" size={8}>
                   <Typography><strong>原始URL:</strong> {redirect.original_url}</Typography>
                   <Typography><strong>重定向至:</strong> {redirect.final_url}</Typography>
-                  <Typography color="textSecondary">{redirect.message}</Typography>
+                  <Typography color="secondary">{redirect.message}</Typography>
                 </Space>
               </div>
             ))}
@@ -483,7 +542,7 @@ const UrlToParquetWizard: React.FC = () => {
                         {result.result.files.map((file: any, fileIndex: number) => (
                           <li key={fileIndex} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span>{file.format.toUpperCase()}: {file.path} ({file.size} bytes)</span>
-                            <Button size="small" variant="outline" onClick={() => handleDownloadSingle(result.job_id, file.format)}>
+                            <Button size="sm" variant="outline" onClick={() => handleDownloadSingle(result.job_id, file.format)}>
                               下載
                             </Button>
                           </li>
@@ -492,18 +551,18 @@ const UrlToParquetWizard: React.FC = () => {
                     </div>
                   ) : (
                     <div>
-                      <Typography color="textSecondary">尚未生成檔案清單，可能仍在處理或寫入中。</Typography>
+                      <Typography color="secondary">尚未生成檔案清單，可能仍在處理或寫入中。</Typography>
                       <Space>
-                        <Button size="small" variant="outline" onClick={() => fetchJobFilesOnce(result.job_id)} disabled={loading}>
+                        <Button size="sm" variant="outline" onClick={() => fetchJobFilesOnce(result.job_id)} disabled={loading}>
                           刷新檔案清單
                         </Button>
                         {!isPolling && (
-                          <Button size="small" onClick={() => startPollingFiles(result.job_id)}>
+                          <Button size="sm" onClick={() => startPollingFiles(result.job_id)}>
                             啟動自動刷新
                           </Button>
                         )}
                         {isPolling && (
-                          <Typography color="textSecondary">自動刷新中...</Typography>
+                          <Typography color="secondary">自動刷新中...</Typography>
                         )}
                       </Space>
                     </div>
@@ -516,6 +575,12 @@ const UrlToParquetWizard: React.FC = () => {
             <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap' }}>
               <Button onClick={downloadOriginalFiles} variant="outline">
                 下載原始文件 (MD/JSON/Parquet)
+              </Button>
+              <Button onClick={handleUploadLocalMd} variant="outline">
+                上傳本地 Markdown 並解析
+              </Button>
+              <Button onClick={fetchLocalMdList} variant="outline" loading={localMdLoading}>
+                載入本地 outputs 清單
               </Button>
               {proxyList.length > 0 && (
                 <>
@@ -535,6 +600,26 @@ const UrlToParquetWizard: React.FC = () => {
         </Card>
       )}
 
+      {/* 本地 outputs 檔案清單 */}
+      {localMdFiles.length > 0 && (
+        <Card>
+          <Space direction="vertical" size={12}>
+            <Typography variant="h4">本地 Markdown 檔案（outputs）</Typography>
+            <ul>
+              {localMdFiles.map((f, i) => (
+                <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontFamily: 'monospace' }}>{f.filename}</span>
+                  <span style={{ color: '#888', fontSize: 12 }}>({Math.round(f.size / 1024)} KB)</span>
+                  <Button size="sm" variant="outline" onClick={() => loadLocalMdContent(f.filename)}>
+                    載入並解析
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </Space>
+        </Card>
+      )}
+
       {/* 代理列表展示 */}
       {proxyList.length > 0 && (
         <Card>
@@ -542,9 +627,9 @@ const UrlToParquetWizard: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="h4">擷取的代理列表 ({proxyList.length} 個)</Typography>
               <Space>
-                <Button onClick={exportToCSV} size="small">導出 CSV</Button>
-                <Button onClick={exportToJSON} size="small">導出 JSON</Button>
-                <Button onClick={exportToTXT} size="small">導出 TXT</Button>
+                <Button onClick={exportToCSV} size="sm">導出 CSV</Button>
+                <Button onClick={exportToJSON} size="sm">導出 JSON</Button>
+                <Button onClick={exportToTXT} size="sm">導出 TXT</Button>
               </Space>
             </div>
             
@@ -606,6 +691,8 @@ const UrlToParquetWizard: React.FC = () => {
         </Card>
       )}
     </Space>
+    <input ref={fileInputRef} type="file" accept=".md,text/markdown" style={{ display: 'none' }} onChange={onLocalMdSelected} />
+  </>
   );
 };
 

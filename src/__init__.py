@@ -32,23 +32,18 @@ __author__ = "Proxy Crawler System Team"
 __description__ = "高效的代理IP爬取、驗證和管理系統"
 
 # 導入核心模組
-from . import config
 from . import utils
-from . import crawlers
-from . import validators
-from . import storage
 from . import core
 from . import api
 from . import monitoring
 from . import optimization
+from . import proxy_manager
 
 # 導入主要類和函數
 from .core import (
-    ProxyValidator,
-    RedisStorageManager,
     TaskManager,
-    CoreValidator,
-    SystemIntegrator
+    SystemIntegrator,
+    WorkflowScheduler
 )
 
 from .api import (
@@ -74,7 +69,8 @@ from .optimization import (
     optimize_system
 )
 
-from .config import (
+# Config 相關導入
+from .core.config import (
     Config,
     get_config,
     load_config

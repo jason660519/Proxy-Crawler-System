@@ -11,6 +11,8 @@ from ..core.pipeline import Url2ParquetPipeline
 from ..core.cache import FileCache
 from ..checksum import compute_checksum
 import httpx
+from pathlib import Path
+import pathlib
 
 
 router = APIRouter(prefix="/api/url2parquet", tags=["URL2Parquet"])
@@ -323,4 +325,58 @@ async def confirm_redirect(job_id: str, redirect_urls: List[str]) -> Dict[str, A
         _jobs[job_id].status = JobStatus.failed
         _jobs[job_id].error = str(e)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============ 本地樣本檔（Markdown）瀏覽 ============
+
+def _outputs_dir(base_work_dir: Optional[str]) -> Path:
+    root = Path(base_work_dir or "data/url2parquet").resolve()
+    outputs = (root / "outputs").resolve()
+    try:
+        outputs.relative_to(root)
+    except Exception:
+        raise HTTPException(status_code=400, detail="invalid work_dir")
+    outputs.mkdir(parents=True, exist_ok=True)
+    return outputs
+
+
+@router.get("/local-md")
+async def list_local_markdown(work_dir: Optional[str] = None, limit: int = 50) -> Dict[str, Any]:
+    """列出工作目錄下 outputs 內的 .md 檔案（供前端手動解析）。"""
+    outputs = _outputs_dir(work_dir)
+    items = []
+    try:
+        md_files = sorted(outputs.rglob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
+        for p in md_files[: max(1, min(limit, 200))]:
+            try:
+                stat = p.stat()
+                items.append({
+                    "filename": str(p.relative_to(outputs).as_posix()),
+                    "size": stat.st_size,
+                    "modified": stat.st_mtime,
+                })
+            except Exception:
+                continue
+        return {"files": items}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list markdown files: {e}")
+
+
+@router.get("/local-md/content")
+async def read_local_markdown(filename: str, work_dir: Optional[str] = None) -> Dict[str, Any]:
+    """讀取 outputs 內指定的 .md 檔案內容。"""
+    outputs = _outputs_dir(work_dir)
+    # 防目錄穿越，僅允許在 outputs 內
+    target = (outputs / filename).resolve()
+    try:
+        target.relative_to(outputs)
+    except Exception:
+        raise HTTPException(status_code=400, detail="invalid filename")
+    if not target.is_file() or target.suffix.lower() != ".md":
+        raise HTTPException(status_code=404, detail="file not found")
+    try:
+        content = target.read_text("utf-8", errors="ignore")
+        return {"filename": filename, "content": content, "size": target.stat().st_size}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read markdown: {e}")
 

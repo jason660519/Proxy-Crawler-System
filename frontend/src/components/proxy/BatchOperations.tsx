@@ -332,9 +332,10 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
     if (updateConfig.timeout) {
       updates.timeout = parseInt(updateConfig.timeout);
     }
-    if (updateConfig.maxRetries) {
-      updates.maxRetries = parseInt(updateConfig.maxRetries);
-    }
+    // maxRetries 屬性在 ProxyNode 類型中不存在，暫時移除
+    // if (updateConfig.maxRetries) {
+    //   updates.maxRetries = parseInt(updateConfig.maxRetries);
+    // }
     updates.enabled = updateConfig.enabled;
 
     setProgress({
@@ -385,32 +386,32 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
         <FilterLabel>快速選擇：</FilterLabel>
         <Select
           value={filterCriteria.status}
-          onChange={(value) => setFilterCriteria(prev => ({ ...prev, status: value }))}
+          onChange={(value) => setFilterCriteria(prev => ({ ...prev, status: value as string }))}
           options={[
             { value: 'all', label: '所有狀態' },
             ...availableStatuses.map(status => ({ value: status, label: status }))
           ]}
-          size="sm"
+          size="small"
         />
         <Select
           value={filterCriteria.healthScore}
-          onChange={(value) => setFilterCriteria(prev => ({ ...prev, healthScore: value }))}
+          onChange={(value) => setFilterCriteria(prev => ({ ...prev, healthScore: value as string }))}
           options={[
             { value: 'all', label: '所有健康度' },
             { value: 'high', label: '高 (≥80)' },
             { value: 'medium', label: '中 (50-79)' },
             { value: 'low', label: '低 (<50)' }
           ]}
-          size="sm"
+          size="small"
         />
         <Select
           value={filterCriteria.country}
-          onChange={(value) => setFilterCriteria(prev => ({ ...prev, country: value }))}
+          onChange={(value) => setFilterCriteria(prev => ({ ...prev, country: value as string }))}
           options={[
             { value: 'all', label: '所有國家' },
-            ...availableCountries.map(country => ({ value: country, label: country }))
+            ...availableCountries.filter((country): country is string => Boolean(country)).map(country => ({ value: country, label: country }))
           ]}
-          size="sm"
+          size="small"
         />
         <Button
           variant="outline"
@@ -428,8 +429,9 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
             checked={isAllSelected}
             indeterminate={isPartialSelected}
             onChange={handleSelectAll}
-            label="全選"
-          />
+          >
+            全選
+          </Checkbox>
           <Button
             variant="outline"
             size="sm"
@@ -505,10 +507,9 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
 
       {/* 批量更新模態框 */}
       <Modal
-        isOpen={showUpdateModal}
+        visible={showUpdateModal}
         onClose={() => setShowUpdateModal(false)}
         title="批量更新配置"
-        size="md"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
@@ -539,8 +540,9 @@ export const BatchOperations: React.FC<BatchOperationsProps> = ({
             <Checkbox
               checked={updateConfig.enabled}
               onChange={(checked) => setUpdateConfig(prev => ({ ...prev, enabled: checked }))}
-              label="啟用代理"
-            />
+            >
+              啟用代理
+            </Checkbox>
           </div>
           
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>

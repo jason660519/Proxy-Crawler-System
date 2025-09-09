@@ -554,3 +554,122 @@ async def get_task_templates(
     except Exception as e:
         logger.error(f"獲取任務模板失敗: {str(e)}")
         raise HTTPException(status_code=500, detail=f"獲取任務模板失敗: {str(e)}")
+
+
+class TaskQueueAPI:
+    """任務佇列 API 類
+    
+    提供任務佇列管理的統一接口。
+    """
+    
+    def __init__(self, task_manager: TaskManager):
+        """初始化任務佇列 API
+        
+        Args:
+            task_manager: 任務管理器實例
+        """
+        self.task_manager = task_manager
+        self.router = router
+        self.logger = logger
+    
+    async def create_task(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
+        """創建任務
+        
+        Args:
+            task_data: 任務數據
+        
+        Returns:
+            Dict[str, Any]: 創建結果
+        """
+        try:
+            task = await self.task_manager.create_task(**task_data)
+            return {
+                "success": True,
+                "task_id": task.id,
+                "message": "任務創建成功"
+            }
+        except Exception as e:
+            self.logger.error(f"創建任務失敗: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    async def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """獲取任務詳情
+        
+        Args:
+            task_id: 任務ID
+        
+        Returns:
+            Optional[Dict[str, Any]]: 任務詳情
+        """
+        try:
+            task = await self.task_manager.get_task(task_id)
+            if task:
+                return task.__dict__
+            return None
+        except Exception as e:
+            self.logger.error(f"獲取任務失敗: {str(e)}")
+            return None
+    
+    async def update_task(self, task_id: str, update_data: Dict[str, Any]) -> Dict[str, Any]:
+        """更新任務
+        
+        Args:
+            task_id: 任務ID
+            update_data: 更新數據
+        
+        Returns:
+            Dict[str, Any]: 更新結果
+        """
+        try:
+            success = await self.task_manager.update_task(task_id, **update_data)
+            return {
+                "success": success,
+                "message": "任務更新成功" if success else "任務更新失敗"
+            }
+        except Exception as e:
+            self.logger.error(f"更新任務失敗: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    async def delete_task(self, task_id: str) -> Dict[str, Any]:
+        """刪除任務
+        
+        Args:
+            task_id: 任務ID
+        
+        Returns:
+            Dict[str, Any]: 刪除結果
+        """
+        try:
+            success = await self.task_manager.delete_task(task_id)
+            return {
+                "success": success,
+                "message": "任務刪除成功" if success else "任務刪除失敗"
+            }
+        except Exception as e:
+            self.logger.error(f"刪除任務失敗: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    async def list_tasks(self, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """列出任務
+        
+        Args:
+            filters: 篩選條件
+        
+        Returns:
+            List[Dict[str, Any]]: 任務列表
+        """
+        try:
+            tasks = await self.task_manager.list_tasks(filters=filters)
+            return [task.__dict__ for task in tasks]
+        except Exception as e:
+            self.logger.error(f"列出任務失敗: {str(e)}")
+            return []

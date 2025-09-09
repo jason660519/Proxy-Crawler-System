@@ -250,7 +250,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
           const seenIPs = new Set<string>();
           let isFirstLine = true;
           
-          lines.forEach((line, index) => {
+          lines.forEach((line) => {
             // 跳過標題行（如果存在）
             if (isFirstLine && line.toLowerCase().includes('ip_address')) {
               isFirstLine = false;
@@ -489,10 +489,10 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
 
   return (
     <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
       title="導入代理 CSV 檔案"
-      size="large"
+      width="800px"
+      visible={isOpen}
+      onClose={handleClose}
     >
       <ImportContainer>
         {/* 檔案上傳區域 */}
@@ -561,7 +561,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
 
         {/* 處理進度 */}
         {isProcessing && (
-          <Progress value={importProgress} label="處理中..." />
+          <Progress percent={importProgress} />
         )}
 
         {/* 資料預覽 */}
