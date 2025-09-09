@@ -148,7 +148,7 @@ docker compose up -d --build
 
 ## 📖 API 使用
 
-### HTML to Markdown 轉換
+### HTML to Markdown 轉換（即將淘汰，改用 URL2Parquet）
 
 ```bash
 # 基本轉換
@@ -160,6 +160,21 @@ curl -X POST "http://localhost:8000/convert" \
 curl -X POST "http://localhost:8000/batch-convert" \
      -H "Content-Type: application/json" \
      -d '{"items": [{"html": "<h1>Title 1</h1>"}, {"html": "<h2>Title 2</h2>"}]}'
+```
+
+### URL2Parquet（新一代內容轉換管線）
+
+```bash
+# 建立轉換任務（單/多 URL）
+curl -X POST "http://127.0.0.1:8000/api/url2parquet/jobs" \
+     -H "Content-Type: application/json" \
+     -d '{"urls":["https://example.com"],"output_formats":["md","json"],"timeout_seconds":10}'
+
+# 查詢任務狀態
+curl "http://127.0.0.1:8000/api/url2parquet/jobs/<job_id>"
+
+# 取得下載清單（檔案路徑）
+curl "http://127.0.0.1:8000/api/url2parquet/jobs/<job_id>/download"
 ```
 
 ### 代理網站檢查

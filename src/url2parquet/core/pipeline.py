@@ -1,71 +1,147 @@
-from __future__ import annotations
-
-import hashlib
 import time
 from pathlib import Path
-from typing import Iterable, List
+from typing import Dict, Any
+
+import httpx
 
 from ..config import PipelineOptions
-from ..types import ConvertResult, OutputFile
+from ..checksum import compute_checksum
 
 
 class Url2ParquetPipeline:
     def __init__(self, options: PipelineOptions):
         self.options = options
-        self.work_dir: Path = Path(options.work_dir)
-        self.cache_dir: Path = self.work_dir / "cache"
-        self.jobs_dir: Path = self.work_dir / "jobs"
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.jobs_dir.mkdir(parents=True, exist_ok=True)
+        self.base = Path(options.work_dir)
+        (self.base / "jobs").mkdir(parents=True, exist_ok=True)
 
-    def _checksum(self, url: str) -> str:
-        return hashlib.sha256(url.encode("utf-8")).hexdigest()
+    async def process_single(self, url: str) -> Dict[str, Any]:
+        started = time.time()
+        checksum = compute_checksum(url, vars(self.options)).replace("sha256:", "")
 
-    def _result_path(self, checksum: str) -> Path:
-        return self.cache_dir / checksum / "result.json"
+        # Fetch with redirect handling - 確保永遠不會拋出httpx錯誤
+        html = None
+        final_url = url
+        
+        try:
+            async with httpx.AsyncClient(
+                timeout=self.options.timeout_seconds,
+                follow_redirects=False,  # 不自動跟隨重定向
+                max_redirects=0
+            ) as client:
+                resp = await client.get(url, headers={"User-Agent": self.options.user_agent})
+                
+                # 檢查重定向狀態碼
+                if resp.status_code in [301, 302, 303, 307, 308]:
+                    redirect_url = resp.headers.get("location")
+                    if redirect_url:
+                        # 確保重定向URL是完整的
+                        if redirect_url.startswith('/'):
+                            from urllib.parse import urljoin
+                            redirect_url = urljoin(url, redirect_url)
+                        
+                        return {
+                            "status": "redirected",
+                            "original_url": url,
+                            "final_url": redirect_url,
+                            "message": f"URL已跳轉至 {redirect_url}，是否繼續測試新的URL？"
+                        }
+                
+                # 只有在非重定向狀態碼時才檢查狀態
+                if resp.status_code not in [301, 302, 303, 307, 308]:
+                    resp.raise_for_status()
+                html = resp.text
+                final_url = str(resp.url)
+                
+                # Check if URL was redirected (即使狀態碼不是重定向)
+                if final_url != url:
+                    return {
+                        "status": "redirected",
+                        "original_url": url,
+                        "final_url": final_url,
+                        "message": f"URL已跳轉至 {final_url}，是否繼續測試新的URL？"
+                    }
+                        
+        except Exception as e:
+            # 統一處理所有錯誤，包括httpx錯誤
+            error_msg = str(e)
+            print(f"🔍 處理URL {url} 時發生錯誤: {error_msg}")
+            
+            # 檢查是否為重定向錯誤
+            if ("Redirect response" in error_msg and "Redirect location:" in error_msg) or \
+               ("301" in error_msg or "302" in error_msg or "303" in error_msg or "307" in error_msg or "308" in error_msg):
+                # 從錯誤訊息中提取重定向URL
+                import re
+                match = re.search(r"Redirect location: '([^']+)'", error_msg)
+                if match:
+                    redirect_url = match.group(1)
+                    return {
+                        "status": "redirected",
+                        "original_url": url,
+                        "final_url": redirect_url,
+                        "message": f"URL已跳轉至 {redirect_url}，是否繼續測試新的URL？"
+                    }
+            
+            # 檢查是否為httpx.HTTPStatusError
+            if hasattr(e, 'response') and hasattr(e.response, 'status_code'):
+                if e.response.status_code in [301, 302, 303, 307, 308]:
+                    redirect_url = e.response.headers.get("location")
+                    if redirect_url:
+                        # 確保重定向URL是完整的
+                        if redirect_url.startswith('/'):
+                            from urllib.parse import urljoin
+                            redirect_url = urljoin(url, redirect_url)
+                        
+                        return {
+                            "status": "redirected",
+                            "original_url": url,
+                            "final_url": redirect_url,
+                            "message": f"URL已跳轉至 {redirect_url}，是否繼續測試新的URL？"
+                        }
+            
+            # 如果不是重定向錯誤，則拋出
+            raise
+        
+        # 如果沒有獲取到HTML，則返回錯誤
+        if html is None:
+            raise ValueError(f"無法獲取URL內容: {url}")
 
-    def _ensure_dir(self, path: Path) -> None:
-        path.mkdir(parents=True, exist_ok=True)
+        # Transform: trivial extract to markdown via markdownify if available; else plain text fallback
+        try:
+            from markdownify import markdownify
 
-    def convert_url(self, url: str) -> ConvertResult:
-        start = time.perf_counter()
-        checksum = self._checksum(url)
-        cache_path = self.cache_dir / checksum
-        self._ensure_dir(cache_path)
+            markdown = markdownify(html)
+        except Exception:
+            # naive fallback
+            markdown = html
 
-        # Minimal stub: write markdown and json placeholders, no real fetch/transform (to be implemented)
-        md_path = cache_path / "content.md"
-        json_path = cache_path / "content.json"
-        parquet_path = cache_path / "content.parquet"
+        # Output: write minimal files according to formats
+        files = []
+        out_dir = self.base / "outputs"
+        out_dir.mkdir(parents=True, exist_ok=True)
 
-        # Create placeholder files if not exist
-        if not md_path.exists():
-            md_path.write_text(f"# Placeholder for {url}\n\nGenerated by url2parquet stub.", encoding="utf-8")
-        if not json_path.exists():
-            json_path.write_text('{"url": "%s", "markdown": true}' % url, encoding="utf-8")
-        if not parquet_path.exists():
-            parquet_path.write_text("PARQUET_PLACEHOLDER", encoding="utf-8")
-
-        files: List[OutputFile] = []
-        if "parquet" in self.options.output_formats:
-            files.append(OutputFile(format="parquet", path=str(parquet_path)))
-        if "json" in self.options.output_formats:
-            files.append(OutputFile(format="json", path=str(json_path)))
         if "md" in self.options.output_formats or "markdown" in self.options.output_formats:
-            files.append(OutputFile(format="md", path=str(md_path)))
+            md_path = out_dir / f"{checksum[7:15]}_content.md"
+            md_path.write_text(markdown, encoding="utf-8")
+            files.append({"format": "md", "path": str(md_path), "size": md_path.stat().st_size})
 
-        duration_ms = int((time.perf_counter() - start) * 1000)
-        return ConvertResult(
-            url=url,
-            title=None,
-            language=None,
-            files=files,
-            checksum=f"sha256:{checksum}",
-            engine=self.options.extract_mode,
-            processing_time_ms=duration_ms,
-        )
+        if "json" in self.options.output_formats:
+            import json
 
-    def batch_convert(self, urls: Iterable[str]) -> List[ConvertResult]:
-        return [self.convert_url(u) for u in urls]
+            json_path = out_dir / f"{checksum[7:15]}_content.json"
+            json_path.write_text(
+                json.dumps({"url": url, "markdown": markdown}, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            files.append({"format": "json", "path": str(json_path), "size": json_path.stat().st_size})
 
+        # parquet/csv can be added in follow-ups; keep MVP minimal
+
+        elapsed_ms = int((time.time() - started) * 1000)
+        return {
+            "url": url,
+            "files": files,
+            "checksum": checksum,
+            "engine": self.options.engine,
+            "processing_time_ms": elapsed_ms,
+        }
 

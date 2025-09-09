@@ -4,16 +4,12 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter } from 'react-router-dom';
 import styled, { ThemeProvider, createGlobalStyle } from 'styled-components';
-import { Header, ActivityBar } from './components/layout';
-import { Dashboard, OperationsDashboard, MetricsOverview, Settings } from './components/dashboard';
 import { ThemeDebugger } from './components/debug';
 import { useTheme, useHealthStatus } from './hooks';
 import { createGlobalStyles, lightTheme, darkTheme } from './styles';
-import ProxyManagement from './pages/ProxyManagement';
-import TaskQueue from './pages/TaskQueue';
-import SystemLogs from './pages/SystemLogs';
-import UrlToParquetWizard from './pages/UrlToParquetWizard';
+import { AppRouter } from './router';
 
 
 // ============= 全域樣式 =============
@@ -30,27 +26,6 @@ const AppContainer = styled.div`
   height: 100vh;
   background-color: var(--color-background-primary);
   color: var(--color-text-primary);
-`;
-
-const MainContainer = styled.div`
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-`;
-
-const ContentArea = styled.main`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background-color: var(--color-background-primary);
-`;
-
-const PageContent = styled.div`
-  flex: 1;
-  padding: 24px;
-  overflow-y: auto;
-  background-color: var(--color-background-primary);
 `;
 
 const LoadingContainer = styled.div`
@@ -108,8 +83,8 @@ const WelcomeSubtitle = styled.p`
 const App: React.FC = () => {
   const { isDark, theme } = useTheme();
   useHealthStatus();
-  const [activeView, setActiveView] = useState('dashboard');
   const [isInitializing, setIsInitializing] = useState(true);
+  
   // 控制是否顯示主題調試器（僅開發環境，且需使用者顯式開啟）
   const isThemeDebugVisible = (() => {
     try {
@@ -135,66 +110,9 @@ const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // 處理活動項目變更
-  const handleActivityChange = (itemId: string) => {
-    setActiveView(itemId);
-  };
-
   // 處理通知點擊
   const handleNotificationClick = () => {
     console.log('Open notifications panel');
-  };
-
-  // 渲染頁面內容
-  const renderPageContent = () => {
-    switch (activeView) {
-      case 'dashboard':
-        return (
-          <Dashboard />
-        );
-      
-      case 'proxies':
-        return (
-          <ProxyManagement />
-        );
-      
-      case 'tasks':
-        return (
-          <TaskQueue />
-        );
-      
-      case 'logs':
-        return (
-          <SystemLogs />
-        );
-      
-      case 'analytics':
-        return (
-          <>
-            <OperationsDashboard />
-            <div style={{ marginTop: 24 }}>
-              <MetricsOverview />
-            </div>
-          </>
-        );
-      
-      case 'settings':
-        return (
-          <Settings />
-        );
-      case 'url2parquet':
-        return (
-          <UrlToParquetWizard />
-        );
-      
-      default:
-        return (
-          <WelcomeMessage>
-            <WelcomeTitle>頁面未找到</WelcomeTitle>
-            <WelcomeSubtitle>請選擇左側導航中的功能項目。</WelcomeSubtitle>
-          </WelcomeMessage>
-        );
-    }
   };
 
   // 顯示載入畫面
@@ -217,41 +135,23 @@ const App: React.FC = () => {
   return (
     <ThemeProvider theme={isDark ? darkTheme : lightTheme}>
       <GlobalStyle theme={isDark ? darkTheme : lightTheme} />
-      <AppContainer>
-        <Header
-          showSearch={true}
-          showQuickActions={true}
-          showNotifications={true}
-          themeName={theme}
-          onToggleTheme={() => {
-            // 與 useTheme 保持同一來源，避免多實例不同步
-            try { (window as any).dispatchEvent?.(new CustomEvent('js-theme-request-toggle')); } catch {}
-          }}
-          onNotificationClick={handleNotificationClick}
-        />
-        
-        <MainContainer>
-          <ActivityBar
-            activeItem={activeView}
-            onItemChange={handleActivityChange}
+      <BrowserRouter>
+        <AppContainer>
+          <AppRouter 
+            theme={theme}
+            onNotificationClick={handleNotificationClick}
           />
           
-          <ContentArea>
-            <PageContent>
-              {renderPageContent()}
-            </PageContent>
-          </ContentArea>
-        </MainContainer>
-        
-        {/* 主題調試器 - 只在開發環境顯示 */}
-        {isThemeDebugVisible && (
-          <ThemeDebugger 
-            theme={theme} 
-            isDark={isDark} 
-            isVisible={true}
-          />
-        )}
-      </AppContainer>
+          {/* 主題調試器 - 只在開發環境顯示 */}
+          {isThemeDebugVisible && (
+            <ThemeDebugger 
+              theme={theme} 
+              isDark={isDark} 
+              isVisible={true}
+            />
+          )}
+        </AppContainer>
+      </BrowserRouter>
     </ThemeProvider>
   );
 };

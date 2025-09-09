@@ -1,0 +1,18 @@
+{
+  "url": "https://www.proxy-list.download/HTTP",
+  "files": [
+    {
+      "format": "md",
+      "path": "data\\url2parquet\\outputs\\127fd955_content.md",
+      "size": 8335
+    },
+    {
+      "format": "json",
+      "path": "data\\url2parquet\\outputs\\127fd955_content.json",
+      "size": 8398
+    }
+  ],
+  "checksum": "b1d61e7127fd9552de48848cbf197321cf8febee9cee5569f780c46edae873ea",
+  "engine": "smart",
+  "processing_time_ms": 581
+}

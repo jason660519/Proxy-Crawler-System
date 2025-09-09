@@ -25,6 +25,9 @@ export type { TextAreaProps } from './TextArea';
 export { Switch } from './Switch';
 export type { SwitchProps } from './Switch';
 
+export { Checkbox } from './Checkbox';
+export type { CheckboxProps } from './Checkbox';
+
 export { Tooltip } from './Tooltip';
 export type { TooltipProps } from './Tooltip';
 

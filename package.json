@@ -7,14 +7,17 @@
     "test-mcp": "echo 'Testing MCP servers...'"
   },
   "devDependencies": {
-    "@modelcontextprotocol/server-github": "latest",
-    "@playwright/mcp": "latest",
-    "@upstash/context7-mcp": "latest",
     "@modelcontextprotocol/server-brave-search": "latest",
+    "@modelcontextprotocol/server-gdrive": "latest",
+    "@modelcontextprotocol/server-github": "latest",
     "@modelcontextprotocol/server-postgres": "latest",
     "@modelcontextprotocol/server-redis": "latest",
-    "@modelcontextprotocol/server-gdrive": "latest",
     "@modelcontextprotocol/server-sequential-thinking": "latest",
+    "@playwright/mcp": "latest",
+    "@upstash/context7-mcp": "latest",
     "figma-developer-mcp": "latest"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.55.0"
   }
 }

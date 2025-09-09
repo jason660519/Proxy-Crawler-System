@@ -23,6 +23,10 @@ import { PageLayout } from '../components/layout/PageLayout';
 import { DataTable, type DataTableColumn } from '../components/ui/DataTable';
 import { StatusIndicator, type StatusType } from '../components/ui/StatusIndicator';
 import { Button, Input, Card, Modal, Select } from '../components/ui';
+import { CsvImportModal } from '../components/proxy/CsvImportModal';
+import { HealthCheckEngine } from '../components/proxy/HealthCheckEngine';
+import { StatsDashboard } from '../components/proxy/StatsDashboard';
+import { BatchOperations } from '../components/proxy/BatchOperations';
 import { useProxyManagement } from '../hooks/useProxyManagement';
 import { useNotification } from '../hooks/useNotification';
 import { formatDateTime } from '../utils/formatters';
@@ -178,6 +182,9 @@ export const ProxyManagement: React.FC<ProxyManagementProps> = ({ className }) =
   
   const [selectedProxies, setSelectedProxies] = useState<string[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showHealthCheck, setShowHealthCheck] = useState(false);
+  const [showStatsDashboard, setShowStatsDashboard] = useState(false);
   const [editingProxy, setEditingProxy] = useState<ProxyNode | null>(null);
   
   const [formData, setFormData] = useState<ProxyFormData>({
@@ -496,6 +503,117 @@ key: 'actions' as any,
       showNotification('批量操作失敗', 'error');
     }
   }, [selectedProxies, bulkOperation, showNotification, handleLoadProxies]);
+
+  const handleCsvImport = useCallback(async (proxies: any[]) => {
+    try {
+      const importPromises = proxies.map(proxy => {
+        const proxyData = {
+          url: `${proxy.protocol || 'http'}://${proxy.ip}${proxy.port ? ':' + proxy.port : ''}`,
+          type: (proxy.protocol || 'http') as ProxyProtocol,
+          username: proxy.username,
+          password: proxy.password,
+          country: proxy.country,
+          tags: [],
+          maxConcurrent: 10,
+          timeout: 30000,
+          enabled: true
+        };
+        return createProxy(proxyData);
+      });
+      
+      await Promise.all(importPromises);
+      handleLoadProxies();
+      showNotification(`成功導入 ${proxies.length} 個代理`, 'success');
+    } catch (error) {
+      showNotification('批量導入失敗', 'error');
+      throw error;
+    }
+  }, [createProxy, handleLoadProxies, showNotification]);
+
+  const handleHealthCheckComplete = useCallback((results: any[]) => {
+    // 處理健康檢查完成後的邏輯
+    const successCount = results.filter(r => r.status === 'success').length;
+    const totalCount = results.length;
+    showNotification(`健康檢查完成：${successCount}/${totalCount} 通過`, 'success');
+    
+    // 重新載入代理列表以更新健康狀態
+    handleLoadProxies();
+  }, [showNotification, handleLoadProxies]);
+
+  // 批量操作處理函數
+  const handleBatchTest = useCallback(async (proxyIds: string[]) => {
+    try {
+      // 調用批量測試 API
+      console.log('批量測試代理:', proxyIds);
+      // 這裡應該調用實際的 API
+    } catch (error) {
+      console.error('批量測試失敗:', error);
+      throw error;
+    }
+  }, []);
+
+  const handleBatchDelete = useCallback(async (proxyIds: string[]) => {
+    try {
+      // 調用批量刪除 API
+      console.log('批量刪除代理:', proxyIds);
+      // 這裡應該調用實際的 API
+    } catch (error) {
+      console.error('批量刪除失敗:', error);
+      throw error;
+    }
+  }, []);
+
+  const handleBatchUpdate = useCallback(async (proxyIds: string[], updates: any) => {
+    try {
+      // 調用批量更新 API
+      console.log('批量更新代理:', proxyIds, updates);
+      // 這裡應該調用實際的 API
+    } catch (error) {
+      console.error('批量更新失敗:', error);
+      throw error;
+    }
+  }, []);
+
+  const handleBatchExport = useCallback((proxyIds: string[]) => {
+    // 導出選中的代理
+    const selectedProxyData = filteredProxies.filter(p => proxyIds.includes(p.id));
+    const csvContent = generateCSVContent(selectedProxyData);
+    downloadCSV(csvContent, `proxies_export_${new Date().toISOString().split('T')[0]}.csv`);
+  }, [filteredProxies]);
+
+  // CSV 生成和下載輔助函數
+  const generateCSVContent = useCallback((data: ProxyNode[]) => {
+    const headers = ['ID', '代理地址', '端口', '類型', '國家', '狀態', '健康分數', '響應時間', '最後檢查時間'];
+    const rows = data.map(proxy => [
+      proxy.id,
+      proxy.host,
+      proxy.port,
+      proxy.type || 'http',
+      proxy.country || '',
+      proxy.status,
+      proxy.healthScore || 0,
+      proxy.responseTime || 0,
+      proxy.lastChecked ? new Date(proxy.lastChecked).toLocaleString() : ''
+    ]);
+    
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .join('\n');
+    
+    return csvContent;
+  }, []);
+
+  const downloadCSV = useCallback((content: string, filename: string) => {
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, []);
   
 
   
@@ -515,13 +633,36 @@ key: 'actions' as any,
       error={state.error}
       className={className}
       toolbar={
-        <Button
-          variant="primary"
-          onClick={() => setShowAddModal(true)}
-          disabled={state.loading}
-        >
-          新增代理
-        </Button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <Button
+            variant="primary"
+            onClick={() => setShowAddModal(true)}
+            disabled={state.loading}
+          >
+            新增代理
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => setShowImportModal(true)}
+            disabled={state.loading}
+          >
+            導入 CSV
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowHealthCheck(!showHealthCheck)}
+            disabled={state.loading}
+          >
+            {showHealthCheck ? '隱藏' : '顯示'}健康檢查
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowStatsDashboard(!showStatsDashboard)}
+            disabled={state.loading}
+          >
+            {showStatsDashboard ? '隱藏' : '顯示'}統計儀表盤
+          </Button>
+        </div>
       }
     >
       <ProxyManagementContainer>
@@ -544,6 +685,36 @@ key: 'actions' as any,
             <StatLabel>平均回應時間</StatLabel>
           </StatCard>
         </StatsCards>
+        
+        {/* 統計儀表盤 */}
+         {showStatsDashboard && (
+           <StatsDashboard
+             proxies={filteredProxies}
+           />
+         )}
+         
+         {/* 批量操作 */}
+         <BatchOperations
+           proxies={filteredProxies}
+           selectedProxies={selectedProxies}
+           onSelectionChange={setSelectedProxies}
+           onBatchTest={handleBatchTest}
+           onBatchDelete={handleBatchDelete}
+           onBatchUpdate={handleBatchUpdate}
+           onBatchExport={handleBatchExport}
+         />
+        
+        {/* 健康檢查引擎 */}
+        {showHealthCheck && (
+          <HealthCheckEngine
+            proxies={filteredProxies}
+            onHealthCheckComplete={(results) => {
+              // 更新代理健康狀態
+              showNotification('健康檢查結果已更新', 'success');
+              handleLoadProxies();
+            }}
+          />
+        )}
         
         {/* 篩選區域 */}
         <FiltersSection>
@@ -770,6 +941,13 @@ key: 'actions' as any,
             </div>
           </ProxyForm>
         </Modal>
+        
+        {/* CSV 導入模態框 */}
+        <CsvImportModal
+          isOpen={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          onImport={handleCsvImport}
+        />
       </ProxyManagementContainer>
     </PageLayout>
   );

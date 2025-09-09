@@ -1,27 +1,28 @@
-from __future__ import annotations
-
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from enum import Enum
+from typing import Dict, Any, List, Optional
+from datetime import datetime
+
+
+class JobStatus(str, Enum):
+    queued = "queued"
+    processing = "processing"
+    completed = "completed"
+    failed = "failed"
+    canceled = "canceled"
 
 
 @dataclass
-class OutputFile:
-    format: str
-    path: str
-    size: Optional[int] = None
-    rows: Optional[int] = None
-
-
-@dataclass
-class ConvertResult:
-    url: str
-    title: Optional[str] = None
-    language: Optional[str] = None
-    files: List[OutputFile] = field(default_factory=list)
+class JobResult:
+    job_id: str
+    status: JobStatus
+    url: Optional[str] = None
+    files: List[Dict[str, Any]] = field(default_factory=list)
     checksum: Optional[str] = None
     engine: Optional[str] = None
     processing_time_ms: Optional[int] = None
-    warnings: List[str] = field(default_factory=list)
-    extra: Dict[str, object] = field(default_factory=dict)
+    created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    updated_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    error: Optional[str] = None
 
 

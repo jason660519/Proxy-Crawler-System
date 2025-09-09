@@ -1,0 +1,18 @@
+{
+  "url": "https://free-proxy-list.net/",
+  "files": [
+    {
+      "format": "md",
+      "path": "data\\url2parquet\\outputs\\38c052ad_content.md",
+      "size": 44585
+    },
+    {
+      "format": "json",
+      "path": "data\\url2parquet\\outputs\\38c052ad_content.json",
+      "size": 44651
+    }
+  ],
+  "checksum": "6db26a838c052ad67dab29a9be180931f8e08aaef6b91bb499c047cc3624f05f",
+  "engine": "smart",
+  "processing_time_ms": 793
+}

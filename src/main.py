@@ -6,6 +6,7 @@
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 import os
 import sys
 from datetime import datetime
@@ -23,15 +24,24 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+# 添加 CORS 中間件
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # 導入並掛載代理管理器 API
 try:
     from src.proxy_manager.api import app as proxy_api, proxy_manager
     # 直接將所有路由添加到主應用
     for route in proxy_api.routes:
         app.routes.append(route)
-    print("✅ 代理管理器 API 已掛載到 /api")
+    print("代理管理器 API 已掛載到 /api")
 except ImportError as e:
-    print(f"⚠️ 無法載入代理管理器 API: {e}")
+    print(f"無法載入代理管理器 API: {e}")
 
 # 添加啟動事件來初始化代理管理器
 @app.on_event("startup")
@@ -58,7 +68,7 @@ async def startup_event():
         import src.proxy_manager.api as proxy_api_module
         proxy_api_module.proxy_manager = manager
         
-        print("✅ 代理管理器在主應用中初始化成功")
+        print("代理管理器在主應用中初始化成功")
         
     except Exception as e:
         print(f"[DEBUG] 代理管理器初始化失敗: {e}")
@@ -82,7 +92,7 @@ async def startup_event():
         import src.api.task_queue_api as task_queue_api_module
         task_queue_api_module._task_manager_instance = task_manager
         
-        print("✅ 任務管理器在主應用中初始化成功")
+        print("任務管理器在主應用中初始化成功")
         
     except Exception as e:
         print(f"[DEBUG] 任務管理器初始化失敗: {e}")
@@ -95,41 +105,49 @@ async def startup_event():
 try:
     from src.etl.etl_api import etl_app
     app.mount("/etl", etl_app)
-    print("✅ ETL API 已掛載到 /etl")
+    print("ETL API 已掛載到 /etl")
 except ImportError as e:
-    print(f"⚠️ 無法載入 ETL API: {e}")
+    print(f"無法載入 ETL API: {e}")
 
 # 導入並掛載 HTML to Markdown API
 try:
     from src.html_to_markdown.api_server import app as html2md_api
     app.mount("/html2md", html2md_api)
-    print("✅ HTML to Markdown API 已掛載到 /html2md")
+    print("HTML to Markdown API 已掛載到 /html2md")
 except ImportError as e:
-    print(f"⚠️ 無法載入 HTML to Markdown API: {e}")
+    print(f"無法載入 HTML to Markdown API: {e}")
+
+# 導入並掛載 URL2Parquet API（新一代內容管線）
+try:
+    from src.url2parquet.api.router import router as url2parquet_router
+    app.include_router(url2parquet_router)
+    print("URL2Parquet API 已掛載到 /api/url2parquet")
+except ImportError as e:
+    print(f"無法載入 URL2Parquet API: {e}")
 
 # 導入並掛載任務佇列管理 API
 try:
     from src.api.task_queue import router as task_queue_router
     app.include_router(task_queue_router, prefix="/api/tasks", tags=["任務佇列"])
-    print("✅ 任務佇列管理 API 已掛載到 /api/tasks")
+    print("任務佇列管理 API 已掛載到 /api/tasks")
 except ImportError as e:
-    print(f"⚠️ 無法載入任務佇列管理 API: {e}")
+    print(f"無法載入任務佇列管理 API: {e}")
 
 # 導入並掛載系統日誌管理 API
 try:
     from src.api.system_logs import router as system_logs_router
     app.include_router(system_logs_router, prefix="/api/logs", tags=["系統日誌"])
-    print("✅ 系統日誌管理 API 已掛載到 /api/logs")
+    print("系統日誌管理 API 已掛載到 /api/logs")
 except ImportError as e:
-    print(f"⚠️ 無法載入系統日誌管理 API: {e}")
+    print(f"無法載入系統日誌管理 API: {e}")
 
 # 導入並掛載數據分析 API
 try:
     from src.api.data_analytics import router as data_analytics_router
     app.include_router(data_analytics_router, prefix="/api/analytics", tags=["數據分析"])
-    print("✅ 數據分析 API 已掛載到 /api/analytics")
+    print("數據分析 API 已掛載到 /api/analytics")
 except ImportError as e:
-    print(f"⚠️ 無法載入數據分析 API: {e}")
+    print(f"無法載入數據分析 API: {e}")
 
 
 @app.get("/")
