@@ -23,6 +23,66 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+# 導入並掛載代理管理器 API
+try:
+    from src.proxy_manager.api import app as proxy_api, proxy_manager
+    # 直接將所有路由添加到主應用
+    for route in proxy_api.routes:
+        app.routes.append(route)
+    print("✅ 代理管理器 API 已掛載到 /api")
+except ImportError as e:
+    print(f"⚠️ 無法載入代理管理器 API: {e}")
+
+# 添加啟動事件來初始化代理管理器
+@app.on_event("startup")
+async def startup_event():
+    """主應用啟動事件"""
+    print("[DEBUG] 主應用 startup_event 被調用")
+    
+    # 初始化代理管理器
+    try:
+        from src.proxy_manager.manager import ProxyManager, ProxyManagerConfig
+        
+        print("[DEBUG] 開始創建代理管理器配置")
+        config = ProxyManagerConfig()
+        print("[DEBUG] 配置創建成功")
+        
+        print("[DEBUG] 開始創建代理管理器")
+        manager = ProxyManager(config)
+        print("[DEBUG] 代理管理器創建成功，開始啟動")
+        
+        await manager.start()
+        print("[DEBUG] 代理管理器啟動成功")
+        
+        # 將管理器設置到 proxy_api 模組中
+        import src.proxy_manager.api as proxy_api_module
+        proxy_api_module.proxy_manager = manager
+        
+        print("✅ 代理管理器在主應用中初始化成功")
+        
+    except Exception as e:
+        print(f"[DEBUG] 代理管理器初始化失敗: {e}")
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"[DEBUG] 詳細錯誤信息: {error_details}")
+        # 不要 raise，讓服務繼續運行
+
+# 導入並掛載 ETL API
+try:
+    from src.etl.etl_api import etl_app
+    app.mount("/etl", etl_app)
+    print("✅ ETL API 已掛載到 /etl")
+except ImportError as e:
+    print(f"⚠️ 無法載入 ETL API: {e}")
+
+# 導入並掛載 HTML to Markdown API
+try:
+    from src.html_to_markdown.api_server import app as html2md_api
+    app.mount("/html2md", html2md_api)
+    print("✅ HTML to Markdown API 已掛載到 /html2md")
+except ImportError as e:
+    print(f"⚠️ 無法載入 HTML to Markdown API: {e}")
+
 
 @app.get("/")
 async def root() -> Dict[str, Any]:

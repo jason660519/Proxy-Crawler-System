@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 from typing import List, Optional
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False
+    )
+    
     # Environment
     environment: str = Field(default="development")
 
@@ -19,6 +26,13 @@ class Settings(BaseSettings):
     db_name: str = Field(default="proxypool")
     db_host: str = Field(default="localhost")
     db_port: int = Field(default=5432)
+    
+    @property
+    def effective_db_host(self) -> str:
+        """根據環境動態決定資料庫主機名"""
+        if self.environment == "docker":
+            return "postgres_db"
+        return self.db_host
 
     # Redis
     redis_password: str = Field(default="")
@@ -37,10 +51,12 @@ class Settings(BaseSettings):
     api_key_header: str = Field(default="X-API-Key")
     api_keys: List[str] = Field(default_factory=list)
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
 
 
 settings = Settings()

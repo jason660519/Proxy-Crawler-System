@@ -189,6 +189,9 @@ geolocation_cache.db
 .vscode/
 .idea/
 
+# Cursor MCP configuration (contains API keys)
+.cursor/
+
 # OS files
 .DS_Store
 Thumbs.db

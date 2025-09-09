@@ -1,18 +1,16 @@
 # 簡化的 Docker Compose 配置
 # 使用新的資料庫配置管理器
 
-version: "3.8"
-
 services:
   # PostgreSQL 資料庫
   postgres_db:
     image: postgres:15
     environment:
-      POSTGRES_USER: ${DB_USER:-proxyadmin}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME:-proxypool}
+      POSTGRES_USER: proxyadmin
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: proxypool
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -28,7 +26,7 @@ services:
   redis_cache:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -48,9 +46,9 @@ services:
     environment:
       # 核心配置 - 只需要這 4 個變數
       - ENVIRONMENT=docker
-      - DB_USER=${DB_USER:-proxyadmin}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME:-proxypool}
+      - DB_USER=proxyadmin
+      - DB_PASSWORD=password123
+      - DB_NAME=proxypool
 
       # 可選配置（如果需要）
       # - REDIS_PASSWORD=${REDIS_PASSWORD}
@@ -74,7 +72,8 @@ services:
       - ./data/transformed:/app/output
       # 配置檔案映射
       - ./src:/app/src
-      - ./requirements_html_to_markdown.txt:/app/requirements_html_to_markdown.txt
+      # 單一依賴檔（已整合）
+      - ./requirements.txt:/app/requirements.txt
 
     restart: unless-stopped
 
@@ -204,9 +203,3 @@ volumes:
 networks:
   proxy_crawler_network:
     driver: bridge
-# 使用說明：
-# 1. 複製 .env.example 為 .env 並設定密碼
-# 2. 執行：docker-compose up -d
-# 3. 包含管理工具：docker-compose --profile tools up -d
-# 4. 查看日誌：docker-compose logs -f proxy_crawler
-# 5. 停止服務：docker-compose down

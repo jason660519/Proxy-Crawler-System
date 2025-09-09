@@ -1,4 +1,6 @@
+analysis
 config
 etl
 html_to_markdown
+monitoring
 proxy_manager

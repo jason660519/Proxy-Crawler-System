@@ -25,6 +25,10 @@ export interface HeaderProps {
   onSearch?: (query: string) => void;
   /** 通知點擊回調 */
   onNotificationClick?: () => void;
+  /** 主題切換（若提供則覆蓋內部 hook）*/
+  onToggleTheme?: () => void;
+  /** 當前主題（若提供則覆蓋內部 hook）*/
+  themeName?: 'light' | 'dark';
 }
 
 interface NotificationItem {
@@ -202,11 +206,16 @@ export const Header: React.FC<HeaderProps> = ({
   customActions,
   onSearch,
   onNotificationClick,
+  onToggleTheme,
+  themeName,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const { results: searchResults, search: performSearch } = useGlobalSearch();
+  // 若父層提供主題控制則優先使用，以避免多個 useTheme 實例不同步
   const { theme, toggleTheme } = useTheme();
+  const effectiveTheme = themeName ?? theme;
+  const effectiveToggle = onToggleTheme ?? toggleTheme;
 
   // 模擬通知數據
   const [notifications] = useState<NotificationItem[]>([
@@ -309,37 +318,9 @@ export const Header: React.FC<HeaderProps> = ({
       </LeftSection>
       
       <RightSection>
-        {showQuickActions && (
-          <QuickActions>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleQuickAction('refresh')}
-              title="重新整理"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleQuickAction('settings')}
-              title="設定"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </Button>
-            
-            {customActions}
-          </QuickActions>
-        )}
-        
-        <ThemeToggle onClick={toggleTheme} title="切換主題">
-          {theme === 'dark' ? (
+        {/* 已移除重新整理與設定兩個按鈕，以避免右上角重複與無作用項 */}
+        <ThemeToggle onClick={effectiveToggle} title="切換主題" aria-label="切換主題">
+          {effectiveTheme === 'dark' ? (
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
             </svg>

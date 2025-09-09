@@ -1,6 +1,10 @@
 README.md
 pyproject.toml
+src/analysis/__init__.py
+src/analysis/analysis_api.py
+src/analysis/proxy_quality_analyzer.py
 src/config/config_loader.py
+src/config/settings.py
 src/etl/data_validator.py
 src/etl/database_schema.py
 src/etl/etl_api.py
@@ -17,6 +21,8 @@ src/html_to_markdown/data_pipeline.py
 src/html_to_markdown/etl_processor.py
 src/html_to_markdown/seek_adapter.py
 src/html_to_markdown/utils.py
+src/monitoring/monitoring_api.py
+src/monitoring/system_monitor.py
 src/proxy_crawler_system.egg-info/PKG-INFO
 src/proxy_crawler_system.egg-info/SOURCES.txt
 src/proxy_crawler_system.egg-info/dependency_links.txt
@@ -25,10 +31,13 @@ src/proxy_crawler_system.egg-info/top_level.txt
 src/proxy_manager/__init__.py
 src/proxy_manager/advanced_fetchers.py
 src/proxy_manager/api.py
+src/proxy_manager/api_config_manager.py
 src/proxy_manager/cli.py
 src/proxy_manager/config.py
 src/proxy_manager/crawler_manager.py
 src/proxy_manager/database_service.py
+src/proxy_manager/enhanced_models.py
+src/proxy_manager/enhanced_scanner.py
 src/proxy_manager/fetchers.py
 src/proxy_manager/geolocation_enhanced.py
 src/proxy_manager/intelligent_detection.py
@@ -47,6 +56,7 @@ src/proxy_manager/crawlers/geonode_com__proxy_crawler__.py
 src/proxy_manager/crawlers/sslproxies_org__proxy_crawler__.py
 src/proxy_manager/tests/test_advanced_integration.py
 src/proxy_manager/validators/__init__.py
+src/proxy_manager/validators/batch_validator.py
 src/proxy_manager/validators/proxy_validator.py
 tests/test_advanced_integration.py
 tests/test_enhanced_integration.py
