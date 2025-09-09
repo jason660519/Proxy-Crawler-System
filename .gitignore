@@ -218,6 +218,8 @@ tools/node-v22.12.0-win-x64/
 
 # Proxy lists and sensitive data
 proxy_list.json
+data/proxy_manager/proxy_pools_*.json
+proxy_pools_*.json
 *.json.bak
 
 # Configuration backups

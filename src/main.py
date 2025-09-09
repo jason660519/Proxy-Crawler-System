@@ -4,10 +4,12 @@
 包含基本的健康檢查和系統狀態端點。
 """
 
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, Response
 import os
 import sys
+from prometheus_client import Counter, Gauge, generate_latest, CONTENT_TYPE_LATEST
+from config.settings import settings
 from datetime import datetime
 from typing import Dict, Any
 
@@ -22,6 +24,20 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# 基本指標
+REQUEST_COUNTER = Counter("http_requests_total", "Total HTTP requests", ["method", "path"])
+POOL_GAUGE = Gauge("proxy_pool_active_total", "Active proxies per pool", ["pool"])
+
+
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):  # pragma: no cover
+    response = await call_next(request)
+    try:
+        REQUEST_COUNTER.labels(method=request.method, path=request.url.path).inc()
+    except Exception:  # noqa: BLE001
+        pass
+    return response
 
 # 導入並掛載代理管理器 API
 try:
@@ -96,7 +112,7 @@ async def root() -> Dict[str, Any]:
         "version": "1.0.0",
         "status": "running",
         "timestamp": datetime.now().isoformat(),
-        "environment": os.getenv("ENVIRONMENT", "development")
+        "environment": settings.environment
     }
 
 
@@ -128,7 +144,7 @@ async def system_status() -> Dict[str, Any]:
     return {
         "system": {
             "python_version": sys.version,
-            "environment": os.getenv("ENVIRONMENT", "development"),
+            "environment": settings.environment,
             "working_directory": os.getcwd(),
             "timestamp": datetime.now().isoformat()
         },
@@ -138,6 +154,21 @@ async def system_status() -> Dict[str, Any]:
             "redis_service": os.getenv("REDIS_SERVICE", "redis_cache")
         }
     }
+
+
+@app.get("/metrics")
+async def metrics():  # pragma: no cover
+    if not settings.enable_metrics:
+        return JSONResponse(status_code=404, content={"detail": "Metrics disabled"})
+    try:
+        from src.proxy_manager.api import proxy_manager  # type: ignore
+        if proxy_manager:
+            stats = proxy_manager.pool_manager.get_summary()
+            for pool_name, pool_stats in stats.items():
+                POOL_GAUGE.labels(pool=pool_name).set(pool_stats.get("active_count", 0))
+    except Exception:  # noqa: BLE001
+        pass
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 if __name__ == "__main__":

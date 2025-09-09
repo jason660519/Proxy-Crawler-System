@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Sync dependencies
+        run: uv sync --dev
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Type check (mypy)
+        run: uv run mypy src || true
+
+      - name: Run tests
+        run: uv run pytest --maxfail=1 --disable-warnings
+
+      - name: Security scan (bandit)
+        run: uv run bandit -q -r src || true
+
+      - name: Safety (dependency vuln)
+        run: uv run safety check || true
+
+      - name: Test summary
+        if: always()
+        run: echo "CI pipeline completed (some checks may be soft-fail initially)."

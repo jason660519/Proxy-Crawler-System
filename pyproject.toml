@@ -109,6 +109,35 @@ monitoring = [
     "retrying>=1.3.4",
 ]
 
+# 新增分組：核心爬蟲、驗證、HTML->Markdown、瀏覽器、自動化、整合
+crawler = [
+    "httpx>=0.24.0",
+    "aiohttp>=3.8.0",
+    "parsel>=1.8.0",
+    "beautifulsoup4>=4.12.0",
+    "lxml>=4.9.0",
+]
+validation = [
+    "geoip2>=4.8.0",
+    "fake-useragent>=1.4.0",
+    "PySocks>=1.7.1",
+]
+html_md = [
+    "markdownify>=0.11.6",
+    "trafilatura>=1.6.0",
+    "html2text>=2020.1.16",
+    "readability-lxml>=0.8.1",
+]
+browser = [
+    "playwright>=1.40.0",
+    "selenium>=4.15.0",
+    "undetected-chromedriver>=3.5.5",
+    "webdriver-manager>=4.0.1",
+]
+full = [
+    "proxy-crawler-system[crawler,validation,html_md,browser,monitoring]",
+]
+
 [project.urls]
 Homepage = "https://github.com/jason/proxy-crawler-system"
 Repository = "https://github.com/jason/proxy-crawler-system.git"
@@ -143,7 +172,7 @@ disallow_untyped_defs = true
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = "-ra -q --strict-markers --strict-config"
-testpaths = ["tests"]
+testpaths = ["tests", "."]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

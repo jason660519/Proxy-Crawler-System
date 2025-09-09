@@ -8,6 +8,7 @@ MCP 伺服器測試腳本
 import subprocess
 import sys
 import json
+import os
 from typing import Dict, List, Tuple
 
 def test_mcp_server(name: str, command: str, args: List[str], env: Dict[str, str] = None) -> Tuple[bool, str]:
@@ -82,7 +83,8 @@ def main():
             "name": "Brave Search MCP",
             "command": "npx",
             "args": ["@modelcontextprotocol/server-brave-search", "--help"],
-            "env": {"BRAVE_API_KEY": "BSAVzM0OA4KEgbQ2ouuN1aqHqN9hw1x"}
+            # 使用環境變數，避免硬編碼金鑰
+            "env": {"BRAVE_API_KEY": os.getenv("BRAVE_API_KEY", "DUMMY_KEY_PLACEHOLDER")}
         },
         {
             "name": "PostgreSQL MCP",

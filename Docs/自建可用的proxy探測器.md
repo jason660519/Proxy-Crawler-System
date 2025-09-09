@@ -1,8 +1,10 @@
-Proxy IP手動來源：RSS/GitHub list、論壇貼文、其他免費清單。 
+# 自建可用的 Proxy 探測器說明
+
+Proxy IP手動來源：RSS/GitHub list、論壇貼文、其他免費清單。
 
 我要如何自建可用的proxy探測器?用電腦瞎猜幾個IP測試有無連通?及聯通品質嗎? 目前沒有現成的軟體或github repo嗎?
 
-###### **ChatGPT said:**
+> ChatGPT 回覆來源（整理摘錄）
 
 Thought for 54s
 
@@ -10,11 +12,11 @@ Thought for 54s
 
 ---
 
-# **你要做的不是「找」，而是「驗證」**
+## 你要做的不是「找」，而是「驗證」
 
 **來源（seed）** 先解決，再用\*\*探測器（checker）\*\*負責判斷「是不是代理」與「好不好用」。
 
-## **一、來源聚合（避免瞎掃）**
+## 一、來源聚合（避免瞎掃）
 
 * **GitHub 集合專案**
 
@@ -42,7 +44,7 @@ Thought for 54s
 
 ---
 
-## **二、探測器（你自建的 checker）要檢什麼？**
+## 二、探測器（你自建的 checker）要檢什麼？
 
 對每組 `ip:port + 協定` 做**主動測試**，最少包含：
 
@@ -76,7 +78,7 @@ Thought for 54s
 
 ---
 
-## **三、隨機猜 IP 來掃可以嗎？**
+## 三、隨機猜 IP 來掃可以嗎？
 
 **不建議。**
 
@@ -88,7 +90,7 @@ Thought for 54s
 
 ---
 
-## **四、可直接拿來用/拼裝的現成專案**
+## 四、可直接拿來用/拼裝的現成專案
 
 * **Rust**：`monosans/proxy-scraper-checker`（抓取＋檢查＋匿名＆地理；可排序）——最快落地的骨架。[GitHub](https://github.com/monosans/proxy-scraper-checker?search=1&utm_source=chatgpt.com)
 
@@ -98,7 +100,7 @@ Thought for 54s
 
 ---
 
-## **五、極簡「自建探測器」範例（Python 思路）**
+## 五、極簡「自建探測器」範例（Python 思路）
 
 目標：驗證一個 HTTP/HTTPS 代理是否可用、測延遲、做匿名等級判定；SOCKS 可用 `httpx-socks`/`aiohttp_socks` 類似處理。[PyPI+1](https://pypi.org/project/httpx-socks/?utm_source=chatgpt.com)
 
@@ -139,7 +141,7 @@ Thought for 54s
 
 ---
 
-## **六、品質量測建議（前端要做統計用）**
+## 六、品質量測建議（前端要做統計用）
 
 * **延遲**：p50/p90、地區切片
 
@@ -153,7 +155,7 @@ Thought for 54s
 
 ---
 
-### **一句話版**
+### 一句話版
 
 * **不要亂猜 IP 掃網**；用**OSINT 種子 \+ 正規化 \+ 高併發驗證 \+ 連續重測**。
 

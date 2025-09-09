@@ -18,7 +18,7 @@
 
 ### 系統架構圖
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           Proxy Crawler System                             │
 │                        (基於 LLMFeeder 架構設計)                           │
@@ -161,7 +161,7 @@
 
 ### 資料流向圖
 
-```
+```text
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   網站數據源    │    │   GitHub 倉庫   │    │   配置文件      │
 │                 │    │                 │    │                 │
@@ -473,21 +473,25 @@ python demo.py
 - **基於 LLMFeeder 架構**: 採用現代化的網頁內容提取與處理架構，專為 AI 上下文優化
 - **分層式設計**: 應用層、核心業務層、個別爬蟲層、基礎設施層的清晰分離
 - **模組化架構**: 高內聚低耦合的模組設計，支援獨立開發與測試
+- **服務層抽象**: FetchService / ValidationService / PersistenceService 解耦抓取、驗證、持久化流程，提升可測試性與擴展性
 
 ### 性能與可靠性
+
 - **高效能異步處理**: 基於 `asyncio` + `aiohttp`/`httpx` 的異步架構
 - **智能代理池管理**: 熱/溫/冷/黑名單四級分類管理系統
 - **反檢測技術**: 整合多種反檢測策略，包括 User-Agent 輪換、TLS 指紋模擬
 - **容錯與重試**: 內建智能重試機制和錯誤恢復策略
 
 ### 資料處理能力
+
 - **HTML to Markdown 轉換**: 多引擎轉換器支援 (markdownify, html2text, TurndownService)
 - **智能內容提取**: 基於 CSS 選擇器和 XPath 的精確資料提取
 - **ETL 流程引擎**: 完整的資料清理、驗證、標準化流程
 - **多格式輸出**: 支援 Markdown、JSON、CSV 等多種輸出格式
 
 ### 前端架構與界面
-- **現代化技術棧**: React 18 + TypeScript + Vite 的高性能前端架構
+
+- **現代化 技術棧**: React 18 + TypeScript + Vite 的高性能前端架構
 - **VS Code 風格組件**: 仿 VS Code 的專業開發者界面設計
 - **狀態管理**: Zustand 輕量級狀態管理，支援持久化和中間件
 - **資料視覺化**: Chart.js + D3.js 的豐富圖表和視覺化組件
@@ -495,12 +499,14 @@ python demo.py
 - **響應式布局**: CSS Grid + Flexbox 的現代化響應式設計
 
 ### 監控與管理
+
 - **實時性能監控**: 代理響應時間、成功率、地理位置等指標追蹤
 - **Web 管理界面**: 直觀的代理池狀態管理和統計面板
 - **結構化日誌**: 基於 `loguru` 的現代化日誌系統
 - **RESTful API**: 完整的 API 服務支援外部整合
 
 ### 技術棧整合
+
 - **現代 Python 生態**: Python 3.11+, `uv` 包管理, `pydantic` 資料驗證
 - **高性能網路庫**: `aiohttp`, `httpx`, `requests` 的最佳實踐組合
 - **專業爬蟲工具**: `beautifulsoup4`, `lxml`, `parsel` 的多引擎支援
@@ -516,6 +522,7 @@ python demo.py
 ## 未來改進
 
 ### 短期目標 (1-3 個月)
+
 - **前端基礎架構建置**: React + TypeScript + Vite 的完整開發環境
 - **VS Code 風格界面實現**: 側邊欄、主面板、狀態欄的基礎布局
 - **代理管理基礎功能**: 代理列表顯示、基本篩選和搜尋功能
@@ -525,18 +532,21 @@ python demo.py
 - **配置熱重載**: 無需重啟的動態配置更新機制
 
 ### 中期目標 (3-6 個月)
+
 - **機器學習整合**: 基於歷史資料的代理品質預測模型
 - **分散式爬取**: 多節點協同爬取，提升整體效能
 - **智能反檢測**: AI 驅動的反檢測策略自動調整
 - **資料分析面板**: 代理來源分析、地理分佈統計、趨勢預測
 
 ### 長期目標 (6-12 個月)
+
 - **雲原生部署**: Kubernetes 支援，自動擴縮容
 - **多協議支援**: SOCKS4/5、HTTP/HTTPS、透明代理的統一管理
 - **商業化代理整合**: 付費代理服務的 API 整合
 - **國際化支援**: 多語言界面，全球代理來源覆蓋
 
 ### 技術債務與優化
+
 - **性能優化**: 記憶體使用優化、並發處理能力提升
 - **測試覆蓋率**: 單元測試、整合測試、端到端測試的完整覆蓋
 - **文檔完善**: API 文檔、部署指南、最佳實踐文檔
@@ -561,6 +571,7 @@ MIT License
 ## 技術棧
 
 ### 核心技術棧
+
 - **程式語言**: Python 3.11+
 - **包管理器**: `uv` (主要) / `pip` (備用)
 - **異步框架**: `asyncio` + `aiohttp` / `httpx`
@@ -568,31 +579,37 @@ MIT License
 - **日誌系統**: `loguru` (結構化日誌)
 
 ### HTTP 客戶端與網路
+
 - **異步 HTTP**: `aiohttp`, `httpx` (現代首選)
 - **同步 HTTP**: `requests` (傳統穩定)
 - **底層網路**: `urllib3`
 
 ### HTML/XML 解析與資料提取
+
 - **HTML 解析**: `beautifulsoup4` (易用), `lxml` (高性能)
 - **選擇器引擎**: `parsel` (XPath + CSS)
 - **HTML to Markdown**: `markdownify`, `html2text`, `TurndownService`
 
 ### 瀏覽器自動化 (反檢測)
+
 - **現代方案**: `playwright` (微軟出品，性能優異)
 - **傳統方案**: `selenium` + `undetected-chromedriver`
 - **反檢測技術**: `fake-useragent`, `tls-client`, `curl_cffi`
 
 ### 資料庫與快取
+
 - **關聯式資料庫**: `PostgreSQL` + `sqlalchemy`
 - **快取系統**: `Redis` + `redis-py`
 - **輕量級存儲**: `sqlite3`
 
 ### 代理管理與輪換
+
 - **代理發現**: `proxybroker`
 - **代理輪換**: `rotating-proxies`
 - **智能驗證**: 自研驗證系統
 
 ### 開發工具與品質保證
+
 - **程式碼格式化**: `ruff format`
 - **程式碼檢查**: `ruff check`
 - **測試框架**: `pytest`
@@ -600,12 +617,14 @@ MIT License
 - **配置管理**: `python-dotenv`
 
 ### 部署與監控
+
 - **容器化**: `Docker` + `Docker Compose`
 - **監控指標**: `prometheus-client`
 - **進度追蹤**: `tqdm`
 - **重試機制**: `tenacity`
 
 ### 前端技術棧
+
 - **核心框架**: `React 18` + `TypeScript`
 - **建置工具**: `Vite` (快速建置與熱重載)
 - **狀態管理**: `Zustand` (輕量級狀態管理)
@@ -619,6 +638,7 @@ MIT License
 - **程式碼品質**: `ESLint` + `Prettier` + `Husky`
 
 ### 版本控制與協作
+
 - **版本控制**: `Git`
 - **提交規範**: Conventional Commits
 - **分支策略**: Feature Branch Workflow

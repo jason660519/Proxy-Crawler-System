@@ -16,6 +16,14 @@ from pathlib import Path
 from dataclasses import dataclass
 import aiofiles
 
+# 服務層導入（可能尚未生成，失敗時以 None 佔位）
+try:  # pragma: no cover - 動態導入容錯
+    from services.fetch_service import FetchService  # type: ignore
+    from services.validation_service import ValidationService  # type: ignore
+    from services.persistence_service import PersistenceService  # type: ignore
+except Exception:  # noqa: BLE001
+    FetchService = ValidationService = PersistenceService = None  # type: ignore
+
 from .models import ProxyNode, ProxyStatus, ProxyAnonymity, ProxyProtocol, ProxyFilter, ScanTarget, ScanResult, ScanConfig
 from .fetchers import ProxyFetcherManager, JsonFileFetcher
 from .advanced_fetchers import AdvancedProxyFetcherManager
@@ -53,9 +61,20 @@ class ProxyManager:
         self.validator: Optional[ProxyValidator] = None
         self.batch_validator: Optional[BatchValidator] = None
         
+        # 服務層組件
+        if FetchService and ValidationService and PersistenceService:
+            self.fetch_service = FetchService(self)  # type: ignore
+            self.validation_service = ValidationService(self)  # type: ignore
+            self.persistence_service = PersistenceService(self)  # type: ignore
+        else:
+            self.fetch_service = None  # type: ignore
+            self.validation_service = None  # type: ignore
+            self.persistence_service = None  # type: ignore
+
         # 狀態
         self._running = False
         self._tasks: List[asyncio.Task] = []
+        self._fetch_lock = asyncio.Lock()
         
         # 統計
         self.stats = {
@@ -176,63 +195,24 @@ class ProxyManager:
             self._tasks.append(task)
     
     async def fetch_proxies(self, sources: Optional[List[str]] = None) -> List[ProxyNode]:
-        """獲取代理"""
-        logger.info("🔍 開始獲取代理...")
-        
-        try:
-            # 獲取原始代理（傳統來源）
-            raw_proxies = await self.fetcher_manager.fetch_all_proxies()
-            
-            # 獲取高級來源代理
-            advanced_proxies = await self.advanced_fetcher_manager.fetch_all_proxies()
-            
-            # 合併代理列表
-            all_proxies = raw_proxies + advanced_proxies
-            
-            if not all_proxies:
-                logger.warning("⚠️ 沒有獲取到任何代理")
-                return []
-            
-            logger.info(f"📥 獲取到 {len(raw_proxies)} 個傳統代理，{len(advanced_proxies)} 個高級代理")
-            
-            # 使用掃描器進行快速預篩選（可選）
-            if hasattr(self.config, 'scanner') and hasattr(self.config.scanner, 'enable_fast_scan') and self.config.scanner.enable_fast_scan:
-                logger.info("🔍 執行快速端口掃描預篩選...")
-                scanned_proxies = await self.scanner.scan_proxy_list(all_proxies)
-                all_proxies = scanned_proxies
-                logger.info(f"🎯 掃描後剩餘 {len(all_proxies)} 個代理")
-            
-            raw_proxies = all_proxies
-            
-            logger.info(f"📥 總共處理 {len(raw_proxies)} 個代理")
-            
-            # 批量驗證
-            if self.batch_validator:
-                validation_results = await self.batch_validator.validate_large_batch(raw_proxies)
-                # 提取有效代理
-                valid_proxies = [result.proxy for result in validation_results if result.is_working]
-            else:
-                # 如果沒有批量驗證器，跳過驗證，直接使用所有代理
-                logger.warning("⚠️ 批量驗證器未初始化，跳過驗證")
-                valid_proxies = raw_proxies
-            
-            logger.info(f"✅ 驗證完成: {len(valid_proxies)}/{len(raw_proxies)} 個代理可用")
-            
-            # 添加到池中
-            await self.pool_manager.add_proxies(valid_proxies)
-            
-            # 更新統計
-            self.stats['total_fetched'] += len(raw_proxies)
-            self.stats['total_validated'] += len(raw_proxies)
-            self.stats['total_active'] = len(valid_proxies)
-            self.stats['last_fetch_time'] = datetime.now()
-            self.stats['last_validation_time'] = datetime.now()
-            
-            return valid_proxies
-            
-        except Exception as e:
-            logger.error(f"❌ 獲取代理失敗: {e}")
-            raise
+        """獲取代理（帶鎖保護避免重入）"""
+        async with self._fetch_lock:
+            logger.info("🔍 開始獲取代理...")
+            try:
+                all_proxies = await self.fetch_service.fetch_all()
+                if not all_proxies:
+                    return []
+                valid_proxies = await self.validation_service.validate(all_proxies)
+                await self.pool_manager.add_proxies(valid_proxies)
+                self.stats['total_fetched'] += len(all_proxies)
+                self.stats['total_validated'] += len(all_proxies)
+                self.stats['total_active'] = len(valid_proxies)
+                self.stats['last_fetch_time'] = datetime.now()
+                self.stats['last_validation_time'] = datetime.now()
+                return valid_proxies
+            except Exception as e:  # noqa: BLE001
+                logger.error(f"❌ 獲取代理失敗: {e}")
+                raise
     
     async def get_proxy(self, 
                        filter_criteria: Optional[ProxyFilter] = None,
@@ -267,11 +247,16 @@ class ProxyManager:
     
     async def _auto_fetch_loop(self):
         """自動獲取循環"""
+        first = True
         while self._running:
             try:
-                await asyncio.sleep(self.config.auto_fetch_interval_hours * 3600)
-                if self._running:
+                if first:
+                    first = False
                     await self.fetch_proxies()
+                else:
+                    await asyncio.sleep(self.config.auto_fetch_interval_hours * 3600)
+                    if self._running:
+                        await self.fetch_proxies()
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -308,32 +293,14 @@ class ProxyManager:
     async def _save_data(self):
         """保存數據"""
         try:
-            data_file = self.config.data_dir / "proxy_pools.json"
-            await self.pool_manager.save_to_file(data_file)
-            
-            # 創建備份
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_file = self.config.backup_dir / f"proxy_pools_{timestamp}.json"
-            await self.pool_manager.save_to_file(backup_file)
-            
-            # 清理舊備份（保留最近10個）
-            await self._cleanup_old_backups()
+            await self.persistence_service.save_snapshot()
             
         except Exception as e:
             logger.error(f"❌ 保存數據失敗: {e}")
     
     async def _cleanup_old_backups(self):
-        """清理舊備份文件"""
-        try:
-            backup_files = list(self.config.backup_dir.glob("proxy_pools_*.json"))
-            backup_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
-            
-            # 保留最近10個備份
-            for old_backup in backup_files[10:]:
-                old_backup.unlink()
-                
-        except Exception as e:
-            logger.error(f"❌ 清理備份失敗: {e}")
+    async def _cleanup_old_backups(self):  # 保留向後兼容呼叫
+        await self.persistence_service._prune_old(self.config.backup_dir, keep=10)
     
     def get_stats(self) -> Dict[str, Any]:
         """獲取統計信息"""

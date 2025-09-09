@@ -75,13 +75,13 @@ cd JasonSpider
 uv venv
 uv shell
 
-# 3. 安裝依賴
+# 3. 安裝依賴（推薦）
 uv sync
-# 或使用 pip
-pip install -r requirements.txt
+# 備註: 以 pyproject.toml 為主，requirements.txt 僅作相容用途
 
-# 4. 配置 API 金鑰（可選）
-python setup_api_config.py interactive
+# 4. 配置環境與 API 金鑰
+cp .env.example .env  # Windows PowerShell: Copy-Item .env.example .env
+python setup_api_config.py interactive  # 可選
 
 # 5. 測試核心功能
 python test_core_functionality.py
@@ -240,5 +240,7 @@ fix(api): resolve markdown conversion encoding issue
 - [Beautiful Soup 文檔](https://www.crummy.com/software/BeautifulSoup/bs4/doc/)
 
 ---
+
+**新增**: 已加入集中設定模組 `config.settings` 與 `/metrics` 指標端點；請勿在程式碼硬編碼金鑰。
 
 **注意**: 本專案仍在積極開發中，部分功能可能尚未完全實現。請參考文檔了解最新進度。

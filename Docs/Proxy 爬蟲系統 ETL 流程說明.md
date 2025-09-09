@@ -12,7 +12,7 @@ This brief points to the authoritative English overview and highlights the curre
 
 For full diagrams, storage paths and operational notes, see `ETL_Pipeline_Overview.md`.
 
-## **2\. ETL 流程圖**
+## 2. ETL 流程圖
 
 ```mermaid
 graph TB
@@ -59,9 +59,9 @@ graph TB
 
 ---
 
-## **3\. 各階段說明與檔案存儲**
+## 3. 各階段說明與檔案存儲
 
-### **3.1 Extract (數據提取)**
+### 3.1 Extract (數據提取)
 
 - **目標**：從目標網站獲取原始數據
 - **存放位置**：
@@ -71,7 +71,7 @@ graph TB
 
 ---
 
-### **3.2 Transform (數據轉換)**
+### 3.2 Transform (數據轉換)
 
 - **目標**：清洗與標準化數據（IP、Port、Protocol、Country、Anonymity、Speed 等）
 - **新增模組**：
@@ -86,7 +86,7 @@ graph TB
 
 ---
 
-### **3.3 Validate (數據驗證)**
+### 3.3 Validate (數據驗證)
 
 - **目標**：驗證代理伺服器可用性（連接性、速度、匿名性、地理位置）並計算綜合評分
 - **存放位置**：
@@ -96,7 +96,7 @@ graph TB
 
 ---
 
-### **3.4 Load (數據加載)**
+### 3.4 Load (數據加載)
 
 - **目標**：將有效數據存入資料庫與快取，並生成報告
 - **存放位置**：
@@ -109,7 +109,17 @@ graph TB
 
 ---
 
-## **4\. 監控與日誌**
+## 4. 監控與日誌
+
+### 4.1 服務層抽象整合說明
+
+本 ETL 流程中：
+
+- FetchService：負責 Extract 階段來源抓取與來源合併
+- ValidationService：封裝 Validate 階段的連通性/速度/匿名性/地理驗證與評分
+- PersistenceService：統一 Load 階段資料庫持久化 + Redis 快取 + Markdown 報告生成
+
+藉由服務層抽象，提升測試性（可注入替身）、降低跨階段耦合，支援未來擴充新型來源或驗證指標。
 
 - **監控指標**：抓取成功率、驗證通過率、數據質量分數
 - **日誌存放**：`logs/{date}.log`

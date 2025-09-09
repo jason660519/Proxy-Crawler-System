@@ -1,17 +1,16 @@
-# Proxy IP 驗證模組 
+# Proxy IP 驗證模組建構範例說明書
 
-# 建構範例說明書
-
-模組名稱：Proxy Pool Manager (PPM)之Proxy IP 驗證模組  
-核心目標：打造一個高可用、高性能、全自動化的代理IP質量管理與分發系統。  
+模組名稱：Proxy Pool Manager (PPM) 之 Proxy IP 驗證模組  
+核心目標：打造一個高可用、高性能、全自動化的代理 IP 質量管理與分發系統。  
 技術棧：Python 3.11+, Asyncio, aiohttp, Redis, FastAPI, Prometheus, Grafana, Docker  
 最後更新：2025-09-08  
-版本：v1.0  
+版本：v1.0
+
 ---
 
-## **一、核心架構與設計哲學**
+## 一、核心架構與設計哲學
 
-### **1.1 設計原則**
+### 1.1 設計原則
 
 1. 高併發：採用異步IO模型，萬級IP驗證分鐘內完成。  
 2. 高可用：無單點故障，組件可水平擴展。  
@@ -19,25 +18,22 @@
 4. 透明可觀測：系統所有狀態和性能指標均被採集、可視化、可告警。  
 5. 低耦合：模組通過清晰API對外提供服務，可輕鬆集成至任何爬蟲項目。
 
-### **1.2 系統架構圖**
+### 1.2 系統架構圖
 
-以下圖表展示了Proxy Pool Manager (PPM)的整體架構及其核心工作流程：
+以下圖表展示了 Proxy Pool Manager (PPM) 的整體架構及其核心工作流程：
 
-Diagram
+```mermaid
+flowchart TD
+  subgraph A [數據採集層]
+    A1[免費源爬取器]
+    A2[付費API適配器]
+    A3[手動上傳接口]
+  end
 
-Code
-
-`flowchart TD`  
-    `subgraph A [數據採集層]`  
-        `A1[免費源爬取器]`  
-        `A2[付費API適配器]`  
-        `A3[手動上傳接口]`  
-    `end`
-
-    `subgraph B [調度與協調層]`  
-        `B1[調度器<br>Scheduler]`  
-        `B2[[任務隊列<br>Redis List]]`  
-    `end`
+  subgraph B [調度與協調層]
+    B1[調度器\nScheduler]
+    B2[[任務隊列\nRedis List]]
+  end
 
     `subgraph C [核心驗證層]`  
         `C1[驗證器 Worker]`  
@@ -79,9 +75,9 @@ Code
 
 ---
 
-## **二、模組詳細說明**
+## 二、模組詳細說明
 
-### **2.1 數據採集層 (Fetcher)**
+### 2.1 數據採集層 (Fetcher)
 
 職責：從多樣化來源獲取原始代理IP。
 
@@ -132,7 +128,7 @@ Code
 
     `schedule: "0 */1 * * *"   # 每小時抓取一次`
 
-### **2.2 驗證器 (Worker)**
+### 2.2 驗證器 (Worker)
 
 職責：執行單個代理IP的全面質量驗證。
 
@@ -186,7 +182,7 @@ Code
 
         `return result`
 
-### **2.3 數據模型 (Data Models)**
+### 2.3 數據模型 (Data Models)
 
 使用 Pydantic 清晰定義所有數據結構：
 
@@ -231,7 +227,7 @@ Code
 
     `success_checks: int = 0`
 
-### **2.4 存儲管理器 (Storage Manager)**
+### 2.4 存儲管理器 (Storage Manager)
 
 職責：封裝所有與Redis的交互邏輯，提供高效的数据讀寫接口。
 
@@ -270,7 +266,7 @@ Code
 
 ---
 
-## **三、核心工作流程**
+## 三、核心工作流程
 
 1. 採集階段：調度器根據配置定時觸發各個Fetcher，將抓取到的原始 `ProxyItem` 放入「待驗證隊列」（Redis List）。  
 2. 驗證階段：  
@@ -287,9 +283,9 @@ Code
 
 ---
 
-## **四、質量指標與觀測體系**
+## 四、質量指標與觀測體系
 
-### **4.1 核心指標 (Metrics)**
+### 4.1 核心指標 (Metrics)
 
 使用Prometheus客戶端暴露指標：
 
@@ -313,7 +309,7 @@ Code
 
     `RESPONSE_TIME_HISTOGRAM.labels(test_url=test_url).observe(response_time)`
 
-### **4.2 Grafana 儀表板**
+### 4.2 Grafana 儀表板
 
 創建至少三個看板：
 
@@ -321,7 +317,7 @@ Code
 2. 來源質量：按來源統計的可用率、貢獻IP數量。  
 3. 性能詳情：驗證耗時分佈、各目標網站的響應時間。
 
-### **4.3 告警規則 (Alerting)**
+### 4.3 告警規則 (Alerting)
 
 在Prometheus中配置：
 
@@ -348,9 +344,9 @@ Code
 
 ---
 
-## **五、部署與擴展**
+## 五、部署與擴展
 
-### **5.1 Docker化**
+### 5.1 Docker化
 
 提供完整的 `docker-compose.yml` 來一鍵部署所有依賴：
 
@@ -396,7 +392,7 @@ Code
 
   `redis_data:`
 
-### **5.2 水平擴展方案**
+### 5.2 水平擴展方案
 
 1. Worker無狀態：任何Worker實例都可以從Redis隊列中消費任務。  
 2. 分片鍵：可根據代理IP的協議或來源進行分片，不同Worker組處理不同類型的任務。  
@@ -404,9 +400,9 @@ Code
 
 ---
 
-## **六、使用方式**
+## 六、使用方式
 
-### **6.1 作為Python庫使用**
+### 6.1 作為 Python 庫使用
 
 `python`
 
@@ -418,7 +414,7 @@ Code
 
         `print(f"{proxy.ip}:{proxy.port} - Score: {proxy.score}")`
 
-### **6.2 作為獨立服務使用**
+### 6.2 作為獨立服務使用
 
 通過RESTful API調用：
 
