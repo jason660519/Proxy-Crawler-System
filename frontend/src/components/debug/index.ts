@@ -2,4 +2,4 @@
  * 調試組件導出
  */
 
-export { ThemeDebugger } from './ThemeDebugger';
+export { default as ThemeDebugger } from './ThemeDebugger';

@@ -632,8 +632,12 @@ export function useTheme() {
     return () => observer.disconnect();
   }, [theme, setTheme]);
 
+  // 返回實際的主題物件而不是主題名稱
+  const themeObject = theme === 'dark' ? darkTheme : lightTheme;
+  
   return {
-    theme,
+    theme: themeObject,
+    themeName: theme,
     setTheme,
     toggleTheme,
     isDark: theme === 'dark',

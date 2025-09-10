@@ -13,16 +13,16 @@ import { TaskStatus } from '../../types';
 // ============= 類型定義 =============
 
 export interface ActivityBarProps {
-  /** 當前活動項目 */
-  activeItem?: string;
-  /** 活動項目變更回調 */
-  onItemChange?: (itemId: string) => void;
   /** 是否摺疊 */
   collapsed?: boolean;
   /** 系統指標 */
   systemMetrics?: SystemMetrics;
   /** 主要健康狀態 */
   mainHealth?: HealthStatus;
+  /** 當前活動視圖 */
+  activeView?: string;
+  /** 活動項目變更回調 */
+  onActivityChange?: (itemId: string) => void;
 }
 
 interface ActivityItem {
@@ -273,11 +273,11 @@ const CollapseButton = styled.button`
 // ============= 組件實作 =============
 
 export const ActivityBar: React.FC<ActivityBarProps> = ({
-  activeItem = 'dashboard',
-  onItemChange,
   collapsed: controlledCollapsed,
   systemMetrics,
   mainHealth: propMainHealth,
+  activeView = 'dashboard',
+  onActivityChange,
 }) => {
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const collapsed = controlledCollapsed ?? internalCollapsed;
@@ -285,6 +285,8 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
   const { mainHealth: hookMainHealth, etlHealth } = useHealthStatus();
   const mainHealth = propMainHealth || hookMainHealth;
   const { tasks } = useTaskQueue();
+  
+  const activeItem = activeView;
   
   // 計算任務統計
   const runningTasks = tasks.filter(task => task.status === TaskStatus.RUNNING).length;
@@ -315,7 +317,7 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
       id: 'proxies',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+          <path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.07 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z" />
         </svg>
       ),
       label: '代理管理',
@@ -363,8 +365,8 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
   ];
   
   const handleItemClick = useCallback((itemId: string) => {
-    onItemChange?.(itemId);
-  }, [onItemChange]);
+    onActivityChange?.(itemId);
+  }, [onActivityChange]);
   
   const handleCollapseToggle = useCallback(() => {
     if (controlledCollapsed === undefined) {

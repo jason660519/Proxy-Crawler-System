@@ -6,7 +6,8 @@
 import React, { useState, useEffect } from 'react';
 import styled, { ThemeProvider, createGlobalStyle } from 'styled-components';
 import { Header, ActivityBar } from './components/layout';
-import { Dashboard, OperationsDashboard, MetricsOverview, Settings } from './components/dashboard';
+import { Dashboard, OperationsDashboard, MetricsOverview } from './components/dashboard';
+import Settings from './components/settings/Settings';
 import { ThemeDebugger } from './components/debug';
 import { useTheme, useHealthStatus } from './hooks';
 import { createGlobalStyles, lightTheme, darkTheme } from './styles';
@@ -141,6 +142,11 @@ const App: React.FC = () => {
     console.log('Open notifications panel');
   };
 
+  // 處理 Logo 點擊
+  const handleLogoClick = () => {
+    setActiveView('dashboard');
+  };
+
   // 渲染頁面內容
   const renderPageContent = () => {
     switch (activeView) {
@@ -220,7 +226,7 @@ const App: React.FC = () => {
       <GlobalStyle theme={isDark ? darkTheme : lightTheme} />
       <AppContainer>
         <Header
-          showSearch={true}
+          showSearch={false}
           showQuickActions={true}
           showNotifications={true}
           themeName={theme}
@@ -229,12 +235,16 @@ const App: React.FC = () => {
             try { (window as any).dispatchEvent?.(new CustomEvent('js-theme-request-toggle')); } catch {}
           }}
           onNotificationClick={handleNotificationClick}
+          onLogoClick={handleLogoClick}
         />
         
         <MainContainer>
           <ActivityBar
-            activeItem={activeView}
-            onItemChange={handleActivityChange}
+            collapsed={false}
+            systemMetrics={undefined}
+            mainHealth={undefined}
+            activeView={activeView}
+            onActivityChange={handleActivityChange}
           />
           
           <ContentArea>

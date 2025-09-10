@@ -4,8 +4,8 @@
  */
 
 // Layout 組件
-export { Header } from './layout/Header';
-export { ActivityBar } from './layout/ActivityBar';
+export { default as Header } from './layout/Header';
+export { default as ActivityBar } from './layout/ActivityBar';
 
 // Dashboard 組件
 export { 

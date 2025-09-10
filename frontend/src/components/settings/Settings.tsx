@@ -5,7 +5,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { ThemeDebugger } from '../debug/ThemeDebugger';
+import ThemeDebugger from '../debug/ThemeDebugger';
 import { useTheme } from '../../hooks';
 
 const Container = styled.div`

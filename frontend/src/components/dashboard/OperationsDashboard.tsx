@@ -31,4 +31,6 @@ export const OperationsDashboard: React.FC = () => {
   );
 };
 
+export default OperationsDashboard;
+
 

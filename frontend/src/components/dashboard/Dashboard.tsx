@@ -5,10 +5,10 @@
 
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { HealthCard } from './HealthCard';
-import { TrendChart } from './TrendChart';
-import { TaskBoard } from './TaskBoard';
-import { LogViewer } from './LogViewer';
+import HealthCard from './HealthCard';
+import TrendChart from './TrendChart';
+import TaskBoard from './TaskBoard';
+import LogViewer from './LogViewer';
 import { spacing } from '../../styles';
 // ============= 類型定義 =============
 

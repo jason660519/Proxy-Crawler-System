@@ -25,6 +25,8 @@ export interface HeaderProps {
   onSearch?: (query: string) => void;
   /** 通知點擊回調 */
   onNotificationClick?: () => void;
+  /** Logo 點擊回調 */
+  onLogoClick?: () => void;
   /** 主題切換（若提供則覆蓋內部 hook）*/
   onToggleTheme?: () => void;
   /** 當前主題（若提供則覆蓋內部 hook）*/
@@ -72,6 +74,12 @@ const Logo = styled.div`
   font-weight: 700;
   color: var(--color-text-primary);
   white-space: nowrap;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  
+  &:hover {
+    opacity: 0.8;
+  }
 `;
 
 const LogoIcon = styled.div`
@@ -206,6 +214,7 @@ export const Header: React.FC<HeaderProps> = ({
   customActions,
   onSearch,
   onNotificationClick,
+  onLogoClick,
   onToggleTheme,
   themeName,
 }) => {
@@ -260,6 +269,15 @@ export const Header: React.FC<HeaderProps> = ({
     console.log('Navigate to proxy:', proxy);
   }, []);
 
+  const handleLogoClick = useCallback(() => {
+    if (onLogoClick) {
+      onLogoClick();
+    } else {
+      // 預設行為：跳轉到首頁
+      window.location.href = '/';
+    }
+  }, [onLogoClick]);
+
   const handleQuickAction = useCallback((action: string) => {
     switch (action) {
       case 'refresh':
@@ -281,7 +299,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <HeaderContainer>
       <LeftSection>
-        <Logo>
+        <Logo onClick={handleLogoClick}>
           <LogoIcon>JS</LogoIcon>
           JasonSpider
         </Logo>
